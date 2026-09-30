@@ -10,7 +10,7 @@ class ConsoleOutputTest {
     private fun render(format: OutputFormat, block: ConsoleOutput.() -> Unit): String {
         val buffer = ByteArrayOutputStream()
         ConsoleOutput(format, PrintStream(buffer, true, Charsets.UTF_8)).block()
-        return buffer.toString(Charsets.UTF_8).trimEnd()
+        return buffer.toString(Charsets.UTF_8).replace("\r\n", "\n").trimEnd()
     }
 
     @Test
