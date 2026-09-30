@@ -4,6 +4,9 @@ import com.github.badoualy.telegram.api.DownloadedMedia
 import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramPeer
+import com.github.badoualy.telegram.api.UploadedFile
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,6 +25,27 @@ class KotlogramMediaGatewayTest {
 
         assertEquals(SendFileCall(ada, file, "a cat", true), operations.fileSends.single())
         assertEquals(42, sent.id)
+        assertEquals("photo", sent.mediaKind)
+    }
+
+    @Test
+    fun `sendStream uploads the stream and then sends the uploaded file by handle`() {
+        val operations = FakeMediaOperations().apply {
+            uploaded = UploadedFile(id = 5, name = "cat.png", size = 3, parts = 1, handle = 99)
+            sentUploaded = message(id = 45, text = "a cat", date = 1_000, media = Media("photo"))
+        }
+        val data = ByteArrayInputStream("cat".toByteArray())
+
+        val sent = gatewayWith(operations).sendStream("@ada", "cat.png", data, caption = "a cat", asPhoto = true)
+
+        assertEquals(
+            listOf(
+                UploadStreamCall("cat.png", "cat"),
+                SendUploadedCall(ada, operations.uploaded, "a cat", true),
+            ),
+            operations.calls,
+        )
+        assertEquals(45, sent.id)
         assertEquals("photo", sent.mediaKind)
     }
 
@@ -70,6 +94,15 @@ class KotlogramMediaGatewayTest {
 
 internal data class SendFileCall(val peer: TelegramPeer, val path: Path, val caption: String, val asPhoto: Boolean)
 
+internal data class UploadStreamCall(val name: String, val content: String)
+
+internal data class SendUploadedCall(
+    val peer: TelegramPeer,
+    val file: UploadedFile,
+    val caption: String,
+    val asPhoto: Boolean,
+)
+
 internal data class SendUrlCall(val peer: TelegramPeer, val url: String, val caption: String, val asPhoto: Boolean)
 
 internal data class CopyMediaCall(val peer: TelegramPeer, val messageId: Int, val caption: String)
@@ -81,15 +114,28 @@ internal class FakeMediaOperations : FacadeMediaOperations {
     var sentUrl: Message = message(id = 1)
     var copied: Message = message(id = 1)
     var downloadedPath: String = "download.bin"
+    var uploaded: UploadedFile = UploadedFile(id = 1, name = "upload.bin", size = 0, parts = 0, handle = 1)
+    var sentUploaded: Message = message(id = 1)
 
     val fileSends = mutableListOf<SendFileCall>()
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
     val downloads = mutableListOf<DownloadCall>()
+    val calls = mutableListOf<Any>()
 
     override fun sendFile(peer: TelegramPeer, path: Path, caption: String, asPhoto: Boolean): Message {
         fileSends += SendFileCall(peer, path, caption, asPhoto)
         return sentFile
+    }
+
+    override fun uploadStream(data: InputStream, name: String): UploadedFile {
+        calls += UploadStreamCall(name, data.readBytes().decodeToString())
+        return uploaded
+    }
+
+    override fun sendUploaded(peer: TelegramPeer, file: UploadedFile, caption: String, asPhoto: Boolean): Message {
+        calls += SendUploadedCall(peer, file, caption, asPhoto)
+        return sentUploaded
     }
 
     override fun sendUrl(peer: TelegramPeer, url: String, caption: String, asPhoto: Boolean): Message {

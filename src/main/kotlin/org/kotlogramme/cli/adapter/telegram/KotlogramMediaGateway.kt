@@ -2,6 +2,7 @@ package org.kotlogramme.cli.adapter.telegram
 
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.domain.Message
+import java.io.InputStream
 import java.nio.file.Path
 
 /**
@@ -9,8 +10,8 @@ import java.nio.file.Path
  *
  * References are resolved through the same [ChatReferenceResolver] the rest of the stack uses, so a
  * `@username`, an invite link and a numeric id all mean the same chat here as they do elsewhere. A
- * copy re-sends the source message's media back to the same conversation, and the download reports
- * the path the facade actually wrote.
+ * copy re-sends the source message's media back to the same conversation, a stream is uploaded
+ * first and then sent by handle, and the download reports the path the facade actually wrote.
  */
 internal class KotlogramMediaGateway(
     private val operations: FacadeMediaOperations,
@@ -18,6 +19,18 @@ internal class KotlogramMediaGateway(
 ) : MediaGateway {
     override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message =
         operations.sendFile(resolver.resolve(reference), path, caption, asPhoto).toMessage()
+
+    override fun sendStream(
+        reference: String,
+        name: String,
+        data: InputStream,
+        caption: String,
+        asPhoto: Boolean,
+    ): Message {
+        val peer = resolver.resolve(reference)
+        val uploaded = operations.uploadStream(data, name)
+        return operations.sendUploaded(peer, uploaded, caption, asPhoto).toMessage()
+    }
 
     override fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message =
         operations.sendUrl(resolver.resolve(reference), url, caption, asPhoto).toMessage()

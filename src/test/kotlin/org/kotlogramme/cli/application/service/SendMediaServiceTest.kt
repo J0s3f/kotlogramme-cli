@@ -3,6 +3,8 @@ package org.kotlogramme.cli.application.service
 import org.junit.jupiter.api.io.TempDir
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.domain.Message
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -34,6 +36,43 @@ class SendMediaServiceTest {
         SendMediaService(gateway).sendFile("@ada", file, caption = "", asPhoto = false)
 
         assertEquals(SendFileCall("@ada", file, "", false), gateway.fileSends.single())
+    }
+
+    @Test
+    fun `sendStream passes the named stream and options through unchanged`() {
+        val gateway = FakeMediaGateway()
+
+        val sent = SendMediaService(gateway).sendStream(
+            "@ada",
+            name = "cat.png",
+            data = ByteArrayInputStream("cat".toByteArray()),
+            caption = "a cat",
+            asPhoto = true,
+        )
+
+        assertEquals(SendStreamCall("@ada", "cat.png", "cat", "a cat", true), gateway.streamSends.single())
+        assertEquals(gateway.sent, sent)
+    }
+
+    @Test
+    fun `sendStream accepts an empty stream and an empty caption`() {
+        val gateway = FakeMediaGateway()
+
+        SendMediaService(gateway).sendStream("@ada", "empty.bin", ByteArrayInputStream(ByteArray(0)), "", false)
+
+        assertEquals(SendStreamCall("@ada", "empty.bin", "", "", false), gateway.streamSends.single())
+    }
+
+    @Test
+    fun `rejects a blank name before the gateway`() {
+        val gateway = FakeMediaGateway()
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            SendMediaService(gateway).sendStream("@ada", "  ", ByteArrayInputStream(ByteArray(0)), "", false)
+        }
+
+        assertTrue(error.message.orEmpty().contains("name"))
+        assertEquals(emptyList(), gateway.streamSends)
     }
 
     @Test
@@ -95,6 +134,14 @@ class SendMediaServiceTest {
 
 private data class SendFileCall(val reference: String, val path: Path, val caption: String, val asPhoto: Boolean)
 
+private data class SendStreamCall(
+    val reference: String,
+    val name: String,
+    val content: String,
+    val caption: String,
+    val asPhoto: Boolean,
+)
+
 private data class SendUrlCall(val reference: String, val url: String, val caption: String, val asPhoto: Boolean)
 
 private data class CopyMediaCall(val reference: String, val fromMessageId: Int, val caption: String)
@@ -103,12 +150,24 @@ private class FakeMediaGateway : MediaGateway {
     val fileSends = mutableListOf<SendFileCall>()
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
+    val streamSends = mutableListOf<SendStreamCall>()
 
     var sent: Message = message
     var downloaded: Path = Path.of("download.bin")
 
     override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message {
         fileSends += SendFileCall(reference, path, caption, asPhoto)
+        return sent
+    }
+
+    override fun sendStream(
+        reference: String,
+        name: String,
+        data: InputStream,
+        caption: String,
+        asPhoto: Boolean,
+    ): Message {
+        streamSends += SendStreamCall(reference, name, data.readBytes().decodeToString(), caption, asPhoto)
         return sent
     }
 

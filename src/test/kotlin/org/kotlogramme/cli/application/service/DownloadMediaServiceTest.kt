@@ -3,6 +3,7 @@ package org.kotlogramme.cli.application.service
 import org.junit.jupiter.api.io.TempDir
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.domain.Message
+import java.io.InputStream
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -65,6 +66,14 @@ private class FakeDownloadGateway : MediaGateway {
 
     override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message =
         error("not used")
+
+    override fun sendStream(
+        reference: String,
+        name: String,
+        data: InputStream,
+        caption: String,
+        asPhoto: Boolean,
+    ): Message = error("not used")
 
     override fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message =
         error("not used")
