@@ -9,23 +9,39 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramAccountGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramChatGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramChatOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramContactGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramContactOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramMessageSearchGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramSearchOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateSource
 import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
 import org.kotlogramme.cli.application.port.api.Authenticate
+import org.kotlogramme.cli.application.port.api.ChatMembers
+import org.kotlogramme.cli.application.port.api.Contacts
 import org.kotlogramme.cli.application.port.api.ListDialogs
+import org.kotlogramme.cli.application.port.api.Listen
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
+import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.application.service.AuthenticateService
+import org.kotlogramme.cli.application.service.ChatMembersService
+import org.kotlogramme.cli.application.service.ContactsService
 import org.kotlogramme.cli.application.service.ListDialogsService
+import org.kotlogramme.cli.application.service.ListenService
 import org.kotlogramme.cli.application.service.MessageWritingService
 import org.kotlogramme.cli.application.service.ReadHistoryService
+import org.kotlogramme.cli.application.service.SearchMessagesService
 import java.nio.file.Path
 
 /**
@@ -45,6 +61,10 @@ class AppContext(
     private val listDialogsFactory: (AppConfig) -> ListDialogs = ::defaultListDialogs,
     private val readHistoryFactory: (AppConfig) -> ReadHistory = ::defaultReadHistory,
     private val messageWriterFactory: (AppConfig) -> MessageWriter = ::defaultMessageWriter,
+    private val contactsFactory: (AppConfig) -> Contacts = ::defaultContacts,
+    private val searchMessagesFactory: (AppConfig) -> SearchMessages = ::defaultSearchMessages,
+    private val chatMembersFactory: (AppConfig) -> ChatMembers = ::defaultChatMembers,
+    private val listenFactory: (AppConfig) -> Listen = ::defaultListen,
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -77,6 +97,18 @@ class AppContext(
 
     /** The message-writing use case, with the same missing-credentials error as [authenticate]. */
     fun messageWriter(): MessageWriter = messageWriterFactory(configured())
+
+    /** The contact-listing use case, with the same missing-credentials error as [authenticate]. */
+    fun contacts(): Contacts = contactsFactory(configured())
+
+    /** The message-search use case, with the same missing-credentials error as [authenticate]. */
+    fun searchMessages(): SearchMessages = searchMessagesFactory(configured())
+
+    /** The chat-membership use case, with the same missing-credentials error as [authenticate]. */
+    fun chatMembers(): ChatMembers = chatMembersFactory(configured())
+
+    /** The update-following use case, with the same missing-credentials error as [authenticate]. */
+    fun listen(): Listen = listenFactory(configured())
 
     private fun configured(): AppConfig {
         val config = config()
@@ -152,6 +184,32 @@ private fun defaultMessageWriter(config: AppConfig): MessageWriter {
         ),
     )
 }
+
+private fun defaultContacts(config: AppConfig): Contacts =
+    ContactsService(KotlogramContactGateway(KotlogramContactOperations(clientFor(config))))
+
+private fun defaultSearchMessages(config: AppConfig): SearchMessages {
+    val client = clientFor(config)
+    val chatOperations = KotlogramChatOperations(client)
+    return SearchMessagesService(
+        KotlogramMessageSearchGateway(KotlogramSearchOperations(client), ChatReferenceResolver(chatOperations)),
+    )
+}
+
+private fun defaultChatMembers(config: AppConfig): ChatMembers {
+    val client = clientFor(config)
+    val chatOperations = KotlogramChatOperations(client)
+    return ChatMembersService(
+        KotlogramParticipantGateway(
+            KotlogramParticipantOperations(client),
+            ChatReferenceResolver(chatOperations),
+        ),
+    )
+}
+
+private fun defaultListen(config: AppConfig): Listen =
+    ListenService(KotlogramUpdateSource(KotlogramUpdateOperations(clientFor(config))))
+
 
 private fun clientFor(config: AppConfig) =
     TelegramClientFactory().create(requireNotNull(config.credentials), config.sessionPath)

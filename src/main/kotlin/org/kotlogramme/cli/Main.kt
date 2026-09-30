@@ -10,17 +10,22 @@ import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.path
 import org.kotlogramme.cli.adapter.cli.AppContext
 import org.kotlogramme.cli.adapter.cli.ConfigCommand
+import org.kotlogramme.cli.adapter.cli.ContactsCommand
 import org.kotlogramme.cli.adapter.cli.DeleteCommand
 import org.kotlogramme.cli.adapter.cli.DialogsCommand
 import org.kotlogramme.cli.adapter.cli.DoctorCommand
 import org.kotlogramme.cli.adapter.cli.EditCommand
 import org.kotlogramme.cli.adapter.cli.ForwardCommand
 import org.kotlogramme.cli.adapter.cli.HistoryCommand
+import org.kotlogramme.cli.adapter.cli.KickCommand
+import org.kotlogramme.cli.adapter.cli.ListenCommand
 import org.kotlogramme.cli.adapter.cli.LoginCommand
 import org.kotlogramme.cli.adapter.cli.LogoutCommand
 import org.kotlogramme.cli.adapter.cli.MarkReadCommand
+import org.kotlogramme.cli.adapter.cli.MembersCommand
 import org.kotlogramme.cli.adapter.cli.PinCommand
 import org.kotlogramme.cli.adapter.cli.ReactCommand
+import org.kotlogramme.cli.adapter.cli.SearchCommand
 import org.kotlogramme.cli.adapter.cli.SendCommand
 import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
@@ -68,6 +73,11 @@ fun main(args: Array<String>) {
             ReactCommand(),
             UnreactCommand(),
             MarkReadCommand(),
+            ContactsCommand(),
+            SearchCommand(),
+            MembersCommand(),
+            KickCommand(),
+            ListenCommand(),
         )
         .main(args)
 }
