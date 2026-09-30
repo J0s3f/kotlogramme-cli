@@ -30,7 +30,7 @@ private fun FacadeMessage.senderName(): String =
         ?: peer?.name?.takeIf(String::isNotBlank)
         ?: ""
 
-private fun User.displayName(): String = listOf(firstName.orEmpty(), lastName.orEmpty())
+internal fun User.displayName(): String = listOf(firstName.orEmpty(), lastName.orEmpty())
     .filter(String::isNotBlank)
     .joinToString(" ")
     .ifBlank { username ?: id.toString() }

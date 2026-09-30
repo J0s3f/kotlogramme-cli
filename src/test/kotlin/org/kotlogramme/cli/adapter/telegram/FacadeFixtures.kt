@@ -33,6 +33,20 @@ internal fun peer(
     ) as TelegramPeer
 }
 
+internal fun user(
+    id: Long,
+    username: String? = null,
+    firstName: String? = null,
+    lastName: String? = null,
+    phone: String? = null,
+): User = User(
+    id = id,
+    username = username,
+    firstName = firstName,
+    lastName = lastName,
+    phone = phone,
+)
+
 internal fun dialog(
     peer: TelegramPeer,
     lastMessage: Message? = null,
