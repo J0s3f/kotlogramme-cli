@@ -3,6 +3,8 @@ package org.kotlogramme.cli.adapter.cli
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import org.kotlogramme.cli.KotlogrammeCommand
+import org.kotlogramme.cli.adapter.telegram.NativeLibraryCheck
+import org.kotlogramme.cli.adapter.telegram.NativeLibraryProbe
 import org.kotlogramme.cli.application.port.api.AccountStatus
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.LoginStep
@@ -101,10 +103,11 @@ internal fun cliFixture(
     authenticate: FakeAuthenticate = FakeAuthenticate(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
+    nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
 ): CliFixture {
     val context = AppContext(configDir, configStore, output, environment) { authenticate }
     val root = KotlogrammeCommand { context }
-        .subcommands(ConfigCommand(), LoginCommand(), LogoutCommand(), WhoamiCommand())
+        .subcommands(ConfigCommand(), LoginCommand(), LogoutCommand(), WhoamiCommand(), DoctorCommand(nativeLibraryProbe))
     return CliFixture(output, authenticate, root)
 }
 
