@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.format
 
 import org.kotlogramme.cli.application.port.spi.OutputFormat
+import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
@@ -17,7 +18,7 @@ class MessageRenderingTest {
             sentAt = Instant.parse("2026-01-01T12:30:00Z"),
             outgoing = true,
             replyToMessageId = 5,
-            mediaKind = "photo",
+            media = MediaInfo("photo"),
         ),
         Message(
             id = 8,
@@ -86,5 +87,38 @@ class MessageRenderingTest {
                 """"media":"","action":"pinned a message","text":""}]""",
             rendered,
         )
+    }
+
+    @Test
+    fun `media labels carry the details the kind has`() {
+        assertEquals(
+            "[video 0:03 320x240]",
+            mediaLabel(MediaInfo("video", durationSeconds = 3.0, width = 320, height = 240)),
+        )
+        assertEquals(
+            "[animation 1:23 640x480]",
+            mediaLabel(MediaInfo("animation", durationSeconds = 83.0, width = 640, height = 480)),
+        )
+        assertEquals("[audio 3:21]", mediaLabel(MediaInfo("audio", durationSeconds = 201.0)))
+        assertEquals("[voice 0:07]", mediaLabel(MediaInfo("voice", durationSeconds = 7.0)))
+        assertEquals("[photo 320x240]", mediaLabel(MediaInfo("photo", width = 320, height = 240)))
+        assertEquals("[document 1.6 MB]", mediaLabel(MediaInfo("document", sizeBytes = 1_677_722)))
+        assertEquals("[sticker]", mediaLabel(MediaInfo("sticker")))
+    }
+
+    @Test
+    fun `a missing detail is left out of the label`() {
+        assertEquals("[video]", mediaLabel(MediaInfo("video")))
+        assertEquals("[photo]", mediaLabel(MediaInfo("photo", width = 320)))
+        assertEquals("[document]", mediaLabel(MediaInfo("document")))
+    }
+
+    @Test
+    fun `a duration reaching an hour is hours minutes and seconds`() {
+        assertEquals("0:03", formatDuration(3.4))
+        assertEquals("59:59", formatDuration(3599.0))
+        assertEquals("1:00:00", formatDuration(3600.0))
+        assertEquals("1:02:03", formatDuration(3723.0))
+        assertEquals("43:00", formatDuration(2580.0))
     }
 }

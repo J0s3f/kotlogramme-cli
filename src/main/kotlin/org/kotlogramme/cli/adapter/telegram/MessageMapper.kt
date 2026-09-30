@@ -1,7 +1,9 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.Media as FacadeMedia
 import com.github.badoualy.telegram.api.Message as FacadeMessage
 import com.github.badoualy.telegram.api.User
+import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
 import java.time.Instant
 
@@ -21,8 +23,17 @@ internal fun FacadeMessage.toMessage(): Message = Message(
     edited = editDate != null,
     pinned = pinned,
     replyToMessageId = replyToMessageId,
-    mediaKind = media?.kind,
+    media = media?.toMediaInfo(),
     action = action?.kind?.let(::serviceAction),
+)
+
+private fun FacadeMedia.toMediaInfo(): MediaInfo = MediaInfo(
+    kind = kind,
+    durationSeconds = duration,
+    width = width,
+    height = height,
+    sizeBytes = size,
+    name = name,
 )
 
 private fun FacadeMessage.senderName(): String =

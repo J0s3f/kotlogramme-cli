@@ -25,7 +25,7 @@ class KotlogramMediaGatewayTest {
 
         assertEquals(SendFileCall(ada, file, "a cat", true), operations.fileSends.single())
         assertEquals(42, sent.id)
-        assertEquals("photo", sent.mediaKind)
+        assertEquals("photo", sent.media?.kind)
     }
 
     @Test
@@ -46,7 +46,7 @@ class KotlogramMediaGatewayTest {
 
         assertEquals(SendVideoCall(ada, file, "a clip", 12.5, 1920, 1080), operations.videoSends.single())
         assertEquals(46, sent.id)
-        assertEquals("video", sent.mediaKind)
+        assertEquals("video", sent.media?.kind)
     }
 
     @Test
@@ -67,7 +67,7 @@ class KotlogramMediaGatewayTest {
             operations.calls,
         )
         assertEquals(45, sent.id)
-        assertEquals("photo", sent.mediaKind)
+        assertEquals("photo", sent.media?.kind)
     }
 
     @Test

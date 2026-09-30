@@ -2,6 +2,7 @@ package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.User
+import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.protocol.MessageAction
 import java.time.Instant
 import kotlin.test.Test
@@ -24,7 +25,7 @@ class MessageMapperTest {
             date = instant.toEpochMilli(),
             editDate = instant.toEpochMilli() + 1_000,
             pinned = true,
-            media = Media(kind = "document"),
+            media = Media(kind = "video", duration = 12.5, width = 1920, height = 1080, size = 4_000_000, name = "clip.mp4"),
             sender = sender,
         ).toMessage()
 
@@ -36,7 +37,17 @@ class MessageMapperTest {
         assertTrue(mapped.edited)
         assertTrue(mapped.pinned)
         assertEquals(41, mapped.replyToMessageId)
-        assertEquals("document", mapped.mediaKind)
+        assertEquals(
+            MediaInfo(
+                kind = "video",
+                durationSeconds = 12.5,
+                width = 1920,
+                height = 1080,
+                sizeBytes = 4_000_000,
+                name = "clip.mp4",
+            ),
+            mapped.media,
+        )
     }
 
     @Test
@@ -46,7 +57,7 @@ class MessageMapperTest {
         assertFalse(mapped.edited)
         assertFalse(mapped.pinned)
         assertNull(mapped.replyToMessageId)
-        assertNull(mapped.mediaKind)
+        assertNull(mapped.media)
         assertNull(mapped.action)
         assertEquals("", mapped.senderName)
     }

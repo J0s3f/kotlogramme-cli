@@ -25,6 +25,12 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
 - `copy-media <peer> <messageId> [--caption <text>]` — re-sends the media of an existing message
   without uploading it again.
 
+Media in a message view is labelled compactly by kind: a `video` or `animation` shows its duration
+and dimensions (`[video 0:03 320x240]`), an `audio` or `voice` its duration (`[audio 3:21]`), a
+`photo` its dimensions (`[photo 320x240]`) and a `document` its size (`[document 1.6 MB]`). Any
+other kind shows just the kind, and a detail the media does not carry is left out rather than shown
+as a placeholder.
+
 A missing file, a blank URL and a non-positive message id are reported as one-line usage errors, not
 stack traces.
 
@@ -65,9 +71,10 @@ used by every command.
 - `dialogs [--limit <n>]` — lists the conversations, newest first, with the unread count and a
   pinned marker.
 - `history <peer> [--limit <n>] [--before <messageId>]` — reads a page of a chat's messages with the
-  sender, the time, a reply marker, a media placeholder and, for a service message, a human phrase
-  for the action (for example "pinned a message" or "added a member"). A kind this build does not
-  name still renders as `service action: <kind>` rather than as a blank row.
+  sender, the time, a reply marker, a media label (for example `[video 0:03 320x240]`) and, for a
+  service message, a human phrase for the action (for example "pinned a message" or "added a
+  member"). A kind this build does not name still renders as `service action: <kind>` rather than as
+  a blank row.
 - `send <peer> <text...> [--reply-to <id>] [--silent]` — sends a text message. Pass `-` as the text
   to read the whole message from standard input, so `echo hello | kotlogramme send @chat -` works.
 - `edit <peer> <messageId> <text...>` — replaces the text of a message.

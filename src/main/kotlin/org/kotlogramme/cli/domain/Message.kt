@@ -12,8 +12,8 @@ data class Message(
     val edited: Boolean = false,
     val pinned: Boolean = false,
     val replyToMessageId: Int? = null,
-    /** The facade's media kind, or `null` when the message has no media attached. */
-    val mediaKind: String? = null,
+    /** What the attachment is, or `null` when the message has no media attached. */
+    val media: MediaInfo? = null,
     /** A short human description of the service action, or `null` for an ordinary message. */
     val action: String? = null,
 )
