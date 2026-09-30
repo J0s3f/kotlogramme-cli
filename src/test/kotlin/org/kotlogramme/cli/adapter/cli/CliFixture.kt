@@ -449,7 +449,14 @@ internal class FakeMessageWriter(
 }
 
 /** A file send request with every field the command parsed. */
-internal data class SendFileCall(val reference: String, val path: Path, val caption: String, val asPhoto: Boolean)
+internal data class SendFileCall(
+    val reference: String,
+    val path: Path,
+    val caption: String,
+    val asPhoto: Boolean,
+    val replyToMessageId: Int?,
+    val silent: Boolean,
+)
 
 /** A video send request with the metadata the command parsed. */
 internal data class SendVideoCall(
@@ -459,6 +466,8 @@ internal data class SendVideoCall(
     val durationSeconds: Double?,
     val width: Int?,
     val height: Int?,
+    val replyToMessageId: Int?,
+    val silent: Boolean,
 )
 
 /** A stream send request, carrying the bytes the stream held. */
@@ -468,13 +477,28 @@ internal data class SendStreamCall(
     val content: String,
     val caption: String,
     val asPhoto: Boolean,
+    val replyToMessageId: Int?,
+    val silent: Boolean,
 )
 
 /** A URL send request. */
-internal data class SendUrlCall(val reference: String, val url: String, val caption: String, val asPhoto: Boolean)
+internal data class SendUrlCall(
+    val reference: String,
+    val url: String,
+    val caption: String,
+    val asPhoto: Boolean,
+    val replyToMessageId: Int?,
+    val silent: Boolean,
+)
 
 /** A copy request naming the source message. */
-internal data class CopyMediaCall(val reference: String, val fromMessageId: Int, val caption: String)
+internal data class CopyMediaCall(
+    val reference: String,
+    val fromMessageId: Int,
+    val caption: String,
+    val replyToMessageId: Int?,
+    val silent: Boolean,
+)
 
 /** A [SendMedia] that records every send and returns a canned result. */
 internal class FakeSendMedia(
@@ -492,9 +516,16 @@ internal class FakeSendMedia(
         rejection?.let { throw it }
     }
 
-    override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message {
+    override fun sendFile(
+        reference: String,
+        path: Path,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
         reject()
-        fileSends += SendFileCall(reference, path, caption, asPhoto)
+        fileSends += SendFileCall(reference, path, caption, asPhoto, replyToMessageId, silent)
         return sent
     }
 
@@ -505,9 +536,11 @@ internal class FakeSendMedia(
         durationSeconds: Double?,
         width: Int?,
         height: Int?,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message {
         reject()
-        videoSends += SendVideoCall(reference, path, caption, durationSeconds, width, height)
+        videoSends += SendVideoCall(reference, path, caption, durationSeconds, width, height, replyToMessageId, silent)
         return sent
     }
 
@@ -517,21 +550,44 @@ internal class FakeSendMedia(
         data: InputStream,
         caption: String,
         asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message {
         reject()
-        streamSends += SendStreamCall(reference, name, data.readBytes().decodeToString(), caption, asPhoto)
+        streamSends += SendStreamCall(
+            reference,
+            name,
+            data.readBytes().decodeToString(),
+            caption,
+            asPhoto,
+            replyToMessageId,
+            silent,
+        )
         return sent
     }
 
-    override fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message {
+    override fun sendUrl(
+        reference: String,
+        url: String,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
         reject()
-        urlSends += SendUrlCall(reference, url, caption, asPhoto)
+        urlSends += SendUrlCall(reference, url, caption, asPhoto, replyToMessageId, silent)
         return sent
     }
 
-    override fun copyMedia(reference: String, fromMessageId: Int, caption: String): Message {
+    override fun copyMedia(
+        reference: String,
+        fromMessageId: Int,
+        caption: String,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
         reject()
-        copies += CopyMediaCall(reference, fromMessageId, caption)
+        copies += CopyMediaCall(reference, fromMessageId, caption, replyToMessageId, silent)
         return sent
     }
 }

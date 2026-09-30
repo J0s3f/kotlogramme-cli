@@ -21,7 +21,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", file.toString(), "--caption", "a cat", "--photo")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendFileCall("@ada", file, "a cat", true)), media.fileSends)
+        assertEquals(listOf(SendFileCall("@ada", file, "a cat", true, null, false)), media.fileSends)
     }
 
     @Test
@@ -46,7 +46,7 @@ class MediaCommandsTest {
         )
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendVideoCall("@ada", file, "a clip", 12.5, 1920, 1080)), media.videoSends)
+        assertEquals(listOf(SendVideoCall("@ada", file, "a clip", 12.5, 1920, 1080, null, false)), media.videoSends)
         assertTrue(media.fileSends.isEmpty())
     }
 
@@ -86,7 +86,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", "-", "--video", stdin = "raw bytes")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendStreamCall("@ada", "stdin", "raw bytes", "", false)), media.streamSends)
+        assertEquals(listOf(SendStreamCall("@ada", "stdin", "raw bytes", "", false, null, false)), media.streamSends)
         assertTrue(media.videoSends.isEmpty())
     }
 
@@ -98,7 +98,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", "-", stdin = "raw bytes")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendStreamCall("@ada", "stdin", "raw bytes", "", false)), media.streamSends)
+        assertEquals(listOf(SendStreamCall("@ada", "stdin", "raw bytes", "", false, null, false)), media.streamSends)
     }
 
     @Test
@@ -109,7 +109,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", "-", "--name", "cat.png", stdin = "bytes")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendStreamCall("@ada", "cat.png", "bytes", "", false)), media.streamSends)
+        assertEquals(listOf(SendStreamCall("@ada", "cat.png", "bytes", "", false, null, false)), media.streamSends)
     }
 
     @Test
@@ -139,7 +139,10 @@ class MediaCommandsTest {
         )
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendUrlCall("@ada", "https://example.com/cat.png", "a cat", true)), media.urlSends)
+        assertEquals(
+            listOf(SendUrlCall("@ada", "https://example.com/cat.png", "a cat", true, null, false)),
+            media.urlSends,
+        )
     }
 
     @Test
@@ -162,7 +165,7 @@ class MediaCommandsTest {
         val result = fixture.run("copy-media", "@ada", "12", "--caption", "a cat")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(CopyMediaCall("@ada", 12, "a cat")), media.copies)
+        assertEquals(listOf(CopyMediaCall("@ada", 12, "a cat", null, false)), media.copies)
     }
 
     @Test
@@ -186,7 +189,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", file.toString(), "--detect")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendVideoCall("@ada", file, "", 2610.0, 1920, 1080)), media.videoSends)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", 2610.0, 1920, 1080, null, false)), media.videoSends)
     }
 
     @Test
@@ -198,7 +201,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", file.toString(), "--detect")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendFileCall("@ada", file, "", true)), media.fileSends)
+        assertEquals(listOf(SendFileCall("@ada", file, "", true, null, false)), media.fileSends)
     }
 
     @Test
@@ -210,7 +213,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", file.toString(), "--detect")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendFileCall("@ada", file, "", false)), media.fileSends)
+        assertEquals(listOf(SendFileCall("@ada", file, "", false, null, false)), media.fileSends)
     }
 
     @Test
@@ -222,7 +225,7 @@ class MediaCommandsTest {
         val result = fixture.run("send-file", "@ada", file.toString(), "--detect", "--duration", "5")
 
         assertEquals(0, result.statusCode)
-        assertEquals(listOf(SendVideoCall("@ada", file, "", 5.0, 1920, 1080)), media.videoSends)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", 5.0, 1920, 1080, null, false)), media.videoSends)
     }
 
     @Test
@@ -254,10 +257,84 @@ class MediaCommandsTest {
         assertEquals(0, video.statusCode)
         assertEquals(
             listOf(
-                SendStreamCall("@ada", "cat.png", "bytes", "", true),
-                SendStreamCall("@ada", "clip.mp4", "bytes", "", false),
+                SendStreamCall("@ada", "cat.png", "bytes", "", true, null, false),
+                SendStreamCall("@ada", "clip.mp4", "bytes", "", false, null, false),
             ),
             media.streamSends,
         )
+    }
+
+    @Test
+    fun `send-file forwards the reply-to and silent flags`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.createFile(tempDir.resolve("cat.png"))
+
+        val result = fixture.run(
+            "send-file",
+            "@ada",
+            file.toString(),
+            "--caption",
+            "a cat",
+            "--photo",
+            "--reply-to",
+            "5",
+            "--silent",
+        )
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "a cat", true, 5, true)), media.fileSends)
+    }
+
+    @Test
+    fun `send-file streams stdin with the reply-to and silent flags`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+
+        val result = fixture.run("send-file", "@ada", "-", "--reply-to", "5", "--silent", stdin = "bytes")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendStreamCall("@ada", "stdin", "bytes", "", false, 5, true)), media.streamSends)
+    }
+
+    @Test
+    fun `send-file sends a video with the reply-to and silent flags`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.createFile(tempDir.resolve("clip.mp4"))
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--video", "--reply-to", "5", "--silent")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", null, null, null, 5, true)), media.videoSends)
+    }
+
+    @Test
+    fun `send-media-url forwards the reply-to and silent flags`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+
+        val result = fixture.run(
+            "send-media-url",
+            "@ada",
+            "https://example.com/cat.png",
+            "--reply-to",
+            "5",
+            "--silent",
+        )
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendUrlCall("@ada", "https://example.com/cat.png", "", false, 5, true)), media.urlSends)
+    }
+
+    @Test
+    fun `copy-media forwards the reply-to and silent flags`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+
+        val result = fixture.run("copy-media", "@ada", "12", "--caption", "a cat", "--reply-to", "5", "--silent")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(CopyMediaCall("@ada", 12, "a cat", 5, true)), media.copies)
     }
 }

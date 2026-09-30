@@ -15,7 +15,14 @@ import java.nio.file.Path
  */
 internal interface FacadeMediaOperations {
     /** Uploads [path] to [peer] as a photo or a document, which is `mediaSend`. */
-    fun sendFile(peer: TelegramPeer, path: Path, caption: String, asPhoto: Boolean): Message
+    fun sendFile(
+        peer: TelegramPeer,
+        path: Path,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 
     /** Uploads [path] to [peer] as a streamable video, which is `mediaSend` with `MediaKind.VIDEO`. */
     fun sendVideo(
@@ -25,19 +32,41 @@ internal interface FacadeMediaOperations {
         durationSeconds: Double?,
         width: Int?,
         height: Int?,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message
 
     /** Uploads [data] under [name] and returns the handle a later send references. */
     fun uploadStream(data: InputStream, name: String): UploadedFile
 
     /** Sends the already-uploaded [file] to [peer], which is the `UploadedFile` overload of `mediaSend`. */
-    fun sendUploaded(peer: TelegramPeer, file: UploadedFile, caption: String, asPhoto: Boolean): Message
+    fun sendUploaded(
+        peer: TelegramPeer,
+        file: UploadedFile,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 
     /** Sends media Telegram fetches from [url], which is `mediaSendUrl`. */
-    fun sendUrl(peer: TelegramPeer, url: String, caption: String, asPhoto: Boolean): Message
+    fun sendUrl(
+        peer: TelegramPeer,
+        url: String,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 
     /** Re-sends the media of message [fromMessageId] in [peer], which is `mediaCopy`. */
-    fun copyMedia(peer: TelegramPeer, fromMessageId: Int, caption: String): Message
+    fun copyMedia(
+        peer: TelegramPeer,
+        fromMessageId: Int,
+        caption: String,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 
     /** Downloads the media of message [messageId] in [peer] into [target], which is `downloadMedia`. */
     fun download(peer: TelegramPeer, messageId: Int, target: Path): DownloadedMedia

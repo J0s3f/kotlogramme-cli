@@ -17,8 +17,15 @@ internal class KotlogramMediaGateway(
     private val operations: FacadeMediaOperations,
     private val resolver: ChatReferenceResolver,
 ) : MediaGateway {
-    override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message =
-        operations.sendFile(resolver.resolve(reference), path, caption, asPhoto).toMessage()
+    override fun sendFile(
+        reference: String,
+        path: Path,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message =
+        operations.sendFile(resolver.resolve(reference), path, caption, asPhoto, replyToMessageId, silent).toMessage()
 
     override fun sendVideo(
         reference: String,
@@ -27,8 +34,19 @@ internal class KotlogramMediaGateway(
         durationSeconds: Double?,
         width: Int?,
         height: Int?,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message =
-        operations.sendVideo(resolver.resolve(reference), path, caption, durationSeconds, width, height).toMessage()
+        operations.sendVideo(
+            resolver.resolve(reference),
+            path,
+            caption,
+            durationSeconds,
+            width,
+            height,
+            replyToMessageId,
+            silent,
+        ).toMessage()
 
 
     override fun sendStream(
@@ -37,17 +55,32 @@ internal class KotlogramMediaGateway(
         data: InputStream,
         caption: String,
         asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message {
         val peer = resolver.resolve(reference)
         val uploaded = operations.uploadStream(data, name)
-        return operations.sendUploaded(peer, uploaded, caption, asPhoto).toMessage()
+        return operations.sendUploaded(peer, uploaded, caption, asPhoto, replyToMessageId, silent).toMessage()
     }
 
-    override fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message =
-        operations.sendUrl(resolver.resolve(reference), url, caption, asPhoto).toMessage()
+    override fun sendUrl(
+        reference: String,
+        url: String,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message =
+        operations.sendUrl(resolver.resolve(reference), url, caption, asPhoto, replyToMessageId, silent).toMessage()
 
-    override fun copyMedia(reference: String, fromMessageId: Int, caption: String): Message =
-        operations.copyMedia(resolver.resolve(reference), fromMessageId, caption).toMessage()
+    override fun copyMedia(
+        reference: String,
+        fromMessageId: Int,
+        caption: String,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message =
+        operations.copyMedia(resolver.resolve(reference), fromMessageId, caption, replyToMessageId, silent).toMessage()
 
     override fun download(reference: String, messageId: Int, target: Path): Path =
         Path.of(operations.download(resolver.resolve(reference), messageId, target).path)

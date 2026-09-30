@@ -7,7 +7,14 @@ import java.nio.file.Path
 /** The media operations the facade exposes, in domain terms. */
 interface MediaGateway {
     /** Uploads a local file and sends it, as a photo when [asPhoto] is set. */
-    fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message
+    fun sendFile(
+        reference: String,
+        path: Path,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 
     /**
      * Uploads a local file and sends it as a streamable video.
@@ -22,16 +29,33 @@ interface MediaGateway {
         durationSeconds: Double?,
         width: Int?,
         height: Int?,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message
 
     /** Uploads [data] under [name] and sends it, as a photo when [asPhoto] is set. */
-    fun sendStream(reference: String, name: String, data: InputStream, caption: String, asPhoto: Boolean): Message
+    fun sendStream(
+        reference: String,
+        name: String,
+        data: InputStream,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 
     /** Lets Telegram fetch a URL and send it as media. */
-    fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message
+    fun sendUrl(
+        reference: String,
+        url: String,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 
     /** Re-sends the media of an existing message without a re-upload. */
-    fun copyMedia(reference: String, fromMessageId: Int, caption: String): Message
+    fun copyMedia(reference: String, fromMessageId: Int, caption: String, replyToMessageId: Int?, silent: Boolean): Message
 
     /** Downloads the media of a message to [target] and returns the path actually written. */
     fun download(reference: String, messageId: Int, target: Path): Path

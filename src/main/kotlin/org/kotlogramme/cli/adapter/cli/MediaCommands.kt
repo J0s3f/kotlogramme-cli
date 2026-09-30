@@ -28,6 +28,9 @@ import java.nio.file.Path
  * supplies its duration, width and height. Explicit `--duration`, `--width` and `--height` still
  * win over the probe. With `-` there is nothing to probe, so only the `--name` extension is used and
  * no metadata is sent.
+ *
+ * `--reply-to` quotes an existing message and `--silent` suppresses the notification; both reach the
+ * service for every form of the send, including a stdin stream.
  */
 class SendFileCommand : CliktCommand(name = "send-file") {
     private val appContext by requireObject<AppContext>()
@@ -43,6 +46,8 @@ class SendFileCommand : CliktCommand(name = "send-file") {
     private val width by option("--width", help = "The video width in pixels; only with --video or --detect").int()
     private val height by option("--height", help = "The video height in pixels; only with --video or --detect").int()
     private val name by option("--name", help = "The upload file name for a stdin stream; defaults to stdin")
+    private val replyTo by option("--reply-to", help = "Reply to this message id").int()
+    private val silent by option("--silent", help = "Send without a notification").flag()
 
     override fun run() {
         val message = rejectInvalidInput {
@@ -60,21 +65,37 @@ class SendFileCommand : CliktCommand(name = "send-file") {
         when {
             path == STDIN -> sendStdin()
             detect -> sendDetected(Path.of(path))
-            video -> appContext.sendMedia().sendVideo(peer, Path.of(path), caption, duration, width, height)
-            else -> appContext.sendMedia().sendFile(peer, Path.of(path), caption, photo)
+            video -> appContext.sendMedia().sendVideo(
+                peer,
+                Path.of(path),
+                caption,
+                duration,
+                width,
+                height,
+                replyTo,
+                silent,
+            )
+            else -> appContext.sendMedia().sendFile(peer, Path.of(path), caption, photo, replyTo, silent)
         }
 
     private fun sendStdin(): Message {
         val uploadName = name ?: STDIN_NAME
         val data = ByteArrayInputStream(readStdin().toByteArray())
         val asPhoto = detect && mediaKindOf(uploadName) == MediaKindHint.PHOTO
-        return appContext.sendMedia().sendStream(peer, uploadName, data, caption, asPhoto)
+        return appContext.sendMedia().sendStream(peer, uploadName, data, caption, asPhoto, replyTo, silent)
     }
 
     private fun sendDetected(file: Path): Message {
         val probe = appContext.mediaProbe().probe(file)
         return when (probe.kind) {
-            MediaKindHint.PHOTO -> appContext.sendMedia().sendFile(peer, file, caption, asPhoto = true)
+            MediaKindHint.PHOTO -> appContext.sendMedia().sendFile(
+                peer,
+                file,
+                caption,
+                asPhoto = true,
+                replyToMessageId = replyTo,
+                silent = silent,
+            )
             MediaKindHint.VIDEO -> appContext.sendMedia().sendVideo(
                 peer,
                 file,
@@ -82,8 +103,17 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 duration ?: probe.durationSeconds,
                 width ?: probe.width,
                 height ?: probe.height,
+                replyTo,
+                silent,
             )
-            MediaKindHint.DOCUMENT -> appContext.sendMedia().sendFile(peer, file, caption, asPhoto = false)
+            MediaKindHint.DOCUMENT -> appContext.sendMedia().sendFile(
+                peer,
+                file,
+                caption,
+                asPhoto = false,
+                replyToMessageId = replyTo,
+                silent = silent,
+            )
         }
     }
 
@@ -105,11 +135,13 @@ class SendMediaUrlCommand : CliktCommand(name = "send-media-url") {
     private val url by argument("url", help = "The URL Telegram fetches")
     private val caption by option("--caption", help = "The caption").default("")
     private val photo by option("--photo", help = "Send as a photo instead of a document").flag()
+    private val replyTo by option("--reply-to", help = "Reply to this message id").int()
+    private val silent by option("--silent", help = "Send without a notification").flag()
 
     override fun run() {
         val message = rejectInvalidInput {
             require(url.isNotBlank()) { "url must not be blank" }
-            appContext.sendMedia().sendUrl(peer, url, caption, photo)
+            appContext.sendMedia().sendUrl(peer, url, caption, photo, replyTo, silent)
         }
         appContext.output.renderMessages(listOf(message))
     }
@@ -122,9 +154,13 @@ class CopyMediaCommand : CliktCommand(name = "copy-media") {
     private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")
     private val messageId by argument("messageId", help = "The message whose media to re-send").int()
     private val caption by option("--caption", help = "A new caption").default("")
+    private val replyTo by option("--reply-to", help = "Reply to this message id").int()
+    private val silent by option("--silent", help = "Send without a notification").flag()
 
     override fun run() {
-        val message = rejectInvalidInput { appContext.sendMedia().copyMedia(peer, messageId, caption) }
+        val message = rejectInvalidInput {
+            appContext.sendMedia().copyMedia(peer, messageId, caption, replyTo, silent)
+        }
         appContext.output.renderMessages(listOf(message))
     }
 }

@@ -15,12 +15,21 @@ import java.nio.file.Path
  * refused unless the source message id is positive. The failures are clear
  * [IllegalArgumentException]s instead of a Telegram error. A caption is optional and may be blank,
  * and an empty stream is accepted. A video is validated like a file: the path must exist and be a
- * regular file.
+ * regular file. A reply-to message id is validated like the copy source: it must be positive when
+ * present, and [silent] passes straight through.
  */
 class SendMediaService(private val gateway: MediaGateway) : SendMedia {
-    override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message {
+    override fun sendFile(
+        reference: String,
+        path: Path,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
         requireRegularFile(path)
-        return gateway.sendFile(reference, path, caption, asPhoto)
+        replyToMessageId?.let(::requirePositiveMessageId)
+        return gateway.sendFile(reference, path, caption, asPhoto, replyToMessageId, silent)
     }
 
     override fun sendVideo(
@@ -30,9 +39,12 @@ class SendMediaService(private val gateway: MediaGateway) : SendMedia {
         durationSeconds: Double?,
         width: Int?,
         height: Int?,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message {
         requireRegularFile(path)
-        return gateway.sendVideo(reference, path, caption, durationSeconds, width, height)
+        replyToMessageId?.let(::requirePositiveMessageId)
+        return gateway.sendVideo(reference, path, caption, durationSeconds, width, height, replyToMessageId, silent)
     }
 
     override fun sendStream(
@@ -41,17 +53,36 @@ class SendMediaService(private val gateway: MediaGateway) : SendMedia {
         data: InputStream,
         caption: String,
         asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message {
         require(name.isNotBlank()) { "name must not be blank" }
-        return gateway.sendStream(reference, name, data, caption, asPhoto)
+        replyToMessageId?.let(::requirePositiveMessageId)
+        return gateway.sendStream(reference, name, data, caption, asPhoto, replyToMessageId, silent)
     }
 
-    override fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message =
-        gateway.sendUrl(reference, url, caption, asPhoto)
+    override fun sendUrl(
+        reference: String,
+        url: String,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
+        replyToMessageId?.let(::requirePositiveMessageId)
+        return gateway.sendUrl(reference, url, caption, asPhoto, replyToMessageId, silent)
+    }
 
-    override fun copyMedia(reference: String, fromMessageId: Int, caption: String): Message {
+    override fun copyMedia(
+        reference: String,
+        fromMessageId: Int,
+        caption: String,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
         requirePositiveMessageId(fromMessageId)
-        return gateway.copyMedia(reference, fromMessageId, caption)
+        replyToMessageId?.let(::requirePositiveMessageId)
+        return gateway.copyMedia(reference, fromMessageId, caption, replyToMessageId, silent)
     }
 
     private fun requireRegularFile(path: Path) {

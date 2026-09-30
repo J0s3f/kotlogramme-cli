@@ -64,8 +64,14 @@ private data class DownloadCall(val reference: String, val messageId: Int, val t
 private class FakeDownloadGateway : MediaGateway {
     val downloads = mutableListOf<DownloadCall>()
 
-    override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message =
-        error("not used")
+    override fun sendFile(
+        reference: String,
+        path: Path,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message = error("not used")
 
     override fun sendVideo(
         reference: String,
@@ -74,6 +80,8 @@ private class FakeDownloadGateway : MediaGateway {
         durationSeconds: Double?,
         width: Int?,
         height: Int?,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message = error("not used")
 
     override fun sendStream(
@@ -82,13 +90,26 @@ private class FakeDownloadGateway : MediaGateway {
         data: InputStream,
         caption: String,
         asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
     ): Message = error("not used")
 
-    override fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message =
-        error("not used")
+    override fun sendUrl(
+        reference: String,
+        url: String,
+        caption: String,
+        asPhoto: Boolean,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message = error("not used")
 
-    override fun copyMedia(reference: String, fromMessageId: Int, caption: String): Message =
-        error("not used")
+    override fun copyMedia(
+        reference: String,
+        fromMessageId: Int,
+        caption: String,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message = error("not used")
 
     override fun download(reference: String, messageId: Int, target: Path): Path {
         downloads += DownloadCall(reference, messageId, target)
