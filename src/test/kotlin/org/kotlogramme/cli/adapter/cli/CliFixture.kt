@@ -10,6 +10,7 @@ import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
 import org.kotlogramme.cli.application.port.api.ListDialogs
+import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.Listen
 import org.kotlogramme.cli.application.port.api.LoginStep
 import org.kotlogramme.cli.application.port.api.MessageWriter
@@ -22,6 +23,7 @@ import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.domain.Account
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.Contact
+import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.IncomingUpdate
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
@@ -189,6 +191,11 @@ internal class FakeChatMembers(private val members: List<Participant> = emptyLis
     }
 }
 
+/** A [ListFolders] returning canned folders. */
+internal class FakeListFolders(private val folders: List<Folder> = emptyList()) : ListFolders {
+    override fun list(): List<Folder> = folders
+}
+
 /** A [Listen] that replays canned updates and stops as soon as the predicate asks it to. */
 internal class FakeListen(private val updates: List<IncomingUpdate> = emptyList()) : Listen {
     override fun run(stop: () -> Boolean, onUpdate: (IncomingUpdate) -> Unit): Int {
@@ -316,6 +323,7 @@ internal fun cliFixture(
     contacts: Contacts = FakeContacts(),
     searchMessages: SearchMessages = FakeSearchMessages(),
     chatMembers: ChatMembers = FakeChatMembers(),
+    listFolders: ListFolders = FakeListFolders(),
     listen: Listen = FakeListen(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
@@ -333,6 +341,7 @@ internal fun cliFixture(
         contactsFactory = { contacts },
         searchMessagesFactory = { searchMessages },
         chatMembersFactory = { chatMembers },
+        listFoldersFactory = { listFolders },
         listenFactory = { listen },
     )
     val root = KotlogrammeCommand { context }
@@ -358,6 +367,8 @@ internal fun cliFixture(
             MembersCommand(),
             KickCommand(),
             ListenCommand(),
+            FoldersCommand(),
+            ShellCommand(),
         )
     return CliFixture(output, authenticate, root)
 }

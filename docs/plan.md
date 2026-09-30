@@ -138,9 +138,9 @@ Acceptance: the update loop is driven by a fake stream; JSON Lines output is sna
 
 ### Phase 6 — Interactive shell
 
-- **T6.1 JLine REPL.** History, completion for commands and peers, prompt showing the current chat,
+- [x] **T6.1 JLine REPL.** History, completion for commands and peers, prompt showing the current chat,
   and line editing. One shell that dispatches to the same use cases as the one-shot commands.
-- **T6.2 Shell workflow.** `open <peer>`, `list`, `read`, `send`, `reply`, `back`, `quit`, and a
+- [x] **T6.2 Shell workflow.** `open <peer>`, `list`, `read`, `send`, `reply`, `back`, `quit`, and a
   compact message view that keeps the last N messages of the current chat.
 
 Acceptance: the shell is unit-tested through its command dispatcher with a fake terminal.

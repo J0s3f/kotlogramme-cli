@@ -15,6 +15,7 @@ import org.kotlogramme.cli.adapter.cli.DeleteCommand
 import org.kotlogramme.cli.adapter.cli.DialogsCommand
 import org.kotlogramme.cli.adapter.cli.DoctorCommand
 import org.kotlogramme.cli.adapter.cli.EditCommand
+import org.kotlogramme.cli.adapter.cli.FoldersCommand
 import org.kotlogramme.cli.adapter.cli.ForwardCommand
 import org.kotlogramme.cli.adapter.cli.HistoryCommand
 import org.kotlogramme.cli.adapter.cli.KickCommand
@@ -27,6 +28,7 @@ import org.kotlogramme.cli.adapter.cli.PinCommand
 import org.kotlogramme.cli.adapter.cli.ReactCommand
 import org.kotlogramme.cli.adapter.cli.SearchCommand
 import org.kotlogramme.cli.adapter.cli.SendCommand
+import org.kotlogramme.cli.adapter.cli.ShellCommand
 import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
@@ -78,6 +80,8 @@ fun main(args: Array<String>) {
             MembersCommand(),
             KickCommand(),
             ListenCommand(),
+            FoldersCommand(),
+            ShellCommand(),
         )
         .main(args)
 }

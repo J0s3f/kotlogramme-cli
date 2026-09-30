@@ -3,6 +3,17 @@
 User-facing features that actually ship, newest first. A feature appears here once it is usable, not
 when it is planned. See [`plan.md`](plan.md) for what is coming.
 
+## Interactive shell and folders (Phases 6 and 7)
+
+- `shell` — starts an interactive, readline-style session. It completes command names and peer
+  references, keeps a history file under the config directory, shows the current chat in the prompt
+  and keeps the last messages of that chat in view. Commands: `help`, `dialogs`/`list`,
+  `open <peer>`, `read [--limit N]`, `send <text...>`, `reply <id> <text...>`, `contacts`,
+  `search <query>`, `quit`/`exit`. It dispatches to the same use cases as the one-shot commands, so
+  anything available there is available in the shell.
+- `folders` — lists the account's dialog folders with their kind and how many peers each pins,
+  includes or excludes.
+
 ## Reading and writing (Phases 2 and 3)
 
 A `<peer>` is an `@username`, a numeric dialog id or a Telegram invite link; the same resolution is

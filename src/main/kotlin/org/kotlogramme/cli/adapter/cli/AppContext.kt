@@ -11,6 +11,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramChatGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramChatOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramContactGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramContactOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramFolderGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramFolderOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageSearchGateway
@@ -26,6 +28,7 @@ import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
 import org.kotlogramme.cli.application.port.api.ListDialogs
+import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.Listen
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
@@ -38,6 +41,7 @@ import org.kotlogramme.cli.application.service.AuthenticateService
 import org.kotlogramme.cli.application.service.ChatMembersService
 import org.kotlogramme.cli.application.service.ContactsService
 import org.kotlogramme.cli.application.service.ListDialogsService
+import org.kotlogramme.cli.application.service.ListFoldersService
 import org.kotlogramme.cli.application.service.ListenService
 import org.kotlogramme.cli.application.service.MessageWritingService
 import org.kotlogramme.cli.application.service.ReadHistoryService
@@ -64,6 +68,7 @@ class AppContext(
     private val contactsFactory: (AppConfig) -> Contacts = ::defaultContacts,
     private val searchMessagesFactory: (AppConfig) -> SearchMessages = ::defaultSearchMessages,
     private val chatMembersFactory: (AppConfig) -> ChatMembers = ::defaultChatMembers,
+    private val listFoldersFactory: (AppConfig) -> ListFolders = ::defaultListFolders,
     private val listenFactory: (AppConfig) -> Listen = ::defaultListen,
 ) {
     /** The configuration as it is on disk right now. */
@@ -106,6 +111,9 @@ class AppContext(
 
     /** The chat-membership use case, with the same missing-credentials error as [authenticate]. */
     fun chatMembers(): ChatMembers = chatMembersFactory(configured())
+
+    /** The dialog-folder use case, with the same missing-credentials error as [authenticate]. */
+    fun listFolders(): ListFolders = listFoldersFactory(configured())
 
     /** The update-following use case, with the same missing-credentials error as [authenticate]. */
     fun listen(): Listen = listenFactory(configured())
@@ -209,6 +217,9 @@ private fun defaultChatMembers(config: AppConfig): ChatMembers {
 
 private fun defaultListen(config: AppConfig): Listen =
     ListenService(KotlogramUpdateSource(KotlogramUpdateOperations(clientFor(config))))
+
+private fun defaultListFolders(config: AppConfig): ListFolders =
+    ListFoldersService(KotlogramFolderGateway(KotlogramFolderOperations(clientFor(config))))
 
 
 private fun clientFor(config: AppConfig) =
