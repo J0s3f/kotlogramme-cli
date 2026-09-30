@@ -18,6 +18,9 @@ internal class KotlogramParticipantGateway(
         operations.participants(resolver.resolve(reference), limit)
             .map { it.toParticipant() }
 
+    override fun invite(reference: String, userReference: String) =
+        operations.invite(resolver.resolve(reference), resolver.resolve(userReference))
+
     override fun kick(reference: String, userReference: String) =
         operations.kick(resolver.resolve(reference), resolver.resolve(userReference))
 }

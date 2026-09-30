@@ -11,6 +11,11 @@ class ChatMembersService(private val gateway: ParticipantGateway) : ChatMembers 
         return gateway.participants(reference, limit)
     }
 
+    override fun invite(reference: String, userReference: String) {
+        require(userReference.isNotBlank()) { "user reference must not be blank" }
+        gateway.invite(reference, userReference)
+    }
+
     override fun kick(reference: String, userReference: String) {
         require(userReference.isNotBlank()) { "user reference must not be blank" }
         gateway.kick(reference, userReference)

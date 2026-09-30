@@ -43,20 +43,43 @@ class KotlogramParticipantGatewayTest {
         assertEquals(listOf("club", "ada"), chatOperations.resolvedUsernames)
         assertEquals(listOf(KickCall(chatPeer, userPeer)), operations.kicks)
     }
+
+    @Test
+    fun `invite resolves both the chat and the user before adding them`() {
+        val chatPeer = peer(id = -9, kind = "channel", name = "The Club", megagroup = true)
+        val userPeer = peer(id = 1, kind = "user", username = "ada", name = "Ada")
+        val chatOperations = FakeParticipantChatOperations().apply {
+            peers["club"] = chatPeer
+            peers["ada"] = userPeer
+        }
+        val operations = FakeParticipantOperations()
+
+        KotlogramParticipantGateway(operations, ChatReferenceResolver(chatOperations)).invite("@club", "@ada")
+
+        assertEquals(listOf("club", "ada"), chatOperations.resolvedUsernames)
+        assertEquals(listOf(InviteCall(chatPeer, userPeer)), operations.invites)
+    }
 }
 
 internal data class ParticipantCall(val peer: TelegramPeer, val limit: Int)
 
 internal data class KickCall(val peer: TelegramPeer, val user: TelegramPeer)
 
+internal data class InviteCall(val peer: TelegramPeer, val user: TelegramPeer)
+
 internal class FakeParticipantOperations : FacadeParticipantOperations {
     var page: List<FacadeParticipant> = emptyList()
     val calls = mutableListOf<ParticipantCall>()
     val kicks = mutableListOf<KickCall>()
+    val invites = mutableListOf<InviteCall>()
 
     override fun participants(peer: TelegramPeer, limit: Int): List<FacadeParticipant> {
         calls += ParticipantCall(peer, limit)
         return page
+    }
+
+    override fun invite(peer: TelegramPeer, user: TelegramPeer) {
+        invites += InviteCall(peer, user)
     }
 
     override fun kick(peer: TelegramPeer, user: TelegramPeer) {

@@ -27,6 +27,25 @@ class ChatMembersServiceTest {
     }
 
     @Test
+    fun `invite passes both references through`() {
+        val gateway = FakeParticipantGateway()
+
+        ChatMembersService(gateway).invite("@club", "@ada")
+
+        assertEquals(listOf(MemberKick("@club", "@ada")), gateway.invites)
+    }
+
+    @Test
+    fun `invite rejects a blank user before the gateway`() {
+        val gateway = FakeParticipantGateway()
+        val service = ChatMembersService(gateway)
+
+        assertFailsWith<IllegalArgumentException> { service.invite("@club", "") }
+        assertFailsWith<IllegalArgumentException> { service.invite("@club", "   ") }
+        assertEquals(emptyList(), gateway.invites)
+    }
+
+    @Test
     fun `rejects a non-positive limit before the gateway`() {
         val gateway = FakeParticipantGateway()
         val service = ChatMembersService(gateway)
@@ -49,11 +68,16 @@ class ChatMembersServiceTest {
     private class FakeParticipantGateway : ParticipantGateway {
         var members: List<Participant> = emptyList()
         val listCalls = mutableListOf<MemberCall>()
+        val invites = mutableListOf<MemberKick>()
         val kicks = mutableListOf<MemberKick>()
 
         override fun participants(reference: String, limit: Int): List<Participant> {
             listCalls += MemberCall(reference, limit)
             return members
+        }
+
+        override fun invite(reference: String, userReference: String) {
+            invites += MemberKick(reference, userReference)
         }
 
         override fun kick(reference: String, userReference: String) {

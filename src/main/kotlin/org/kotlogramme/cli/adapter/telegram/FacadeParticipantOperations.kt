@@ -17,4 +17,7 @@ internal interface FacadeParticipantOperations {
 
     /** Removes [user] from [peer], which is `channelsKickParticipant`. */
     fun kick(peer: TelegramPeer, user: TelegramPeer)
+
+    /** Adds [user] to [peer], which is `channelsInviteToChannel`. */
+    fun invite(peer: TelegramPeer, user: TelegramPeer)
 }

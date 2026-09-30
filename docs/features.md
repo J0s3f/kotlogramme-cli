@@ -59,8 +59,9 @@ trace.
 - `contacts [--limit <n>]` — lists the account's contacts with their username and phone number.
 - `search <query> [--in <peer>] [--limit <n>] [--total]` — searches message text, globally or in one
   chat; `--total` prints just the number of matches.
-- `members <peer> [--limit <n>]` — lists a chat's members with their role.
-- `kick <peer> <user>` — removes a member from a chat.
+- `members <peer> [--limit <n>]` - lists a chat's members with their role.
+- `invite <peer> <user>` - adds a member to a channel, supergroup or group.
+- `kick <peer> <user>` - removes a member from a chat.
 - `listen [--once] [--json]` — follows the live update stream, printing each update as it arrives.
   `--once` stops after the first update, which is what makes it scriptable; `--json` prints one JSON
   object per line; Ctrl-C ends the stream cleanly instead of killing the process mid-print.

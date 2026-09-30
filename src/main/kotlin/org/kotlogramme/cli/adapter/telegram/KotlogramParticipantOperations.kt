@@ -10,4 +10,6 @@ internal class KotlogramParticipantOperations(private val client: TelegramClient
         client.channelsGetParticipants(peer, limit)
 
     override fun kick(peer: TelegramPeer, user: TelegramPeer) = client.channelsKickParticipant(peer, user)
+
+    override fun invite(peer: TelegramPeer, user: TelegramPeer) = client.channelsInviteToChannel(peer, user)
 }

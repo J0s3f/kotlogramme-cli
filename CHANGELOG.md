@@ -14,7 +14,7 @@ Initial project.
   placeholders.
 - `send`, `edit`, `delete`, `forward`, `pin`/`unpin`, `react`/`unreact`, `mark-read`; `send` accepts
   its body on stdin via `-`.
-- `contacts`, `search` (global or `--in <peer>`, with `--total`), `members`/`kick`.
+- `contacts`, `search` (global or `--in <peer>`, with `--total`), `members`/`invite`/`kick`.
 - `folders`, and `listen` — follow live updates with `--once` and `--json` (one JSON object per
   line), exiting cleanly on Ctrl-C.
 - `shell` — an interactive REPL with history, completion for commands and peers, a current-chat

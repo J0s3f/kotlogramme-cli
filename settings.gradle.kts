@@ -8,5 +8,10 @@ plugins {
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        // -PuseMavenLocal resolves a locally published kotlogramme while the facade and the client
+        // are developed together; CI and ordinary builds stay on Maven Central.
+        if (gradle.startParameter.projectProperties.containsKey("useMavenLocal")) {
+            mavenLocal()
+        }
     }
 }

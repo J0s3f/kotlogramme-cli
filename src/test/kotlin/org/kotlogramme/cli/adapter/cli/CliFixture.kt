@@ -182,11 +182,16 @@ internal data class MemberCall(val reference: String, val limit: Int)
 /** A [ChatMembers] returning canned members and recording every request. */
 internal class FakeChatMembers(private val members: List<Participant> = emptyList()) : ChatMembers {
     val lists = mutableListOf<MemberCall>()
+    val invites = mutableListOf<Pair<String, String>>()
     val kicks = mutableListOf<Pair<String, String>>()
 
     override fun list(reference: String, limit: Int): List<Participant> {
         lists += MemberCall(reference, limit)
         return members
+    }
+
+    override fun invite(reference: String, userReference: String) {
+        invites += reference to userReference
     }
 
     override fun kick(reference: String, userReference: String) {
