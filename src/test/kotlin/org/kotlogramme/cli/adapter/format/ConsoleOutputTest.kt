@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ConsoleOutputTest {
     private fun render(format: OutputFormat, block: ConsoleOutput.() -> Unit): String {
@@ -58,6 +59,21 @@ class ConsoleOutputTest {
         }
 
         assertEquals("""[{"id":"1","name":""}]""", rendered)
+    }
+
+    @Test
+    fun `a cell carrying ansi styling is padded by its visible width`() {
+        val styled = "\u001B[1mbold\u001B[22m"
+
+        val rendered = render(OutputFormat.TABLE) {
+            table(listOf("name"), listOf(listOf(styled)))
+        }
+        val lines = rendered.lines()
+
+        assertTrue(rendered.contains("\u001B[1m"))
+        // The escapes must not count towards the column, or the border would be too wide.
+        assertEquals(1, lines.map(::visibleLength).distinct().size)
+        assertEquals("| bold |", lines[3].replace(Regex("\u001B\\[[0-9;]*m"), ""))
     }
 
     @Test

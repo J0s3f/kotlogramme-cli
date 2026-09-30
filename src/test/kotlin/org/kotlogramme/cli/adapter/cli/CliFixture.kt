@@ -642,7 +642,7 @@ internal fun cliFixture(
         inlineFactory = { inline },
         sendMediaFactory = { sendMedia },
     )
-    val root = KotlogrammeCommand { context }
+    val root = KotlogrammeCommand { _, _ -> context }
         .subcommands(
             ConfigCommand(),
             LoginCommand(),

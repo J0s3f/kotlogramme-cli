@@ -34,7 +34,7 @@ class InlineCommand : CliktCommand(name = "inline") {
         val answer = rejectInvalidInput { appContext.inline().query(bot, query, inChat) }
         appContext.output.renderInlineResults(answer)
         sendChosenResult(answer).let { messages ->
-            if (messages.isNotEmpty()) appContext.output.renderMessages(messages)
+            if (messages.isNotEmpty()) appContext.output.renderMessages(messages, appContext.messageStyler)
         }
     }
 

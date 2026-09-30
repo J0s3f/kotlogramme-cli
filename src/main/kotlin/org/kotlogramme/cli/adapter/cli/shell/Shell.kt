@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.cli.shell
 
+import org.kotlogramme.cli.adapter.format.MessageStyler
 import org.kotlogramme.cli.adapter.format.renderChats
 import org.kotlogramme.cli.adapter.format.renderContacts
 import org.kotlogramme.cli.adapter.format.renderFolders
@@ -29,6 +30,7 @@ class Shell(
     private val lines: LineSource,
     private val output: Output,
     private val useCases: ShellUseCases,
+    private val messageStyler: MessageStyler = MessageStyler.PLAIN,
 ) {
     private var currentChat: Chat? = null
     private val transcript = ArrayDeque<Message>()
@@ -100,7 +102,7 @@ class Shell(
         val chat = requireChat() ?: return
         val limit = readLimit(arguments) ?: return
         remember(useCases.readHistory().read(chat.reference, limit, beforeMessageId = null))
-        output.renderMessages(orderedTranscript())
+        output.renderMessages(orderedTranscript(), messageStyler)
     }
 
     private fun send(arguments: List<String>, replyToMessageId: Int?) {
@@ -112,7 +114,7 @@ class Shell(
         }
         val sent = useCases.messageWriter().sendText(chat.reference, text, replyToMessageId, silent = false)
         remember(listOf(sent))
-        output.renderMessages(listOf(sent))
+        output.renderMessages(listOf(sent), messageStyler)
     }
 
     private fun reply(arguments: List<String>) {
@@ -135,7 +137,10 @@ class Shell(
             return
         }
         val scope = currentChat?.reference
-        output.renderMessages(useCases.searchMessages().search(scope, query, TRANSCRIPT_LIMIT))
+        output.renderMessages(
+            useCases.searchMessages().search(scope, query, TRANSCRIPT_LIMIT),
+            messageStyler,
+        )
     }
 
     private fun listStickerSets() {
@@ -162,7 +167,7 @@ class Shell(
         }
         val sent = useCases.stickers().send(chat.reference, set, index)
         remember(listOf(sent))
-        output.renderMessages(listOf(sent))
+        output.renderMessages(listOf(sent), messageStyler)
     }
 
     /**
@@ -204,7 +209,7 @@ class Shell(
             return
         }
         remember(listOf(sent))
-        output.renderMessages(listOf(sent))
+        output.renderMessages(listOf(sent), messageStyler)
     }
 
     private fun listMembers(arguments: List<String>) {

@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.obj
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.path
@@ -49,12 +50,19 @@ import kotlin.system.exitProcess
 
 /** The root of the command tree. Every user-facing command hangs off this. */
 class KotlogrammeCommand(
-    private val appContextFactory: (Path?) -> AppContext = { AppContext.create(it) },
+    private val appContextFactory: (Path?, Boolean) -> AppContext = { directory, noColor ->
+        AppContext.create(directory, noColor)
+    },
 ) : CliktCommand(name = "kotlogramme") {
     private val configDir by option(
         "--config-dir",
         help = "Use this directory instead of the platform default",
     ).path()
+
+    private val noColor by option(
+        "--no-color",
+        help = "Never style message text with ANSI colour (as NO_COLOR does)",
+    ).flag()
 
     init {
         // A chat reference is `@username`, so `@` must not be read as an argument file.
@@ -64,7 +72,7 @@ class KotlogrammeCommand(
     }
 
     override fun run() {
-        currentContext.obj = appContextFactory(configDir)
+        currentContext.obj = appContextFactory(configDir, noColor)
     }
 }
 

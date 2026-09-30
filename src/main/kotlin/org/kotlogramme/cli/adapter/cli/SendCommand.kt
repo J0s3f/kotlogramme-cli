@@ -30,7 +30,7 @@ class SendCommand : CliktCommand(name = "send") {
     override fun run() {
         val body = messageText()
         val sent = rejectInvalidInput { appContext.messageWriter().sendText(peer, body, replyTo, silent) }
-        appContext.output.renderMessages(listOf(sent))
+        appContext.output.renderMessages(listOf(sent), appContext.messageStyler)
     }
 
     private fun messageText(): String =

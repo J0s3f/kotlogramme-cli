@@ -11,8 +11,9 @@ import java.io.PrintStream
  * Renders command output to a stream in the configured format.
  *
  * Deliberately dependency-free in its rendering: tables are drawn here so the output is identical
- * across terminals and easy to assert in tests. Colour, where it is added later, belongs to a
- * presentation layer above this one.
+ * across terminals and easy to assert in tests. A cell may already carry ANSI styling from the
+ * renderer above; the escapes are ignored when a column is measured and padded so the border cannot
+ * drift, and nothing here adds styling of its own.
  */
 class ConsoleOutput(
     private val format: OutputFormat,
@@ -34,7 +35,7 @@ class ConsoleOutput(
     private fun asciiTable(headers: List<String>, rows: List<List<String>>) {
         val columnCount = maxOf(headers.size, rows.maxOfOrNull(List<String>::size) ?: 0)
         val widths = (0 until columnCount).map { column ->
-            (listOf(headers) + rows).maxOf { row -> cell(row, column).length }
+            (listOf(headers) + rows).maxOf { row -> visibleLength(cell(row, column)) }
         }
         val border = widths.joinToString(separator = "+", prefix = "+", postfix = "+") { "-".repeat(it + 2) }
         line(border)
@@ -46,7 +47,8 @@ class ConsoleOutput(
 
     private fun rowFor(row: List<String>, widths: List<Int>): String =
         widths.indices.joinToString(separator = "|", prefix = "|", postfix = "|") { column ->
-            " " + cell(row, column).padEnd(widths[column]) + " "
+            val cell = cell(row, column)
+            " " + cell + " ".repeat(widths[column] - visibleLength(cell)) + " "
         }
 
     private fun delimitedTable(headers: List<String>, rows: List<List<String>>, separator: String) {

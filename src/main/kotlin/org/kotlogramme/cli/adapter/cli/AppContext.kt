@@ -4,6 +4,9 @@ import com.github.ajalt.clikt.core.CliktError
 import org.kotlogramme.cli.adapter.config.ConfigPaths
 import org.kotlogramme.cli.adapter.config.JsonConfigStore
 import org.kotlogramme.cli.adapter.format.ConsoleOutput
+import org.kotlogramme.cli.adapter.format.MessageStyler
+import org.kotlogramme.cli.adapter.format.colorEnabled
+import org.kotlogramme.cli.adapter.format.messageStylerFor
 import org.kotlogramme.cli.adapter.media.FileMediaProbe
 import org.kotlogramme.cli.adapter.telegram.ChatReferenceResolver
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountGateway
@@ -32,6 +35,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramStickerGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramStickerOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateSource
+import org.kotlogramme.cli.adapter.telegram.KotlogramUserGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramUserOperations
 import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
 import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
@@ -79,6 +84,8 @@ class AppContext(
     private val configStore: ConfigStore,
     val output: Output,
     private val environment: Map<String, String>,
+    /** The entity renderer History and the shell use; plain everywhere else by default. */
+    val messageStyler: MessageStyler = MessageStyler.PLAIN,
     private val authenticateFactory: (AppConfig) -> Authenticate = ::defaultAuthenticate,
     private val listDialogsFactory: (AppConfig) -> ListDialogs = ::defaultListDialogs,
     private val readHistoryFactory: (AppConfig) -> ReadHistory = ::defaultReadHistory,
@@ -180,19 +187,25 @@ class AppContext(
          * Telegram client behind every use case.
          *
          * [configDir] is the `--config-dir` override; when it is null [ConfigPaths] falls back to
-         * the platform default.
+         * the platform default. [noColor] is the `--no-color` flag. Colour is emitted only for the
+         * table format, on a terminal, with `NO_COLOR` unset and the flag off; the JSON and plain
+         * formats never carry escapes.
          */
         fun create(
             configDir: Path? = null,
+            noColor: Boolean = false,
             environment: Map<String, String> = System.getenv(),
         ): AppContext {
             val dir = ConfigPaths(configDirOverride = configDir?.toString()).baseDir()
             val configStore = JsonConfigStore(dir)
+            val format = configStore.load().outputFormat
+            val color = colorEnabled(noColor, environment, terminal = System.console() != null)
             return AppContext(
                 configDir = dir,
                 configStore = configStore,
-                output = ConsoleOutput(configStore.load().outputFormat),
+                output = ConsoleOutput(format),
                 environment = environment,
+                messageStyler = messageStylerFor(format, color),
             )
         }
     }
@@ -217,6 +230,7 @@ private fun defaultReadHistory(config: AppConfig): ReadHistory {
     val chatOperations = KotlogramChatOperations(client)
     return ReadHistoryService(
         KotlogramMessageGateway(chatOperations, KotlogramMessageOperations(client)),
+        KotlogramUserGateway(KotlogramUserOperations(client)),
     )
 }
 

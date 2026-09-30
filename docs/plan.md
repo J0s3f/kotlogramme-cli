@@ -198,8 +198,8 @@ own acceptance check rather than a build tweak.
   `folders`, with `help` and the completer updated; the send and lookup commands act on the current
   chat the prompt shows. `9897d46`.
 - [x] **T9.3 `via` column.** The message view shows the inline bot a message came through beside
-  `from`. The facade projects only a numeric `viaBotId`, so the column shows a bare id today; the
-  renderer falls back to `@username` if the facade ever supplies one. `1a31732`.
+  `from`. At this release the facade projected only a numeric `viaBotId`, so the column showed a bare
+  id; T10.2 resolves it to `@username`. `1a31732`.
 - [x] **T9.4 Media reply and silent.** `send-file`, `send-media-url` and `copy-media` gained
   `--reply-to <id>` and `--silent`, threaded through `SendMedia`/`MediaGateway` to the facade's
   `mediaSend`/`mediaSendUrl`/`mediaCopy`. `25f970c`.
@@ -209,6 +209,24 @@ own acceptance check rather than a build tweak.
   fat jar's size. `60916ea`.
 - [x] **T9.6 Documentation.** These five changes recorded in `docs/features.md`,
   `docs/decisions.md`, this plan, `CHANGELOG.md` and `README.md`.
+
+### Phase 10 — Consuming `kotlogramme` 0.7.0
+
+- [x] **T10.1 Received formatting.** The domain `Message` carries the facade's `entities`, mapped by
+  `MessageMapper`. A `MessageStyler` renders them in the table's text column: the terminal-expressible
+  kinds become ANSI styles, a spoiler is masked with blocks rather than printed, an out-of-range span
+  is ignored, and colour is emitted only for the table format on a terminal with neither `NO_COLOR`
+  nor `--no-color`. Columns are measured and padded by visible width, so styling never moves the
+  borders.
+- [x] **T10.2 Inline-bot resolution.** A `UserGateway` port, with a kotlogramme adapter, turns the
+  distinct `viaBotId`s of a history page into `@username` in one batched `usersGetUsers` call; a
+  failure or an unresolved id falls back to the numeric id without failing the command. Only the
+  history path pays for the lookup.
+- [x] **T10.3 Facade bump.** `kotlogrammeVersion` moves to `0.7.0`.
+
+Acceptance: the offline suite covers the styling (alignment, colour on/off, masking, out-of-range),
+the batched lookup (resolution, fallback, failure) and the JSON shape; the client still builds
+against the published facade. Verified offline; the live pass is run by the orchestrator.
 
 ## Verification strategy
 

@@ -3,11 +3,14 @@ package org.kotlogramme.cli.adapter.format
 import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
+import org.kotlogramme.cli.domain.MessageEntity
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class MessageRenderingTest {
     private val messages = listOf(
@@ -88,6 +91,64 @@ class MessageRenderingTest {
                 """"reply":"","media":"","action":"pinned a message","text":""}]""",
             rendered,
         )
+    }
+
+    @Test
+    fun `a styled message stays aligned with an unstyled one`() {
+        val plain = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "hello bold world",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+        )
+        val styled = plain.copy(entities = listOf(MessageEntity("bold", 6, 4)))
+
+        val rendered = render(OutputFormat.TABLE) {
+            renderMessages(listOf(plain, styled), MessageStyler.table(color = true))
+        }
+        val lines = rendered.lines()
+
+        assertTrue(rendered.contains("\u001B[1m"), rendered)
+        // The escapes must not count towards a column, or every border would drift.
+        assertEquals(1, lines.map(::visibleLength).distinct().size, rendered)
+        assertEquals(lines[3], lines[4].replace(Regex("\u001B\\[[0-9;]*m"), ""))
+    }
+
+    @Test
+    fun `colour off renders the same row without escapes`() {
+        val message = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "hello bold world",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            entities = listOf(MessageEntity("bold", 6, 4)),
+        )
+
+        val rendered = render(OutputFormat.TABLE) {
+            renderMessages(listOf(message), MessageStyler.table(color = false))
+        }
+
+        assertFalse(rendered.contains("\u001B"), rendered)
+        assertTrue(rendered.contains("hello bold world"), rendered)
+    }
+
+    @Test
+    fun `json carries the raw text without escapes`() {
+        val message = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "hi",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            entities = listOf(MessageEntity("bold", 0, 2), MessageEntity("spoiler", 0, 2)),
+        )
+
+        val rendered = render(OutputFormat.JSON) { renderMessages(listOf(message)) }
+
+        assertFalse(rendered.contains("\u001B"), rendered)
+        assertTrue(rendered.contains("\"text\":\"hi\""), rendered)
     }
 
     @Test

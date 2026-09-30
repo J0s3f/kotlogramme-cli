@@ -6,6 +6,7 @@ import org.kotlogramme.protocol.ChatPermissions as ProtocolChatPermissions
 import com.github.badoualy.telegram.api.DialogNotifySettings
 import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.Message
+import com.github.badoualy.telegram.api.MessageEntity
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.User
 import org.kotlogramme.protocol.MessageAction
@@ -80,6 +81,7 @@ internal fun message(
     peer: TelegramPeer? = null,
     action: MessageAction? = null,
     viaBotId: Long? = null,
+    entities: List<MessageEntity> = emptyList(),
 ): Message = Message(
     id = id,
     text = text,
@@ -94,6 +96,7 @@ internal fun message(
     peer = peer,
     action = action,
     viaBotId = viaBotId,
+    entities = entities,
 )
 
 private fun telegramPeerConstructor(): Constructor<*> = TelegramPeer::class.java.getDeclaredConstructor(

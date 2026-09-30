@@ -16,8 +16,8 @@ import java.time.format.DateTimeFormatter
 internal val UPDATE_HEADERS = listOf("kind", "chat", "message_id", "from", "time", "text")
 
 /** Prints one update as the configured output format. */
-fun Output.renderUpdate(update: IncomingUpdate) {
-    table(UPDATE_HEADERS, listOf(updateRow(update)))
+fun Output.renderUpdate(update: IncomingUpdate, styler: MessageStyler = MessageStyler.PLAIN) {
+    table(UPDATE_HEADERS, listOf(updateRow(update, styler)))
 }
 
 /** Prints one update as a single JSON object, for one-object-per-line output. */
@@ -26,14 +26,14 @@ fun Output.renderUpdateJson(update: IncomingUpdate) {
 }
 
 /** The row for one [update]; pure so it can be snapshot-tested without an [Output]. */
-internal fun updateRow(update: IncomingUpdate): List<String> = when (update) {
+internal fun updateRow(update: IncomingUpdate, styler: MessageStyler = MessageStyler.PLAIN): List<String> = when (update) {
     is IncomingUpdate.NewMessage -> listOf(
         NEW_MESSAGE_KIND,
         update.chat?.title.orEmpty(),
         update.message.id.toString(),
         update.message.senderName,
         DateTimeFormatter.ISO_INSTANT.format(update.message.sentAt),
-        update.message.text,
+        styler.style(update.message.text, update.message.entities),
     )
     is IncomingUpdate.Other -> listOf(update.kind, "", "", "", "", "")
 }

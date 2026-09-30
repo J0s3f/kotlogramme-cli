@@ -17,12 +17,12 @@ import kotlin.math.roundToInt
 internal val MESSAGE_HEADERS = listOf("id", "time", "from", "via", "reply", "media", "action", "text")
 
 /** Prints the messages as the configured output format. */
-fun Output.renderMessages(messages: List<Message>) {
-    table(MESSAGE_HEADERS, messages.map(::messageRow))
+fun Output.renderMessages(messages: List<Message>, styler: MessageStyler = MessageStyler.PLAIN) {
+    table(MESSAGE_HEADERS, messages.map { messageRow(it, styler) })
 }
 
 /** The row for one [message]; pure so it can be snapshot-tested without an [Output]. */
-internal fun messageRow(message: Message): List<String> = listOf(
+internal fun messageRow(message: Message, styler: MessageStyler = MessageStyler.PLAIN): List<String> = listOf(
     message.id.toString(),
     DateTimeFormatter.ISO_INSTANT.format(message.sentAt),
     message.senderName,
@@ -30,7 +30,7 @@ internal fun messageRow(message: Message): List<String> = listOf(
     message.replyToMessageId?.toString().orEmpty(),
     message.media?.let(::mediaLabel).orEmpty(),
     message.action.orEmpty(),
-    message.text,
+    styler.style(message.text, message.entities),
 )
 
 /**

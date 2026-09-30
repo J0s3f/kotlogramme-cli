@@ -34,10 +34,22 @@ and dimensions (`[video 0:03 320x240]`), an `audio` or `voice` its duration (`[a
 other kind shows just the kind, and a detail the media does not carry is left out rather than shown
 as a placeholder.
 
-A message view also has a `via` column beside `from`, naming the inline bot a message came through.
-The facade projects only the numeric `viaBotId` — grammers 0.8.1 has no `via_bot()` peer accessor
-and carries no user vector to resolve it against — so the column shows a bare id, not `@username`,
-today. The renderer already prints `@username` if a username ever arrives.
+A message's formatting is rendered in the table's text column: `bold`, `italic`, `underline` and
+`strike` use their terminal attribute; `code` and `pre` are cyan; `url` and `textUrl` are underlined
+in blue; `mention`, `mentionName` and the auto-detected kinds (`hashtag`, `cashtag`, `botCommand`,
+`email`, `phone`, `bankCard`) are cyan. A kind a terminal cannot express, such as `blockquote` or a
+custom emoji, is left as plain text. A spoiler has no terminal equivalent, so it is not printed: each
+of its characters becomes a block (`█`), which keeps it hidden and keeps the column aligned. An
+entity whose span is out of range for the text is ignored rather than throwing. Colour is used only
+for the table format on a terminal, and only when neither `NO_COLOR` nor the global `--no-color` flag
+is set; the plain and JSON formats always carry the raw text with no escapes. Because the table
+measures a column by its visible width, the escapes never make the borders drift.
+
+A message view's `via` column names the inline bot a message came through as `@username`. A history
+page resolves the distinct `viaBotId`s on the page in one batched lookup, so the page costs at most
+one extra request. An id Telegram cannot resolve, a user without a username, or a failed lookup
+falls back to the bare numeric id and never fails the command. No other path pays for it: `listen`,
+search and the send commands never do the lookup.
 
 A missing file, a blank URL and a non-positive message id are reported as one-line usage errors, not
 stack traces.

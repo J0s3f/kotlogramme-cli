@@ -2,9 +2,11 @@ package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.Media as FacadeMedia
 import com.github.badoualy.telegram.api.Message as FacadeMessage
+import com.github.badoualy.telegram.api.MessageEntity as FacadeEntity
 import com.github.badoualy.telegram.api.User
 import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
+import org.kotlogramme.cli.domain.MessageEntity
 import java.time.Instant
 
 /**
@@ -26,6 +28,17 @@ internal fun FacadeMessage.toMessage(): Message = Message(
     media = media?.toMediaInfo(),
     action = action?.kind?.let(::serviceAction),
     viaBotId = viaBotId,
+    entities = entities.map { it.toMessageEntity() },
+)
+
+private fun FacadeEntity.toMessageEntity(): MessageEntity = MessageEntity(
+    kind = type,
+    offset = offset,
+    length = length,
+    url = url,
+    userId = userId,
+    language = language,
+    customEmojiId = customEmojiId,
 )
 
 private fun FacadeMedia.toMediaInfo(): MediaInfo = MediaInfo(

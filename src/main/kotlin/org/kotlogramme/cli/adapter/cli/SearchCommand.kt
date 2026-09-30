@@ -29,7 +29,10 @@ class SearchCommand : CliktCommand(name = "search") {
             val matches = rejectInvalidInput { search.total(inPeer, query) }
             appContext.output.line(matches.toString())
         } else {
-            appContext.output.renderMessages(rejectInvalidInput { search.search(inPeer, query, limit) })
+        appContext.output.renderMessages(
+            rejectInvalidInput { search.search(inPeer, query, limit) },
+            appContext.messageStyler,
+        )
         }
     }
 

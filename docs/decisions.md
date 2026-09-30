@@ -135,3 +135,25 @@ revision, so it would unblock this release and likely fail the next grammers bum
 intermittently returning 503 to the runners, which is a transient failure to retry, not a reason to
 move onto a dead mirror. The client's own release does not depend on this: it resolves the facade
 from Maven Central.
+
+## 0011 — Render formatting only in the table, and mask spoilers
+
+**Decision.** A received message's entities are carried into the domain and rendered as ANSI styling
+in the table's text column only. Colour is emitted only when the format is the table, stdout is a
+terminal, `NO_COLOR` is unset and `--no-color` is off. A spoiler is rendered as a run of `█` of the
+same length; an out-of-range span is dropped. The table measures a column by its *visible* width
+(ANSI SGR sequences excluded) and pads on that, so the borders cannot drift.
+
+**Alternatives.** Rendering styling in every format would put escapes into the JSON and plain output
+that scripts consume, which is wrong for both. Applying `padEnd` to the styled string would count the
+escapes, so the borders would move exactly on the cells that carry formatting. ANSI's concealed mode
+(`SGR 8`) for spoilers renders inconsistently and would make hidden text look selectable; dropping the
+spoiler text silently, or printing it, both mislead. Emitting hyperlinks with OSC 8 was rejected as
+too uneven across terminals for the modest gain.
+
+**Why.** Only the table is a human-facing view, so only it gets escapes. Measuring the visible width
+is a tiny, contained change to `ConsoleOutput` (a regex strip) and makes the invariant — every line
+of a table is its border width — hold for styled and unstyled cells alike. Masking is honest: it says
+there is a spoiler and how long it is without revealing it. `NO_COLOR`, `--no-color` and the terminal
+check are the conventional three ways a user turns colour off, and all three are respected.
+

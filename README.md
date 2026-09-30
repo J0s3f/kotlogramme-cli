@@ -7,11 +7,12 @@ It aims to be two things at once: a genuinely useful, scriptable client for the 
 reference consumer that exercises the whole `kotlogramme` surface so its gaps are found by a real
 application.
 
-> **Status: usable.** Phases 1–8 are implemented: authentication, configuration, dialogs, history,
+> **Status: usable.** Phases 1–9 are implemented: authentication, configuration, dialogs, history,
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline, and the first tagged release,
 > [`v0.1.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.1.0), carrying the fat jar and
-> the distribution. See [`docs/features.md`](docs/features.md) for what ships and
+> the distribution. Received messages render their formatting, and a message's inline bot is
+> resolved to `@username`; see [`docs/features.md`](docs/features.md) for what ships and
 > [`docs/plan.md`](docs/plan.md) for what is left (album sends, media downloads, blocking, and the
 > bot-safe numeric peer lookup).
 

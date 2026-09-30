@@ -12,7 +12,7 @@ version = providers.gradleProperty("version").orElse("0.1.0-SNAPSHOT").get()
 
 // The facade this client exercises. Override with -PkotlogrammeVersion=... while a release is
 // still being validated on Maven Central.
-val kotlogrammeVersion = providers.gradleProperty("kotlogrammeVersion").orElse("0.6.0").get()
+val kotlogrammeVersion = providers.gradleProperty("kotlogrammeVersion").orElse("0.7.0").get()
 
 // This application is not a library anyone links against, so it targets the newest LTS JVM and the
 // newest stable Kotlin rather than the conservative versions the facade is bound to.

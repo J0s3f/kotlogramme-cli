@@ -58,7 +58,7 @@ class SendFileCommand : CliktCommand(name = "send-file") {
             }
             send()
         }
-        appContext.output.renderMessages(listOf(message))
+        appContext.output.renderMessages(listOf(message), appContext.messageStyler)
     }
 
     private fun send() =
@@ -143,7 +143,7 @@ class SendMediaUrlCommand : CliktCommand(name = "send-media-url") {
             require(url.isNotBlank()) { "url must not be blank" }
             appContext.sendMedia().sendUrl(peer, url, caption, photo, replyTo, silent)
         }
-        appContext.output.renderMessages(listOf(message))
+        appContext.output.renderMessages(listOf(message), appContext.messageStyler)
     }
 }
 
@@ -161,6 +161,6 @@ class CopyMediaCommand : CliktCommand(name = "copy-media") {
         val message = rejectInvalidInput {
             appContext.sendMedia().copyMedia(peer, messageId, caption, replyTo, silent)
         }
-        appContext.output.renderMessages(listOf(message))
+        appContext.output.renderMessages(listOf(message), appContext.messageStyler)
     }
 }

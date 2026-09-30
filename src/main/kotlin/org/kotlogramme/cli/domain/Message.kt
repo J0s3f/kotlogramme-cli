@@ -19,8 +19,11 @@ data class Message(
     /** The id of the inline bot this message came via, or `null` when it did not come via one. */
     val viaBotId: Long? = null,
     /**
-     * The inline bot's username, when the facade offers one. The facade projects only [viaBotId],
-     * so this is `null` today and the renderer falls back to the numeric id.
+     * The inline bot's username, when it can be resolved. A history page fills this in with one
+     * batched lookup of the distinct [viaBotId]s; it stays `null` when the lookup is skipped, fails
+     * or does not resolve the id, and the renderer then falls back to the numeric id.
      */
     val viaBotUsername: String? = null,
+    /** The formatting entities on [text], empty when the text is unformatted. */
+    val entities: List<MessageEntity> = emptyList(),
 )

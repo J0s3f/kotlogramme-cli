@@ -19,6 +19,6 @@ class ForwardCommand : CliktCommand(name = "forward") {
 
     override fun run() {
         val forwarded = rejectInvalidInput { appContext.messageWriter().forward(fromPeer, messageIds, toPeer) }
-        appContext.output.renderMessages(forwarded)
+        appContext.output.renderMessages(forwarded, appContext.messageStyler)
     }
 }

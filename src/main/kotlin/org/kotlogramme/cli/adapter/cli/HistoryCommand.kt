@@ -17,7 +17,8 @@ class HistoryCommand : CliktCommand(name = "history") {
     private val before by option("--before", help = "Only messages older than this id").int()
 
     override fun run() {
-        appContext.output.renderMessages(appContext.readHistory().read(peer, limit, before))
+        val messages = appContext.readHistory().read(peer, limit, before)
+        appContext.output.renderMessages(messages, appContext.messageStyler)
     }
 
     private companion object {

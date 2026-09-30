@@ -1,8 +1,10 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.Media
+import com.github.badoualy.telegram.api.MessageEntity
 import com.github.badoualy.telegram.api.User
 import org.kotlogramme.cli.domain.MediaInfo
+import org.kotlogramme.cli.domain.MessageEntity as DomainMessageEntity
 import org.kotlogramme.protocol.MessageAction
 import java.time.Instant
 import kotlin.test.Test
@@ -123,5 +125,34 @@ class MessageMapperTest {
 
         assertEquals(99L, mapped.viaBotId)
         assertNull(mapped.viaBotUsername)
+    }
+
+    @Test
+    fun `maps the formatting entities and their extras`() {
+        val mapped = message(
+            id = 1,
+            text = "bold https://example.org code",
+            entities = listOf(
+                MessageEntity("bold", 0, 4),
+                MessageEntity("textUrl", 5, 17, url = "https://example.org"),
+                MessageEntity("code", 23, 4),
+                MessageEntity("mentionName", 27, 3, userId = 77),
+            ),
+        ).toMessage()
+
+        assertEquals(
+            listOf(
+                DomainMessageEntity("bold", 0, 4),
+                DomainMessageEntity("textUrl", 5, 17, url = "https://example.org"),
+                DomainMessageEntity("code", 23, 4),
+                DomainMessageEntity("mentionName", 27, 3, userId = 77),
+            ),
+            mapped.entities,
+        )
+    }
+
+    @Test
+    fun `a message without entities maps to an empty list`() {
+        assertEquals(emptyList(), message(id = 1, text = "plain").toMessage().entities)
     }
 }

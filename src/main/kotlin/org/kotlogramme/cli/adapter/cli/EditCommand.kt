@@ -19,6 +19,6 @@ class EditCommand : CliktCommand(name = "edit") {
         val edited = rejectInvalidInput {
             appContext.messageWriter().edit(peer, messageId, text.joinToString(" "))
         }
-        appContext.output.renderMessages(listOf(edited))
+        appContext.output.renderMessages(listOf(edited), appContext.messageStyler)
     }
 }

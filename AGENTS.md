@@ -47,7 +47,7 @@ The primary development machine is Windows; use PowerShell. CI runs on Linux.
   `settings.gradle.kts` can fetch it on a machine that lacks it.
 - Run the client locally with `.\gradlew.bat run --args="..."` or `./gradlew installDist` and the
   generated `build/install/kotlogramme/bin/kotlogramme`.
-- The dependency is `io.github.j0s3f:kotlogramme` (default `0.2.0`, the current Maven Central
+- The dependency is `io.github.j0s3f:kotlogramme` (default `0.7.0`, the current Maven Central
   release). Override with `-PkotlogrammeVersion=...` to test a different one.
 - Capture full command output to a temp file when you pipe it (`... | Tee-Object -FilePath $env:TEMP\x.log | Select-Object -Last 40`),
   so diagnosing a failure later does not require a rerun.

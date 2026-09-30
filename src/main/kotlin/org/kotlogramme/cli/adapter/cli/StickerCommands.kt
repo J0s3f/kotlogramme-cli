@@ -44,6 +44,6 @@ class SendStickerCommand : CliktCommand(name = "send-sticker") {
         val message = rejectInvalidInput {
             appContext.stickers().send(peer, set, index, replyTo, silent)
         }
-        appContext.output.renderMessages(listOf(message))
+        appContext.output.renderMessages(listOf(message), appContext.messageStyler)
     }
 }

@@ -55,7 +55,11 @@ class ListenCommand : CliktCommand(name = "listen") {
     }
 
     private fun printUpdate(update: IncomingUpdate) {
-        if (json) appContext.output.renderUpdateJson(update) else appContext.output.renderUpdate(update)
+        if (json) {
+            appContext.output.renderUpdateJson(update)
+        } else {
+            appContext.output.renderUpdate(update, appContext.messageStyler)
+        }
     }
 
     private fun removeShutdownHook(hook: Thread) {

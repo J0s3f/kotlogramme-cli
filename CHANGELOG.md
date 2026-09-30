@@ -2,6 +2,27 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## Unreleased
+
+Built on `kotlogramme` 0.7.0.
+
+### Features
+
+- Received messages now show their formatting. In the table's text column, bold, italic, underline,
+  strikethrough, inline `code`, `pre`, links, mentions and the auto-detected kinds (hashtag, command,
+  email, phone, card) are rendered; a kind a terminal cannot express is left plain. A spoiler has no
+  terminal equivalent and is masked with blocks rather than printed, and an entity whose span falls
+  outside the text is ignored instead of throwing. Colour is used only for the table format on a
+  terminal, and `NO_COLOR` or the new global `--no-color` turns it off; the plain and JSON formats
+  stay raw. Columns are measured by visible width, so the styling never moves the borders.
+- The `via` column resolves a message's inline bot to `@username` through one batched lookup of the
+  distinct ids on the page. A failed lookup or an unresolved id falls back to the numeric id and never
+  fails the command; only the history path pays for the lookup, not `listen` or search.
+
+### Project
+
+- The facade dependency moves to `kotlogramme` 0.7.0.
+
 ## 0.1.0 — 2026-09-30
 
 The first tagged release. Built on `kotlogramme` 0.6.0 and published as a GitHub Release
