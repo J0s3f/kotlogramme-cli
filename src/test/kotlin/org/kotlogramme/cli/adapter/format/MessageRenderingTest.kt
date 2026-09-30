@@ -107,6 +107,49 @@ class MessageRenderingTest {
     }
 
     @Test
+    fun `a video label prefers the resolution over the thumbnail dimensions`() {
+        assertEquals(
+            "[video 0:03 1920x1080]",
+            mediaLabel(
+                MediaInfo(
+                    "video",
+                    durationSeconds = 3.0,
+                    width = 320,
+                    height = 240,
+                    resolutionWidth = 1920,
+                    resolutionHeight = 1080,
+                ),
+            ),
+        )
+        assertEquals(
+            "[animation 640x480]",
+            mediaLabel(
+                MediaInfo(
+                    "animation",
+                    width = 160,
+                    height = 120,
+                    resolutionWidth = 640,
+                    resolutionHeight = 480,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `a video falls back to the thumbnail dimensions without a resolution`() {
+        assertEquals(
+            "[video 0:03 320x240]",
+            mediaLabel(MediaInfo("video", durationSeconds = 3.0, width = 320, height = 240)),
+        )
+    }
+
+    @Test
+    fun `a video with neither a resolution nor thumbnail dimensions shows only its kind`() {
+        assertEquals("[video 0:03]", mediaLabel(MediaInfo("video", durationSeconds = 3.0)))
+        assertEquals("[video]", mediaLabel(MediaInfo("video")))
+    }
+
+    @Test
     fun `a missing detail is left out of the label`() {
         assertEquals("[video]", mediaLabel(MediaInfo("video")))
         assertEquals("[photo]", mediaLabel(MediaInfo("photo", width = 320)))

@@ -32,6 +32,8 @@ private fun FacadeMedia.toMediaInfo(): MediaInfo = MediaInfo(
     durationSeconds = duration,
     width = width,
     height = height,
+    resolutionWidth = resolutionWidth,
+    resolutionHeight = resolutionHeight,
     sizeBytes = size,
     name = name,
 )

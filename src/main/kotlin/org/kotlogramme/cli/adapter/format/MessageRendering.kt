@@ -39,7 +39,7 @@ internal fun messageRow(message: Message): List<String> = listOf(
  */
 internal fun mediaLabel(media: MediaInfo): String {
     val details = when (media.kind) {
-        "video", "animation" -> listOfNotNull(media.durationLabel(), media.dimensionsLabel())
+        "video", "animation" -> listOfNotNull(media.durationLabel(), media.videoDimensionsLabel())
         "audio", "voice" -> listOfNotNull(media.durationLabel())
         "photo" -> listOfNotNull(media.dimensionsLabel())
         "document" -> listOfNotNull(media.sizeLabel())
@@ -50,10 +50,16 @@ internal fun mediaLabel(media: MediaInfo): String {
 
 private fun MediaInfo.durationLabel(): String? = durationSeconds?.let(::formatDuration)
 
-private fun MediaInfo.dimensionsLabel(): String? =
-    if (width != null && height != null) "${width}x$height" else null
+private fun MediaInfo.dimensionsLabel(): String? = dimensions(width, height)
+
+/** A video's real resolution, falling back to the thumbnail's size when the resolution is absent. */
+private fun MediaInfo.videoDimensionsLabel(): String? =
+    dimensions(resolutionWidth, resolutionHeight) ?: dimensions(width, height)
 
 private fun MediaInfo.sizeLabel(): String? = sizeBytes?.let(::formatSize)
+
+private fun dimensions(width: Int?, height: Int?): String? =
+    if (width != null && height != null) "${width}x$height" else null
 
 /** `h:mm:ss` once the duration reaches an hour, `m:ss` below it, rounded to whole seconds. */
 internal fun formatDuration(seconds: Double): String {

@@ -25,7 +25,16 @@ class MessageMapperTest {
             date = instant.toEpochMilli(),
             editDate = instant.toEpochMilli() + 1_000,
             pinned = true,
-            media = Media(kind = "video", duration = 12.5, width = 1920, height = 1080, size = 4_000_000, name = "clip.mp4"),
+            media = Media(
+                kind = "video",
+                duration = 12.5,
+                width = 320,
+                height = 240,
+                resolutionWidth = 1920,
+                resolutionHeight = 1080,
+                size = 4_000_000,
+                name = "clip.mp4",
+            ),
             sender = sender,
         ).toMessage()
 
@@ -41,8 +50,10 @@ class MessageMapperTest {
             MediaInfo(
                 kind = "video",
                 durationSeconds = 12.5,
-                width = 1920,
-                height = 1080,
+                width = 320,
+                height = 240,
+                resolutionWidth = 1920,
+                resolutionHeight = 1080,
                 sizeBytes = 4_000_000,
                 name = "clip.mp4",
             ),
