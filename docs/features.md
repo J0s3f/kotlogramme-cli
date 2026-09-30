@@ -42,7 +42,9 @@ custom emoji, is left as plain text. A spoiler has no terminal equivalent, so it
 of its characters becomes a block (`█`), which keeps it hidden and keeps the column aligned. An
 entity whose span is out of range for the text is ignored rather than throwing. Colour is used only
 for the table format on a terminal, and only when neither `NO_COLOR` nor the global `--no-color` flag
-is set; the plain and JSON formats always carry the raw text with no escapes. Because the table
+is set; the global `--color` forces it on for a caller that is not a terminal, such as a pager, and
+`--no-color` wins if both are given. The plain and JSON formats always carry the raw text with no
+escapes. Because the table
 measures a column by its visible width, the escapes never make the borders drift.
 
 A message view's `via` column names the inline bot a message came through as `@username`. A history

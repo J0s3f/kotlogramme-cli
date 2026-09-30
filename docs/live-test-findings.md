@@ -90,3 +90,21 @@ Verified:
 Finding 6 is worth keeping in mind for any future client work: the label a message carries is the
 library's projection, so a client on an older release can look broken while being perfectly correct.
 
+## Fourth pass, after the Phase 10 features
+
+Run against the fat jar from `main`, resolving `kotlogramme` 0.7.0.
+
+- **The `via` column resolves.** Messages 36 and 38, which are inline-bot answers, now read
+  `via @bold` instead of the bare id `107705060`.
+- **A received entity is styled.** Message 41 carries a link Telegram itself added, and with colour
+  forced it renders as `ESC[4;34mhttps://example.com/pageESC[24;39m` — underline and blue — with the
+  table borders exactly where they were. Messages 36 and 38 are the bot's *Italic* answer and render
+  as `ESC[3m…ESC[23m`, so an entity coming from an inline result is projected too, not just one the
+  server generated.
+- **Nothing leaks into a pipe.** Without colour the same rows contain no `ESC` byte at all, which is
+  the property a script consuming the output depends on.
+
+The `--color` flag was added during this pass: piping to `less -R` otherwise lost the styling
+entirely, and a captured shell has no terminal, so it was also the only way to check the rendering
+above. `--no-color` still wins when both are given.
+

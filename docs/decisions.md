@@ -140,7 +140,9 @@ from Maven Central.
 
 **Decision.** A received message's entities are carried into the domain and rendered as ANSI styling
 in the table's text column only. Colour is emitted only when the format is the table, stdout is a
-terminal, `NO_COLOR` is unset and `--no-color` is off. A spoiler is rendered as a run of `█` of the
+terminal, `NO_COLOR` is unset and `--no-color` is off; `--color` forces it on when something other
+than a terminal is consuming the output, such as a pager, and `--no-color` wins over it. A spoiler is
+rendered as a run of `█` of the
 same length; an out-of-range span is dropped. The table measures a column by its *visible* width
 (ANSI SGR sequences excluded) and pads on that, so the borders cannot drift.
 
@@ -155,5 +157,7 @@ too uneven across terminals for the modest gain.
 is a tiny, contained change to `ConsoleOutput` (a regex strip) and makes the invariant — every line
 of a table is its border width — hold for styled and unstyled cells alike. Masking is honest: it says
 there is a spoiler and how long it is without revealing it. `NO_COLOR`, `--no-color` and the terminal
-check are the conventional three ways a user turns colour off, and all three are respected.
+check are the conventional three ways a user turns colour off, and all three are respected; `--color`
+is the matching way to ask for colour when the consumer is a pipe, which is what a pager such as
+`less -R` needs.
 

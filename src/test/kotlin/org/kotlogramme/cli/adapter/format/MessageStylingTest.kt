@@ -94,10 +94,17 @@ class MessageStylingTest {
 
     @Test
     fun `colour is on only with a terminal, no flag and no NO_COLOR`() {
-        assertTrue(colorEnabled(noColor = false, environment = emptyMap(), terminal = true))
-        assertFalse(colorEnabled(noColor = true, environment = emptyMap(), terminal = true))
-        assertFalse(colorEnabled(noColor = false, environment = mapOf("NO_COLOR" to "1"), terminal = true))
-        assertFalse(colorEnabled(noColor = false, environment = emptyMap(), terminal = false))
-        assertTrue(colorEnabled(noColor = false, environment = mapOf("NO_COLOR" to ""), terminal = true))
+        assertTrue(colorEnabled(noColor = false, color = false, environment = emptyMap(), terminal = true))
+        assertFalse(colorEnabled(noColor = true, color = false, environment = emptyMap(), terminal = true))
+        assertFalse(colorEnabled(noColor = false, color = false, environment = mapOf("NO_COLOR" to "1"), terminal = true))
+        assertFalse(colorEnabled(noColor = false, color = false, environment = emptyMap(), terminal = false))
+        assertTrue(colorEnabled(noColor = false, color = false, environment = mapOf("NO_COLOR" to ""), terminal = true))
+    }
+
+    @Test
+    fun `the colour flag forces styling off a terminal, and no-color still wins`() {
+        assertTrue(colorEnabled(noColor = false, color = true, environment = emptyMap(), terminal = false))
+        assertTrue(colorEnabled(noColor = false, color = true, environment = mapOf("NO_COLOR" to "1"), terminal = false))
+        assertFalse(colorEnabled(noColor = true, color = true, environment = emptyMap(), terminal = true))
     }
 }

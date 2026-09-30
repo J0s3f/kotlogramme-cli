@@ -75,7 +75,7 @@ the 39.4 MB fat jar, the real win being startup and no JVM.
 The client depends on the current Maven Central release of the facade. To test a different one:
 
 ```bash
-./gradlew test -PkotlogrammeVersion=0.2.0
+./gradlew test -PkotlogrammeVersion=0.6.0
 ```
 
 ## Documentation
@@ -86,3 +86,9 @@ The client depends on the current Maven Central release of the facade. To test a
 - [`docs/features.md`](docs/features.md) — user-facing features that actually ship.
 - [`docs/native-image.md`](docs/native-image.md) — assessment of a GraalVM native build.
 - [`AGENTS.md`](AGENTS.md) — engineering rules for humans and agents.
+
+## License
+
+This project is licensed under Apache-2.0; see [`LICENSE`](LICENSE). It builds on the
+[`kotlogramme`](https://github.com/J0s3f/kotlogram) facade, which is licensed the same way and which
+in turn depends on grammers (dual-licensed Apache-2.0 or MIT), whose notices remain authoritative.

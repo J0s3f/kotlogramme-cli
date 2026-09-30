@@ -13,7 +13,8 @@ Built on `kotlogramme` 0.7.0.
   email, phone, card) are rendered; a kind a terminal cannot express is left plain. A spoiler has no
   terminal equivalent and is masked with blocks rather than printed, and an entity whose span falls
   outside the text is ignored instead of throwing. Colour is used only for the table format on a
-  terminal, and `NO_COLOR` or the new global `--no-color` turns it off; the plain and JSON formats
+  terminal, and `NO_COLOR` or the new global `--no-color` turns it off, while the new global `--color`
+  forces it on for a caller that is not a terminal, such as a pager; the plain and JSON formats
   stay raw. Columns are measured by visible width, so the styling never moves the borders.
 - The `via` column resolves a message's inline bot to `@username` through one batched lookup of the
   distinct ids on the page. A failed lookup or an unresolved id falls back to the numeric id and never

@@ -125,9 +125,17 @@ internal fun visibleLength(text: String): Int = ANSI_SGR.replace(text, "").lengt
 
 private val ANSI_SGR = Regex("\u001B\\[[0-9;]*m")
 
-/** Whether ANSI colour may be emitted: the flag, `NO_COLOR` and a terminal decide together. */
-internal fun colorEnabled(noColor: Boolean, environment: Map<String, String>, terminal: Boolean): Boolean =
-    !noColor && environment["NO_COLOR"].isNullOrEmpty() && terminal
+/**
+ * Whether ANSI colour may be emitted. `--no-color` wins over everything; an explicit `--color`
+ * turns it on for a caller that is not a terminal, such as a pager that would otherwise lose the
+ * styling; otherwise it takes a terminal with `NO_COLOR` unset.
+ */
+internal fun colorEnabled(
+    noColor: Boolean,
+    color: Boolean,
+    environment: Map<String, String>,
+    terminal: Boolean,
+): Boolean = !noColor && (color || (environment["NO_COLOR"].isNullOrEmpty() && terminal))
 
 /** The styler a command should render messages with for [format]. */
 internal fun messageStylerFor(format: OutputFormat, color: Boolean): MessageStyler = when (format) {

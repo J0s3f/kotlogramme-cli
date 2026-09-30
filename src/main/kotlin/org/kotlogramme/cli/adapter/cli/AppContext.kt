@@ -187,25 +187,27 @@ class AppContext(
          * Telegram client behind every use case.
          *
          * [configDir] is the `--config-dir` override; when it is null [ConfigPaths] falls back to
-         * the platform default. [noColor] is the `--no-color` flag. Colour is emitted only for the
-         * table format, on a terminal, with `NO_COLOR` unset and the flag off; the JSON and plain
-         * formats never carry escapes.
+         * the platform default. [noColor] is the `--no-color` flag and [color] is the `--color` one,
+         * which forces styling for a caller that is not a terminal; `--no-color` wins if both are
+         * given. Otherwise colour is emitted only for the table format, on a terminal, with
+         * `NO_COLOR` unset; the JSON and plain formats never carry escapes.
          */
         fun create(
             configDir: Path? = null,
             noColor: Boolean = false,
+            color: Boolean = false,
             environment: Map<String, String> = System.getenv(),
         ): AppContext {
             val dir = ConfigPaths(configDirOverride = configDir?.toString()).baseDir()
             val configStore = JsonConfigStore(dir)
             val format = configStore.load().outputFormat
-            val color = colorEnabled(noColor, environment, terminal = System.console() != null)
+            val styled = colorEnabled(noColor, color, environment, terminal = System.console() != null)
             return AppContext(
                 configDir = dir,
                 configStore = configStore,
                 output = ConsoleOutput(format),
                 environment = environment,
-                messageStyler = messageStylerFor(format, color),
+                messageStyler = messageStylerFor(format, styled),
             )
         }
     }

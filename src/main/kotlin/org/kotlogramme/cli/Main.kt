@@ -50,8 +50,8 @@ import kotlin.system.exitProcess
 
 /** The root of the command tree. Every user-facing command hangs off this. */
 class KotlogrammeCommand(
-    private val appContextFactory: (Path?, Boolean) -> AppContext = { directory, noColor ->
-        AppContext.create(directory, noColor)
+    private val appContextFactory: (Path?, Boolean, Boolean) -> AppContext = { directory, noColor, color ->
+        AppContext.create(directory, noColor, color)
     },
 ) : CliktCommand(name = "kotlogramme") {
     private val configDir by option(
@@ -61,7 +61,12 @@ class KotlogrammeCommand(
 
     private val noColor by option(
         "--no-color",
-        help = "Never style message text with ANSI colour (as NO_COLOR does)",
+        help = "Never style message text with ANSI colour (as NO_COLOR does, and wins over --color)",
+    ).flag()
+
+    private val color by option(
+        "--color",
+        help = "Style message text with ANSI colour even off a terminal, for a pager such as less -R",
     ).flag()
 
     init {
@@ -72,7 +77,7 @@ class KotlogrammeCommand(
     }
 
     override fun run() {
-        currentContext.obj = appContextFactory(configDir, noColor)
+        currentContext.obj = appContextFactory(configDir, noColor, color)
     }
 }
 

@@ -216,8 +216,8 @@ own acceptance check rather than a build tweak.
   `MessageMapper`. A `MessageStyler` renders them in the table's text column: the terminal-expressible
   kinds become ANSI styles, a spoiler is masked with blocks rather than printed, an out-of-range span
   is ignored, and colour is emitted only for the table format on a terminal with neither `NO_COLOR`
-  nor `--no-color`. Columns are measured and padded by visible width, so styling never moves the
-  borders.
+  nor `--no-color`, or when `--color` forces it on off a terminal. Columns are measured and padded by
+  visible width, so styling never moves the borders.
 - [x] **T10.2 Inline-bot resolution.** A `UserGateway` port, with a kotlogramme adapter, turns the
   distinct `viaBotId`s of a history page into `@username` in one batched `usersGetUsers` call; a
   failure or an unresolved id falls back to the numeric id without failing the command. Only the
