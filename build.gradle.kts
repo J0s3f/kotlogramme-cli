@@ -54,6 +54,28 @@ tasks.test {
     }
 }
 
+// `--version` must report the version this build was produced under, including a release built
+// with `-Pversion=0.1.0`, so bake the project version into a resource the application reads at
+// startup. Without the property the value stays the development default.
+val generatedVersionDir = layout.buildDirectory.dir("generated/version")
+val generateVersionResource = tasks.register("generateVersionResource") {
+    val projectVersion = version.toString()
+    inputs.property("version", projectVersion)
+    outputs.dir(generatedVersionDir)
+    doLast {
+        generatedVersionDir.get().file("kotlogramme-version.properties").asFile.apply {
+            parentFile.mkdirs()
+            writeText("version=$projectVersion\n")
+        }
+    }
+}
+
+sourceSets {
+    main {
+        resources.srcDir(generateVersionResource)
+    }
+}
+
 // A single runnable jar, `build/libs/kotlogramme-all.jar`, that carries every runtime dependency.
 // The facade loads its native library with `ClassLoader.getResourceAsStream`, so the bundled
 // `native/<platform>/...` entries must survive shading at their original paths. Merging
