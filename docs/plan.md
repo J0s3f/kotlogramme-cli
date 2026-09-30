@@ -151,7 +151,9 @@ Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
 
 - **T7.1 Folders.** List and filter by dialog folder; `folders` command.
 - **T7.2 Admin and rights.** Show and edit participant rights.
-- **T7.3 Stickers and inline.** Sticker-set listing; inline query and send.
+- **T7.3 Stickers and inline.** Sticker reads and sends are done (`stickers`, `sticker-set`,
+  `send-sticker`, with the facade at 0.4.0). The inline stack (adapter, service) is implemented but
+  its `inline` command is not wired into the CLI yet.
 - **T7.4 Uploads from streams.** Use `uploadStream` for large files and stdin pipe input.
 - **T7.5 Invite members.** `invite <peer> <user>` over `channels.inviteToChannel` (channels) and
   `messages.addChatUser` (basic groups). Found missing during the live test, where a kicked member

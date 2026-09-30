@@ -32,7 +32,10 @@ import org.kotlogramme.cli.adapter.cli.ReactCommand
 import org.kotlogramme.cli.adapter.cli.RestrictCommand
 import org.kotlogramme.cli.adapter.cli.SearchCommand
 import org.kotlogramme.cli.adapter.cli.SendCommand
+import org.kotlogramme.cli.adapter.cli.SendStickerCommand
 import org.kotlogramme.cli.adapter.cli.ShellCommand
+import org.kotlogramme.cli.adapter.cli.StickerSetCommand
+import org.kotlogramme.cli.adapter.cli.StickersCommand
 import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
@@ -92,6 +95,9 @@ fun main(args: Array<String>) {
                 RestrictCommand(),
                 ListenCommand(),
                 FoldersCommand(),
+                StickersCommand(),
+                StickerSetCommand(),
+                SendStickerCommand(),
                 ShellCommand(),
             )
             .main(args)

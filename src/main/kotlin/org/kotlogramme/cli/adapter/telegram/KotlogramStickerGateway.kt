@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import org.kotlogramme.cli.application.port.spi.StickerGateway
+import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.StickerSet
 
 /**
@@ -14,7 +15,10 @@ import org.kotlogramme.cli.domain.StickerSet
  * triggers the marker; if it ever does, `sets` reports an empty list because no data was carried,
  * while `set` raises a clear error because a single set has no useful empty projection.
  */
-internal class KotlogramStickerGateway(private val operations: FacadeStickerOperations) : StickerGateway {
+internal class KotlogramStickerGateway(
+    private val operations: FacadeStickerOperations,
+    private val resolver: ChatReferenceResolver,
+) : StickerGateway {
     override fun sets(): List<StickerSet> {
         val answer = operations.sets()
         if (answer.notModified) return emptyList()
@@ -29,6 +33,25 @@ internal class KotlogramStickerGateway(private val operations: FacadeStickerOper
             error("sticker set '$reference' came back not modified, so it carries no set")
         }
         return set.toStickerSet()
+    }
+
+    override fun send(
+        chatReference: String,
+        setReference: String,
+        index: Int,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
+        val parsed = parseReference(setReference)
+        return operations.send(
+            resolver.resolve(chatReference),
+            parsed.id,
+            parsed.accessHash,
+            parsed.shortName,
+            index,
+            replyToMessageId,
+            silent,
+        ).toMessage()
     }
 }
 

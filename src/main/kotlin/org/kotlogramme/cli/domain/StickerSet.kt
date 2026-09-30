@@ -24,8 +24,10 @@ data class StickerSet(
     val masks: Boolean = false,
     val emojis: Boolean = false,
     val packs: List<StickerPack> = emptyList(),
+    /** The documents the answer carried, in the order Telegram returned them; `send` indexes this. */
+    val documents: List<Long> = emptyList(),
 ) {
     /** How many stickers this projection actually carries, which is not always [count]. */
     val projectedCount: Int
-        get() = packs.sumOf { it.documentIds.size }
+        get() = documents.ifEmpty { packs.flatMap { it.documentIds } }.size
 }

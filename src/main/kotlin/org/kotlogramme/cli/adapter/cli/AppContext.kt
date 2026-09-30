@@ -23,6 +23,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramSearchOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramStickerGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramStickerOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateSource
 import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
@@ -36,6 +38,7 @@ import org.kotlogramme.cli.application.port.api.Listen
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
+import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
@@ -50,6 +53,7 @@ import org.kotlogramme.cli.application.service.ListenService
 import org.kotlogramme.cli.application.service.MessageWritingService
 import org.kotlogramme.cli.application.service.ReadHistoryService
 import org.kotlogramme.cli.application.service.SearchMessagesService
+import org.kotlogramme.cli.application.service.StickerService
 import java.nio.file.Path
 
 /**
@@ -75,6 +79,7 @@ class AppContext(
     private val adminRightsFactory: (AppConfig) -> AdminRights = ::defaultAdminRights,
     private val listFoldersFactory: (AppConfig) -> ListFolders = ::defaultListFolders,
     private val listenFactory: (AppConfig) -> Listen = ::defaultListen,
+    private val stickersFactory: (AppConfig) -> Stickers = ::defaultStickers,
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -125,6 +130,9 @@ class AppContext(
 
     /** The update-following use case, with the same missing-credentials error as [authenticate]. */
     fun listen(): Listen = listenFactory(configured())
+
+    /** The sticker use case, with the same missing-credentials error as [authenticate]. */
+    fun stickers(): Stickers = stickersFactory(configured())
 
     private fun configured(): AppConfig {
         val config = config()
@@ -236,6 +244,16 @@ private fun defaultListen(config: AppConfig): Listen =
 
 private fun defaultListFolders(config: AppConfig): ListFolders =
     ListFoldersService(KotlogramFolderGateway(KotlogramFolderOperations(clientFor(config))))
+
+private fun defaultStickers(config: AppConfig): Stickers {
+    val client = clientFor(config)
+    return StickerService(
+        KotlogramStickerGateway(
+            KotlogramStickerOperations(client),
+            ChatReferenceResolver(KotlogramChatOperations(client)),
+        ),
+    )
+}
 
 
 private fun clientFor(config: AppConfig) =

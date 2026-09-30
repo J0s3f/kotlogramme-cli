@@ -17,6 +17,8 @@ Initial project.
 - `contacts`, `search` (global or `--in <peer>`, with `--total`), `members`/`invite`/`kick`.
 - `folders`, and `listen` — follow live updates with `--once` and `--json` (one JSON object per
   line), exiting cleanly on Ctrl-C.
+- `stickers`, `sticker-set <set>` and `send-sticker <peer> <set> <index>` — list the installed sets,
+  read one with its stickers numbered, and send one from that list.
 - `shell` — an interactive REPL with history, completion for commands and peers, a current-chat
   prompt, and `open`/`read`/`send`/`reply`/`contacts`/`search`.
 - Global `--config-dir` and `--version`; output as a table, plain text or JSON.

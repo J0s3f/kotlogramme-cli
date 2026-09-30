@@ -24,6 +24,7 @@ internal fun FacadeStickerSet.toStickerSet(): StickerSet = StickerSet(
     masks = masks,
     emojis = emojis,
     packs = packs.map { it.toStickerPack() },
+    documents = documents,
 )
 
 /** Projects a facade pack's `documents` onto the domain's [StickerPack.documentIds]. */

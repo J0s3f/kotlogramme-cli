@@ -65,6 +65,10 @@ trace.
 - `listen [--once] [--json]` — follows the live update stream, printing each update as it arrives.
   `--once` stops after the first update, which is what makes it scriptable; `--json` prints one JSON
   object per line; Ctrl-C ends the stream cleanly instead of killing the process mid-print.
+- `stickers` — lists the installed sticker sets with their short name, title, count and flags.
+- `sticker-set <set>` — shows one set with its stickers numbered, which is the index `send-sticker`
+  takes. The set is named by short name, or `id:accessHash` for one that is not installed.
+- `send-sticker <peer> <set> <index> [--reply-to <id>] [--silent]` — sends one sticker from a set.
 
 ## Diagnostics (Phase 8)
 

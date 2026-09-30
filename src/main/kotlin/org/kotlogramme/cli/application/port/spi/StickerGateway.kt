@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.application.port.spi
 
+import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.StickerSet
 
 /** The sticker operations the facade exposes, in domain terms. */
@@ -9,4 +10,16 @@ interface StickerGateway {
 
     /** One set by short name, or by `id:accessHash`, which is `messagesGetStickerSet`. */
     fun set(reference: String): StickerSet
+
+    /**
+     * Sends the sticker at [index] of the set [setReference] names to the chat [chatReference]
+     * names, which is `sendSticker`.
+     */
+    fun send(
+        chatReference: String,
+        setReference: String,
+        index: Int,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message
 }

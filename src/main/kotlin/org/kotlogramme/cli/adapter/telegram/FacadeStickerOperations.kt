@@ -1,7 +1,9 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.AllStickers
+import com.github.badoualy.telegram.api.Message as FacadeMessage
 import com.github.badoualy.telegram.api.StickerSetResult
+import com.github.badoualy.telegram.api.TelegramPeer
 
 /**
  * The facade sticker calls the sticker gateway needs, narrowed to a seam a test can implement.
@@ -17,4 +19,18 @@ internal interface FacadeStickerOperations {
 
     /** One set by [shortName], or by [id] and [accessHash], which is `messagesGetStickerSet`. */
     fun set(id: Long?, accessHash: Long?, shortName: String?): StickerSetResult
+
+    /**
+     * Sends the sticker at [index] of the set [shortName] or [id]/[accessHash] names, which is
+     * `sendSticker`.
+     */
+    fun send(
+        peer: TelegramPeer,
+        id: Long?,
+        accessHash: Long?,
+        shortName: String?,
+        index: Int,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): FacadeMessage
 }
