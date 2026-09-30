@@ -3,6 +3,28 @@
 User-facing features that actually ship, newest first. A feature appears here once it is usable, not
 when it is planned. See [`plan.md`](plan.md) for what is coming.
 
+## Reading and writing (Phases 2 and 3)
+
+A `<peer>` is an `@username`, a numeric dialog id or a Telegram invite link; the same resolution is
+used by every command.
+
+- `dialogs [--limit <n>]` — lists the conversations, newest first, with the unread count and a
+  pinned marker.
+- `history <peer> [--limit <n>] [--before <messageId>]` — reads a page of a chat's messages with the
+  sender, the time, a reply marker and a media placeholder.
+- `send <peer> <text...> [--reply-to <id>] [--silent]` — sends a text message. Pass `-` as the text
+  to read the whole message from standard input, so `echo hello | kotlogramme send @chat -` works.
+- `edit <peer> <messageId> <text...>` — replaces the text of a message.
+- `delete <peer> <messageId...>` — deletes one or more messages.
+- `forward <fromPeer> <messageId...> --to <toPeer>` — forwards one or more messages.
+- `pin <peer> <messageId>` / `unpin <peer> <messageId>` — pins or unpins a message.
+- `react <peer> <messageId> <emoji>` / `unreact <peer> <messageId>` — adds or removes a reaction.
+- `mark-read <peer>` — marks every message in a chat as read.
+
+Lists honour the configured output format: a padded table, tab-separated plain text or JSON. Bad
+input — a blank message or a non-positive id — is reported as a one-line usage error, not a stack
+trace.
+
 ## Diagnostics (Phase 8)
 
 - `doctor` — checks that the bundled native library can be loaded on this machine. It builds the

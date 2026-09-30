@@ -93,12 +93,12 @@ Acceptance: with a fake gateway, `login` walks phone → code → password and p
 
 ### Phase 2 — Reading
 
-- **T2.1 `Chat` domain + dialog listing.** `ListDialogs` use case over `getDialogs`, paging and
+- [x] **T2.1 `Chat` domain + dialog listing.** `ListDialogs` use case over `getDialogs`, paging and
   totals, projecting title, kind, unread count, pinned/muted/archived flags. CLI `dialogs`
   (`--limit`, `--json`).
 - **T2.2 Chat resolution.** `ResolveChat` over username, id (`--peer`), invite link, or a bare
   `@name`, returning a domain `Chat` used by every other command.
-- **T2.3 Message domain + history.** `ReadHistory` over `getHistory` with paging, projecting sender,
+- [x] **T2.3 Message domain + history.** `ReadHistory` over `getHistory` with paging, projecting sender,
   text, timestamp, edited/pinned flags, reply header, action and media summary. CLI `history`
   (`--limit`, `--before`, `--json`), plus renderers for table/plain/JSON.
 
@@ -107,12 +107,12 @@ snapshot-tested.
 
 ### Phase 3 — Writing
 
-- **T3.1 Send text.** `SendText` with reply-to, silent, schedule, and link-preview control. CLI
+- [x] **T3.1 Send text.** `SendText` with reply-to, silent, schedule, and link-preview control. CLI
   `send <peer> <text...>`, reading from stdin when text is `-`.
-- **T3.2 Edit, delete, forward, pin.** `EditMessage`, `DeleteMessages`, `ForwardMessages`,
+- [x] **T3.2 Edit, delete, forward, pin.** `EditMessage`, `DeleteMessages`, `ForwardMessages`,
   `PinMessage`/`UnpinMessage`, each with CLI commands and tests.
-- **T3.3 Reactions.** `React` / `RemoveReaction` over `sendReactions`.
-- **T3.4 Read receipts and typing.** `MarkRead`, `sendChatAction` used by the interactive shell.
+- [x] **T3.3 Reactions.** `React` / `RemoveReaction` over `sendReactions`.
+- [x] **T3.4 Read receipts and typing.** `MarkRead`, `sendChatAction` used by the interactive shell.
 
 Acceptance: each use case has a fake-gateway test asserting the exact gateway call; CLI commands are
 covered end-to-end against the fake.

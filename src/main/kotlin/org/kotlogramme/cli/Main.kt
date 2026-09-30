@@ -1,6 +1,7 @@
 package org.kotlogramme.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.obj
 import com.github.ajalt.clikt.core.subcommands
@@ -9,9 +10,20 @@ import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.path
 import org.kotlogramme.cli.adapter.cli.AppContext
 import org.kotlogramme.cli.adapter.cli.ConfigCommand
+import org.kotlogramme.cli.adapter.cli.DeleteCommand
+import org.kotlogramme.cli.adapter.cli.DialogsCommand
 import org.kotlogramme.cli.adapter.cli.DoctorCommand
+import org.kotlogramme.cli.adapter.cli.EditCommand
+import org.kotlogramme.cli.adapter.cli.ForwardCommand
+import org.kotlogramme.cli.adapter.cli.HistoryCommand
 import org.kotlogramme.cli.adapter.cli.LoginCommand
 import org.kotlogramme.cli.adapter.cli.LogoutCommand
+import org.kotlogramme.cli.adapter.cli.MarkReadCommand
+import org.kotlogramme.cli.adapter.cli.PinCommand
+import org.kotlogramme.cli.adapter.cli.ReactCommand
+import org.kotlogramme.cli.adapter.cli.SendCommand
+import org.kotlogramme.cli.adapter.cli.UnpinCommand
+import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
 import java.nio.file.Path
 
@@ -24,6 +36,13 @@ class KotlogrammeCommand(
         help = "Use this directory instead of the platform default",
     ).path()
 
+    init {
+        // A chat reference is `@username`, so `@` must not be read as an argument file.
+        context {
+            readArgumentFile = null
+        }
+    }
+
     override fun run() {
         currentContext.obj = appContextFactory(configDir)
     }
@@ -32,6 +51,23 @@ class KotlogrammeCommand(
 fun main(args: Array<String>) {
     KotlogrammeCommand()
         .versionOption(VERSION)
-        .subcommands(ConfigCommand(), LoginCommand(), LogoutCommand(), WhoamiCommand(), DoctorCommand())
+        .subcommands(
+            ConfigCommand(),
+            LoginCommand(),
+            LogoutCommand(),
+            WhoamiCommand(),
+            DoctorCommand(),
+            DialogsCommand(),
+            HistoryCommand(),
+            SendCommand(),
+            EditCommand(),
+            DeleteCommand(),
+            ForwardCommand(),
+            PinCommand(),
+            UnpinCommand(),
+            ReactCommand(),
+            UnreactCommand(),
+            MarkReadCommand(),
+        )
         .main(args)
 }
