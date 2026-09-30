@@ -17,6 +17,7 @@ import org.kotlogramme.cli.application.port.api.LoginStep
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
+import org.kotlogramme.cli.application.port.api.SendMedia
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
@@ -30,6 +31,7 @@ import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.IncomingUpdate
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
+import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -352,6 +354,70 @@ internal class FakeMessageWriter(
     }
 }
 
+/** A file send request with every field the command parsed. */
+internal data class SendFileCall(val reference: String, val path: Path, val caption: String, val asPhoto: Boolean)
+
+/** A stream send request, carrying the bytes the stream held. */
+internal data class SendStreamCall(
+    val reference: String,
+    val name: String,
+    val content: String,
+    val caption: String,
+    val asPhoto: Boolean,
+)
+
+/** A URL send request. */
+internal data class SendUrlCall(val reference: String, val url: String, val caption: String, val asPhoto: Boolean)
+
+/** A copy request naming the source message. */
+internal data class CopyMediaCall(val reference: String, val fromMessageId: Int, val caption: String)
+
+/** A [SendMedia] that records every send and returns a canned result. */
+internal class FakeSendMedia(
+    private val sent: Message = testMessage,
+    private val rejection: IllegalArgumentException? = null,
+) : SendMedia {
+    val fileSends = mutableListOf<SendFileCall>()
+    val streamSends = mutableListOf<SendStreamCall>()
+    val urlSends = mutableListOf<SendUrlCall>()
+    val copies = mutableListOf<CopyMediaCall>()
+
+    /** Simulates the use case rejecting the input before it reaches the gateway. */
+    private fun reject() {
+        rejection?.let { throw it }
+    }
+
+    override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message {
+        reject()
+        fileSends += SendFileCall(reference, path, caption, asPhoto)
+        return sent
+    }
+
+    override fun sendStream(
+        reference: String,
+        name: String,
+        data: InputStream,
+        caption: String,
+        asPhoto: Boolean,
+    ): Message {
+        reject()
+        streamSends += SendStreamCall(reference, name, data.readBytes().decodeToString(), caption, asPhoto)
+        return sent
+    }
+
+    override fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message {
+        reject()
+        urlSends += SendUrlCall(reference, url, caption, asPhoto)
+        return sent
+    }
+
+    override fun copyMedia(reference: String, fromMessageId: Int, caption: String): Message {
+        reject()
+        copies += CopyMediaCall(reference, fromMessageId, caption)
+        return sent
+    }
+}
+
 /** Drives the whole command tree the way `main` does, against injected fakes. */
 internal class CliFixture(
     val output: RecordingOutput,
@@ -378,6 +444,7 @@ internal fun cliFixture(
     adminRights: AdminRights = FakeAdminRights(),
     listFolders: ListFolders = FakeListFolders(),
     listen: Listen = FakeListen(),
+    sendMedia: SendMedia = FakeSendMedia(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
     nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
@@ -397,6 +464,7 @@ internal fun cliFixture(
         adminRightsFactory = { adminRights },
         listFoldersFactory = { listFolders },
         listenFactory = { listen },
+        sendMediaFactory = { sendMedia },
     )
     val root = KotlogrammeCommand { context }
         .subcommands(
@@ -408,6 +476,9 @@ internal fun cliFixture(
             DialogsCommand(),
             HistoryCommand(),
             SendCommand(),
+            SendFileCommand(),
+            SendMediaUrlCommand(),
+            CopyMediaCommand(),
             EditCommand(),
             DeleteCommand(),
             ForwardCommand(),
