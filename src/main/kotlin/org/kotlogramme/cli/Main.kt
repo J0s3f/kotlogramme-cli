@@ -24,8 +24,11 @@ import org.kotlogramme.cli.adapter.cli.LoginCommand
 import org.kotlogramme.cli.adapter.cli.LogoutCommand
 import org.kotlogramme.cli.adapter.cli.MarkReadCommand
 import org.kotlogramme.cli.adapter.cli.MembersCommand
+import org.kotlogramme.cli.adapter.cli.PermissionsCommand
 import org.kotlogramme.cli.adapter.cli.PinCommand
+import org.kotlogramme.cli.adapter.cli.PromoteCommand
 import org.kotlogramme.cli.adapter.cli.ReactCommand
+import org.kotlogramme.cli.adapter.cli.RestrictCommand
 import org.kotlogramme.cli.adapter.cli.SearchCommand
 import org.kotlogramme.cli.adapter.cli.SendCommand
 import org.kotlogramme.cli.adapter.cli.ShellCommand
@@ -79,6 +82,9 @@ fun main(args: Array<String>) {
             SearchCommand(),
             MembersCommand(),
             KickCommand(),
+            PermissionsCommand(),
+            PromoteCommand(),
+            RestrictCommand(),
             ListenCommand(),
             FoldersCommand(),
             ShellCommand(),

@@ -3,6 +3,24 @@
 User-facing features that actually ship, newest first. A feature appears here once it is usable, not
 when it is planned. See [`plan.md`](plan.md) for what is coming.
 
+## Admin and ban rights (Phase 7)
+
+- `permissions <peer> <user>` — shows the member's admin rights as granted and denied, one right per
+  row, in the configured output format.
+- `promote <peer> <user> [--grant <list>] [--all]` — promotes a member with the named rights, or
+  every right with `--all`. The rights are `change-info`, `post-messages`, `edit-messages`,
+  `delete-messages`, `ban-users`, `invite-users`, `pin-messages`, `add-admins`, `anonymous` and
+  `manage-call`; an unknown name is a usage error.
+- `restrict <peer> <user> [--allow <list>] [--forever]` — bans a member, taking away every ability
+  for 24 hours by default; `--allow` keeps the named abilities and `--forever` removes the expiry.
+  The allowed abilities are the restriction flags (`view-messages`, `send-messages`, `send-media`,
+  `send-stickers`, `send-gifs`, `send-games`, `send-inline`, `embed-links`, `send-polls`,
+  `change-info`, `invite-users`, `pin-messages`).
+
+A member's rights are read in two steps: the facade's role check decides whether they hold any, and
+the participant listing supplies the granular set; a member beyond the listing's lookup limit falls
+back to their role.
+
 ## Interactive shell and folders (Phases 6 and 7)
 
 - `shell` — starts an interactive, readline-style session. It completes command names and peer
