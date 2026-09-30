@@ -116,4 +116,12 @@ class MessageMapperTest {
 
         assertEquals("ada", mapped.senderName)
     }
+
+    @Test
+    fun `carries the inline bot a message came via`() {
+        val mapped = message(id = 1, text = "x", viaBotId = 99).toMessage()
+
+        assertEquals(99L, mapped.viaBotId)
+        assertNull(mapped.viaBotUsername)
+    }
 }

@@ -309,9 +309,9 @@ class ShellTest {
     )
 
     private fun row(id: Int, text: String, outgoing: Boolean = false) =
-        "$id\t2026-01-01T00:00:00Z\t${if (outgoing) "You" else "Ada"}\t\t\t\t$text"
+        "$id\t2026-01-01T00:00:00Z\t${if (outgoing) "You" else "Ada"}\t\t\t\t\t$text"
 
     private companion object {
-        const val MESSAGE_ROW_HEADER = "id\ttime\tfrom\treply\tmedia\taction\ttext"
+        const val MESSAGE_ROW_HEADER = "id\ttime\tfrom\tvia\treply\tmedia\taction\ttext"
     }
 }

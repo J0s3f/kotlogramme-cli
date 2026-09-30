@@ -26,6 +26,7 @@ class MessageRenderingTest {
             text = "ok",
             sentAt = Instant.parse("2026-01-01T12:31:00Z"),
             outgoing = false,
+            viaBotId = 99,
         ),
         Message(
             id = 9,
@@ -48,13 +49,13 @@ class MessageRenderingTest {
         val rendered = render(OutputFormat.TABLE) { renderMessages(messages) }
 
         val expected = listOf(
-            "+----+----------------------+--------------+-------+---------+------------------+------+",
-            "| id | time                 | from         | reply | media   | action           | text |",
-            "+----+----------------------+--------------+-------+---------+------------------+------+",
-            "| 7  | 2026-01-01T12:30:00Z | Ada Lovelace | 5     | [photo] |                  | look |",
-            "| 8  | 2026-01-01T12:31:00Z | Bob          |       |         |                  | ok   |",
-            "| 9  | 2026-01-01T12:32:00Z | Ada Lovelace |       |         | pinned a message |      |",
-            "+----+----------------------+--------------+-------+---------+------------------+------+",
+            "+----+----------------------+--------------+-----+-------+---------+------------------+------+",
+            "| id | time                 | from         | via | reply | media   | action           | text |",
+            "+----+----------------------+--------------+-----+-------+---------+------------------+------+",
+            "| 7  | 2026-01-01T12:30:00Z | Ada Lovelace |     | 5     | [photo] |                  | look |",
+            "| 8  | 2026-01-01T12:31:00Z | Bob          | 99  |       |         |                  | ok   |",
+            "| 9  | 2026-01-01T12:32:00Z | Ada Lovelace |     |       |         | pinned a message |      |",
+            "+----+----------------------+--------------+-----+-------+---------+------------------+------+",
         ).joinToString("\n")
         assertEquals(expected, rendered)
     }
@@ -65,10 +66,10 @@ class MessageRenderingTest {
 
         assertEquals(
             listOf(
-                "id\ttime\tfrom\treply\tmedia\taction\ttext",
-                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t5\t[photo]\t\tlook",
-                "8\t2026-01-01T12:31:00Z\tBob\t\t\t\tok",
-                "9\t2026-01-01T12:32:00Z\tAda Lovelace\t\t\tpinned a message",
+                "id\ttime\tfrom\tvia\treply\tmedia\taction\ttext",
+                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t\t5\t[photo]\t\tlook",
+                "8\t2026-01-01T12:31:00Z\tBob\t99\t\t\t\tok",
+                "9\t2026-01-01T12:32:00Z\tAda Lovelace\t\t\t\tpinned a message",
             ),
             rendered.lines(),
         )
@@ -79,14 +80,32 @@ class MessageRenderingTest {
         val rendered = render(OutputFormat.JSON) { renderMessages(messages) }
 
         assertEquals(
-            """[{"id":"7","time":"2026-01-01T12:30:00Z","from":"Ada Lovelace","reply":"5",""" +
-                """"media":"[photo]","action":"","text":"look"},""" +
-                """{"id":"8","time":"2026-01-01T12:31:00Z","from":"Bob","reply":"","media":"",""" +
-                """"action":"","text":"ok"},""" +
-                """{"id":"9","time":"2026-01-01T12:32:00Z","from":"Ada Lovelace","reply":"",""" +
-                """"media":"","action":"pinned a message","text":""}]""",
+            """[{"id":"7","time":"2026-01-01T12:30:00Z","from":"Ada Lovelace","via":"",""" +
+                """"reply":"5","media":"[photo]","action":"","text":"look"},""" +
+                """{"id":"8","time":"2026-01-01T12:31:00Z","from":"Bob","via":"99",""" +
+                """"reply":"","media":"","action":"","text":"ok"},""" +
+                """{"id":"9","time":"2026-01-01T12:32:00Z","from":"Ada Lovelace","via":"",""" +
+                """"reply":"","media":"","action":"pinned a message","text":""}]""",
             rendered,
         )
+    }
+
+    @Test
+    fun `the via column shows the inline bot username, the bare id or blank`() {
+        val base = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+        )
+
+        assertEquals(
+            "@inline_bot",
+            viaBotLabel(base.copy(viaBotId = 99, viaBotUsername = "inline_bot")),
+        )
+        assertEquals("99", viaBotLabel(base.copy(viaBotId = 99)))
+        assertEquals("", viaBotLabel(base))
     }
 
     @Test

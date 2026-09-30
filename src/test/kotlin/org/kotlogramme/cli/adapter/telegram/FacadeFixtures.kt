@@ -79,6 +79,7 @@ internal fun message(
     sender: User? = null,
     peer: TelegramPeer? = null,
     action: MessageAction? = null,
+    viaBotId: Long? = null,
 ): Message = Message(
     id = id,
     text = text,
@@ -92,6 +93,7 @@ internal fun message(
     sender = sender,
     peer = peer,
     action = action,
+    viaBotId = viaBotId,
 )
 
 private fun telegramPeerConstructor(): Constructor<*> = TelegramPeer::class.java.getDeclaredConstructor(

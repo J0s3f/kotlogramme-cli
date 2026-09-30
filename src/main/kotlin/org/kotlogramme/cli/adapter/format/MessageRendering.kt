@@ -10,10 +10,11 @@ import kotlin.math.roundToInt
 /**
  * Renders a page of messages.
  *
- * The row is plain data so every [Output] format carries the same fields: the reply marker, the
- * media label and the service action are their own columns, not concatenated into the text.
+ * The row is plain data so every [Output] format carries the same fields: the inline bot, the
+ * reply marker, the media label and the service action are their own columns, not concatenated
+ * into the text.
  */
-internal val MESSAGE_HEADERS = listOf("id", "time", "from", "reply", "media", "action", "text")
+internal val MESSAGE_HEADERS = listOf("id", "time", "from", "via", "reply", "media", "action", "text")
 
 /** Prints the messages as the configured output format. */
 fun Output.renderMessages(messages: List<Message>) {
@@ -25,11 +26,20 @@ internal fun messageRow(message: Message): List<String> = listOf(
     message.id.toString(),
     DateTimeFormatter.ISO_INSTANT.format(message.sentAt),
     message.senderName,
+    viaBotLabel(message),
     message.replyToMessageId?.toString().orEmpty(),
     message.media?.let(::mediaLabel).orEmpty(),
     message.action.orEmpty(),
     message.text,
 )
+
+/**
+ * The inline bot a message came through: `@username` when the facade offers one, otherwise the
+ * bare numeric id the facade projects, and blank when the message did not come via a bot. Pure, so
+ * it can be snapshot-tested without an [Output].
+ */
+internal fun viaBotLabel(message: Message): String =
+    message.viaBotUsername?.let { "@$it" } ?: message.viaBotId?.toString().orEmpty()
 
 /**
  * The compact label for an attachment, driven by its kind: a video carries its duration and

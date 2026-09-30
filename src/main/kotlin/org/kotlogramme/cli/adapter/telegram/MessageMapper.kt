@@ -25,6 +25,7 @@ internal fun FacadeMessage.toMessage(): Message = Message(
     replyToMessageId = replyToMessageId,
     media = media?.toMediaInfo(),
     action = action?.kind?.let(::serviceAction),
+    viaBotId = viaBotId,
 )
 
 private fun FacadeMedia.toMediaInfo(): MediaInfo = MediaInfo(
