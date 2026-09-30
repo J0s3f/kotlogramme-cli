@@ -154,12 +154,23 @@ Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
 - **T7.3 Stickers and inline.** Sticker-set listing; inline query and send.
 - **T7.4 Uploads from streams.** Use `uploadStream` for large files and stdin pipe input.
 
-### Phase 8 — Release
+### Phase 8 — Packaging and release
 
-- `docs/features.md` and `docs/decisions.md` complete.
-- Distribution: `application` plugin `distZip`/`installDist`, plus a `fatJar` if it earns its keep.
-- CI: `clean test` on Linux/Windows/macOS; a tag publishes a GitHub Release with the distributions.
-- `CHANGELOG.md` entry and README status update.
+- **T8.1 Fat jar.** A single runnable jar (`kotlogramme-all.jar`) that contains every dependency,
+  including the `kotlogramme` jar and the six native libraries it bundles. The native loader must
+  keep working from inside the shaded jar: `java -jar kotlogramme-all.jar --version` runs on a
+  machine with only a JRE, and a command that needs Telegram fails with a credentials or connection
+  error rather than `UnsatisfiedLinkError`. Shading must preserve `META-INF/services` entries
+  (ServiceLoader) and the `native/<platform>/` resource paths, and must not relocate `kotlogramme`
+  or `kotlinx.serialization`. Acceptance: the jar is exercised on Linux, Windows and macOS in CI.
+- **T8.2 Distributions and release.** `application`'s `installDist`/`distZip` still build, and a
+  tagged release publishes a GitHub Release carrying the fat jar and the distributions.
+- **T8.3 Documentation.** `docs/features.md` and `docs/decisions.md` complete, a `CHANGELOG.md`
+  entry, and a README status update.
+
+The fat jar earns its keep because the alternative — a `distZip` with a `lib/` directory — is
+awkward to move around. The risk is exactly the native loading, which is why T8.1 is a task with its
+own acceptance check rather than a build tweak.
 
 ## Verification strategy
 
