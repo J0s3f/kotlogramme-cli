@@ -7,17 +7,19 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.int
 import org.kotlogramme.cli.adapter.format.renderMessages
 import java.io.ByteArrayInputStream
 import java.nio.file.Path
 
 /**
- * Sends a local file, or the bytes piped on standard input, as a document or a photo.
+ * Sends a local file, or the bytes piped on standard input, as a document, a photo or a video.
  *
  * A `-` path reads standard input and uploads it as a stream named by `--name`, defaulting to
- * `stdin`, because Telegram needs a file name for an upload that has no path. Any other path is
- * handed to the gateway as-is, so its file name names the upload.
+ * `stdin`, because Telegram needs a file name for an upload that has no path. A piped file is never
+ * streamable, so `--video` and its metadata apply only to a real file. Any other path is handed to
+ * the gateway as-is, so its file name names the upload.
  */
 class SendFileCommand : CliktCommand(name = "send-file") {
     private val appContext by requireObject<AppContext>()
@@ -26,10 +28,19 @@ class SendFileCommand : CliktCommand(name = "send-file") {
     private val path by argument("path", help = "The file to send, or - to read the bytes from stdin")
     private val caption by option("--caption", help = "The caption").default("")
     private val photo by option("--photo", help = "Send as a photo instead of a document").flag()
+    private val video by option("--video", help = "Send as a streamable video instead of a document").flag()
+    private val duration by option("--duration", help = "The video duration in seconds; only with --video")
+        .double()
+    private val width by option("--width", help = "The video width in pixels; only with --video").int()
+    private val height by option("--height", help = "The video height in pixels; only with --video").int()
     private val name by option("--name", help = "The upload file name for a stdin stream; defaults to stdin")
 
     override fun run() {
-        val message = rejectInvalidInput { send() }
+        val message = rejectInvalidInput {
+            require(!(video && photo)) { "--video and --photo are mutually exclusive" }
+            require(video || isMetadataAbsent()) { "--duration, --width and --height require --video" }
+            send()
+        }
         appContext.output.renderMessages(listOf(message))
     }
 
@@ -37,9 +48,13 @@ class SendFileCommand : CliktCommand(name = "send-file") {
         if (path == STDIN) {
             val data = ByteArrayInputStream(readStdin().toByteArray())
             appContext.sendMedia().sendStream(peer, name ?: STDIN_NAME, data, caption, photo)
+        } else if (video) {
+            appContext.sendMedia().sendVideo(peer, Path.of(path), caption, duration, width, height)
         } else {
             appContext.sendMedia().sendFile(peer, Path.of(path), caption, photo)
         }
+
+    private fun isMetadataAbsent() = duration == null && width == null && height == null
 
     private fun readStdin(): String = generateSequence { terminal.readLineOrNull(false) }.joinToString("\n")
 

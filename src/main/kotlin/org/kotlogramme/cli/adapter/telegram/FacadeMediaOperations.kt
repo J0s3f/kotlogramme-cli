@@ -17,6 +17,16 @@ internal interface FacadeMediaOperations {
     /** Uploads [path] to [peer] as a photo or a document, which is `mediaSend`. */
     fun sendFile(peer: TelegramPeer, path: Path, caption: String, asPhoto: Boolean): Message
 
+    /** Uploads [path] to [peer] as a streamable video, which is `mediaSend` with `MediaKind.VIDEO`. */
+    fun sendVideo(
+        peer: TelegramPeer,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message
+
     /** Uploads [data] under [name] and returns the handle a later send references. */
     fun uploadStream(data: InputStream, name: String): UploadedFile
 

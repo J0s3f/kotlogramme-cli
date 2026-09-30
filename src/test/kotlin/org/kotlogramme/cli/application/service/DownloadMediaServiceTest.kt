@@ -67,6 +67,15 @@ private class FakeDownloadGateway : MediaGateway {
     override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message =
         error("not used")
 
+    override fun sendVideo(
+        reference: String,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message = error("not used")
+
     override fun sendStream(
         reference: String,
         name: String,

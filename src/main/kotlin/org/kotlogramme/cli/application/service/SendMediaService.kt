@@ -14,12 +14,25 @@ import java.nio.file.Path
  * the path exists and is a regular file, a stream is refused unless it carries a name, and a copy is
  * refused unless the source message id is positive. The failures are clear
  * [IllegalArgumentException]s instead of a Telegram error. A caption is optional and may be blank,
- * and an empty stream is accepted.
+ * and an empty stream is accepted. A video is validated like a file: the path must exist and be a
+ * regular file.
  */
 class SendMediaService(private val gateway: MediaGateway) : SendMedia {
     override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message {
         requireRegularFile(path)
         return gateway.sendFile(reference, path, caption, asPhoto)
+    }
+
+    override fun sendVideo(
+        reference: String,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message {
+        requireRegularFile(path)
+        return gateway.sendVideo(reference, path, caption, durationSeconds, width, height)
     }
 
     override fun sendStream(

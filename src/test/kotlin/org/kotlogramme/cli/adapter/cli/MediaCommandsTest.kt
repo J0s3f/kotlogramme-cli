@@ -24,6 +24,72 @@ class MediaCommandsTest {
     }
 
     @Test
+    fun `send-file sends a local file as a streamable video with the metadata`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.createFile(tempDir.resolve("clip.mp4"))
+
+        val result = fixture.run(
+            "send-file",
+            "@ada",
+            file.toString(),
+            "--caption",
+            "a clip",
+            "--video",
+            "--duration",
+            "12.5",
+            "--width",
+            "1920",
+            "--height",
+            "1080",
+        )
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendVideoCall("@ada", file, "a clip", 12.5, 1920, 1080)), media.videoSends)
+        assertTrue(media.fileSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file rejects --video together with --photo`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.createFile(tempDir.resolve("clip.mp4"))
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--video", "--photo")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("mutually exclusive"), "stderr was: ${result.stderr}")
+        assertTrue(media.videoSends.isEmpty())
+        assertTrue(media.fileSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file rejects video metadata without the video flag`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.createFile(tempDir.resolve("clip.mp4"))
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--duration", "12.5")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("require --video"), "stderr was: ${result.stderr}")
+        assertTrue(media.videoSends.isEmpty())
+        assertTrue(media.fileSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file streams stdin even with the video flag`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+
+        val result = fixture.run("send-file", "@ada", "-", "--video", stdin = "raw bytes")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendStreamCall("@ada", "stdin", "raw bytes", "", false)), media.streamSends)
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
     fun `send-file reads stdin into a stream named stdin`() {
         val media = FakeSendMedia()
         val fixture = cliFixture(sendMedia = media)

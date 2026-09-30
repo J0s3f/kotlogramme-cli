@@ -14,6 +14,25 @@ internal class KotlogramMediaOperations(private val client: TelegramClient) : Fa
     override fun sendFile(peer: TelegramPeer, path: Path, caption: String, asPhoto: Boolean): Message =
         client.mediaSend(peer, path, kind = if (asPhoto) MediaKind.PHOTO else MediaKind.DOCUMENT, caption = caption)
 
+    override fun sendVideo(
+        peer: TelegramPeer,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message =
+        client.mediaSend(
+            peer,
+            path,
+            kind = MediaKind.VIDEO,
+            caption = caption,
+            durationSeconds = durationSeconds,
+            width = width,
+            height = height,
+        )
+
+
     override fun uploadStream(data: InputStream, name: String): UploadedFile = client.uploadStream(data, name)
 
     override fun sendUploaded(peer: TelegramPeer, file: UploadedFile, caption: String, asPhoto: Boolean): Message =

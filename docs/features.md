@@ -5,10 +5,14 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
 
 ## Media (Phases 4 and 7)
 
-- `send-file <peer> <path|-> [--caption <text>] [--photo] [--name <name>]` — uploads a local file as
-  a document, or as a photo with `--photo`. A `-` path reads standard input and uploads it as a
-  stream, named by `--name` and defaulting to `stdin`, so `cat cat.png | kotlogramme send-file @chat -`
-  works.
+- `send-file <peer> <path|-> [--caption <text>] [--photo] [--video] [--duration <seconds>]
+  [--width <px>] [--height <px>] [--name <name>]` — uploads a local file as a document, as a photo
+  with `--photo`, or as a streamable video with `--video` that Telegram plays in place instead of
+  offering as a download. The video's `--duration`, `--width` and `--height` describe it; they are
+  only accepted together with `--video`, and `--video` and `--photo` are mutually exclusive. A `-`
+  path reads standard input and uploads it as a plain stream named by `--name`, defaulting to
+  `stdin`, so `cat cat.png | kotlogramme send-file @chat -` works; a piped upload is never
+  streamable, so `--video` does not apply to it.
 - `send-media-url <peer> <url> [--caption <text>] [--photo]` — lets Telegram fetch the URL and send
   it, so nothing is uploaded from this machine.
 - `copy-media <peer> <messageId> [--caption <text>]` — re-sends the media of an existing message

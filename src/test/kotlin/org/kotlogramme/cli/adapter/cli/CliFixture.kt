@@ -396,6 +396,16 @@ internal class FakeMessageWriter(
 /** A file send request with every field the command parsed. */
 internal data class SendFileCall(val reference: String, val path: Path, val caption: String, val asPhoto: Boolean)
 
+/** A video send request with the metadata the command parsed. */
+internal data class SendVideoCall(
+    val reference: String,
+    val path: Path,
+    val caption: String,
+    val durationSeconds: Double?,
+    val width: Int?,
+    val height: Int?,
+)
+
 /** A stream send request, carrying the bytes the stream held. */
 internal data class SendStreamCall(
     val reference: String,
@@ -417,6 +427,7 @@ internal class FakeSendMedia(
     private val rejection: IllegalArgumentException? = null,
 ) : SendMedia {
     val fileSends = mutableListOf<SendFileCall>()
+    val videoSends = mutableListOf<SendVideoCall>()
     val streamSends = mutableListOf<SendStreamCall>()
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
@@ -429,6 +440,19 @@ internal class FakeSendMedia(
     override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message {
         reject()
         fileSends += SendFileCall(reference, path, caption, asPhoto)
+        return sent
+    }
+
+    override fun sendVideo(
+        reference: String,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message {
+        reject()
+        videoSends += SendVideoCall(reference, path, caption, durationSeconds, width, height)
         return sent
     }
 

@@ -9,6 +9,21 @@ interface MediaGateway {
     /** Uploads a local file and sends it, as a photo when [asPhoto] is set. */
     fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message
 
+    /**
+     * Uploads a local file and sends it as a streamable video.
+     *
+     * [durationSeconds], [width] and [height] describe the video so Telegram can play it in place
+     * rather than offering it as a download; any of them may be null.
+     */
+    fun sendVideo(
+        reference: String,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message
+
     /** Uploads [data] under [name] and sends it, as a photo when [asPhoto] is set. */
     fun sendStream(reference: String, name: String, data: InputStream, caption: String, asPhoto: Boolean): Message
 

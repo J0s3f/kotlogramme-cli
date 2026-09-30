@@ -20,6 +20,17 @@ internal class KotlogramMediaGateway(
     override fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message =
         operations.sendFile(resolver.resolve(reference), path, caption, asPhoto).toMessage()
 
+    override fun sendVideo(
+        reference: String,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message =
+        operations.sendVideo(resolver.resolve(reference), path, caption, durationSeconds, width, height).toMessage()
+
+
     override fun sendStream(
         reference: String,
         name: String,

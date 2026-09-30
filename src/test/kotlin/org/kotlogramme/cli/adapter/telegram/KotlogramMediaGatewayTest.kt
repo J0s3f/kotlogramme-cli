@@ -29,6 +29,27 @@ class KotlogramMediaGatewayTest {
     }
 
     @Test
+    fun `sendVideo resolves the reference and forwards the video metadata`() {
+        val operations = FakeMediaOperations().apply {
+            sentVideo = message(id = 46, text = "a clip", date = 1_000, media = Media("video"))
+        }
+        val file = Path.of("media", "clip.mp4")
+
+        val sent = gatewayWith(operations).sendVideo(
+            "@ada",
+            file,
+            caption = "a clip",
+            durationSeconds = 12.5,
+            width = 1920,
+            height = 1080,
+        )
+
+        assertEquals(SendVideoCall(ada, file, "a clip", 12.5, 1920, 1080), operations.videoSends.single())
+        assertEquals(46, sent.id)
+        assertEquals("video", sent.mediaKind)
+    }
+
+    @Test
     fun `sendStream uploads the stream and then sends the uploaded file by handle`() {
         val operations = FakeMediaOperations().apply {
             uploaded = UploadedFile(id = 5, name = "cat.png", size = 3, parts = 1, handle = 99)
@@ -94,6 +115,15 @@ class KotlogramMediaGatewayTest {
 
 internal data class SendFileCall(val peer: TelegramPeer, val path: Path, val caption: String, val asPhoto: Boolean)
 
+internal data class SendVideoCall(
+    val peer: TelegramPeer,
+    val path: Path,
+    val caption: String,
+    val durationSeconds: Double?,
+    val width: Int?,
+    val height: Int?,
+)
+
 internal data class UploadStreamCall(val name: String, val content: String)
 
 internal data class SendUploadedCall(
@@ -111,6 +141,7 @@ internal data class DownloadCall(val peer: TelegramPeer, val messageId: Int, val
 
 internal class FakeMediaOperations : FacadeMediaOperations {
     var sentFile: Message = message(id = 1)
+    var sentVideo: Message = message(id = 1)
     var sentUrl: Message = message(id = 1)
     var copied: Message = message(id = 1)
     var downloadedPath: String = "download.bin"
@@ -118,6 +149,7 @@ internal class FakeMediaOperations : FacadeMediaOperations {
     var sentUploaded: Message = message(id = 1)
 
     val fileSends = mutableListOf<SendFileCall>()
+    val videoSends = mutableListOf<SendVideoCall>()
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
     val downloads = mutableListOf<DownloadCall>()
@@ -126,6 +158,18 @@ internal class FakeMediaOperations : FacadeMediaOperations {
     override fun sendFile(peer: TelegramPeer, path: Path, caption: String, asPhoto: Boolean): Message {
         fileSends += SendFileCall(peer, path, caption, asPhoto)
         return sentFile
+    }
+
+    override fun sendVideo(
+        peer: TelegramPeer,
+        path: Path,
+        caption: String,
+        durationSeconds: Double?,
+        width: Int?,
+        height: Int?,
+    ): Message {
+        videoSends += SendVideoCall(peer, path, caption, durationSeconds, width, height)
+        return sentVideo
     }
 
     override fun uploadStream(data: InputStream, name: String): UploadedFile {
