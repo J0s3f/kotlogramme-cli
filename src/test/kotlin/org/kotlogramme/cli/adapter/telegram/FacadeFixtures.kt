@@ -8,6 +8,7 @@ import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.User
+import org.kotlogramme.protocol.MessageAction
 import org.kotlogramme.protocol.Peer
 import java.lang.reflect.Constructor
 
@@ -77,6 +78,7 @@ internal fun message(
     postAuthor: String? = null,
     sender: User? = null,
     peer: TelegramPeer? = null,
+    action: MessageAction? = null,
 ): Message = Message(
     id = id,
     text = text,
@@ -89,6 +91,7 @@ internal fun message(
     postAuthor = postAuthor,
     sender = sender,
     peer = peer,
+    action = action,
 )
 
 private fun telegramPeerConstructor(): Constructor<*> = TelegramPeer::class.java.getDeclaredConstructor(

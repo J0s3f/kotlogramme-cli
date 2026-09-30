@@ -7,10 +7,10 @@ import java.time.format.DateTimeFormatter
 /**
  * Renders a page of messages.
  *
- * The row is plain data so every [Output] format carries the same fields: the reply marker and the
- * media placeholder are their own columns, not concatenated into the text.
+ * The row is plain data so every [Output] format carries the same fields: the reply marker, the
+ * media placeholder and the service action are their own columns, not concatenated into the text.
  */
-internal val MESSAGE_HEADERS = listOf("id", "time", "from", "reply", "media", "text")
+internal val MESSAGE_HEADERS = listOf("id", "time", "from", "reply", "media", "action", "text")
 
 /** Prints the messages as the configured output format. */
 fun Output.renderMessages(messages: List<Message>) {
@@ -24,5 +24,6 @@ internal fun messageRow(message: Message): List<String> = listOf(
     message.senderName,
     message.replyToMessageId?.toString().orEmpty(),
     message.mediaKind?.let { "[$it]" }.orEmpty(),
+    message.action.orEmpty(),
     message.text,
 )

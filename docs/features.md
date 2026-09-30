@@ -54,7 +54,9 @@ used by every command.
 - `dialogs [--limit <n>]` — lists the conversations, newest first, with the unread count and a
   pinned marker.
 - `history <peer> [--limit <n>] [--before <messageId>]` — reads a page of a chat's messages with the
-  sender, the time, a reply marker and a media placeholder.
+  sender, the time, a reply marker, a media placeholder and, for a service message, a human phrase
+  for the action (for example "pinned a message" or "added a member"). A kind this build does not
+  name still renders as `service action: <kind>` rather than as a blank row.
 - `send <peer> <text...> [--reply-to <id>] [--silent]` — sends a text message. Pass `-` as the text
   to read the whole message from standard input, so `echo hello | kotlogramme send @chat -` works.
 - `edit <peer> <messageId> <text...>` — replaces the text of a message.

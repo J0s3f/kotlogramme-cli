@@ -14,4 +14,6 @@ data class Message(
     val replyToMessageId: Int? = null,
     /** The facade's media kind, or `null` when the message has no media attached. */
     val mediaKind: String? = null,
+    /** A short human description of the service action, or `null` for an ordinary message. */
+    val action: String? = null,
 )

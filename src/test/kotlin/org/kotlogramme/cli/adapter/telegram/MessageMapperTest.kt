@@ -2,6 +2,7 @@ package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.User
+import org.kotlogramme.protocol.MessageAction
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,7 +47,29 @@ class MessageMapperTest {
         assertFalse(mapped.pinned)
         assertNull(mapped.replyToMessageId)
         assertNull(mapped.mediaKind)
+        assertNull(mapped.action)
         assertEquals("", mapped.senderName)
+    }
+
+    @Test
+    fun `maps a known service action to a phrase`() {
+        val mapped = message(
+            id = 7,
+            action = MessageAction(messageId = 7, senderId = 1, kind = "pinMessage"),
+        ).toMessage()
+
+        assertEquals("pinned a message", mapped.action)
+    }
+
+    @Test
+    fun `a kind this build does not name keeps the kind in the phrase`() {
+        val mapped = message(
+            id = 8,
+            action = MessageAction(messageId = 8, kind = "someFutureAction"),
+        ).toMessage()
+
+        assertEquals("service action: someFutureAction", mapped.action)
+        assertEquals("service action: unknown", serviceAction("unknown"))
     }
 
     @Test

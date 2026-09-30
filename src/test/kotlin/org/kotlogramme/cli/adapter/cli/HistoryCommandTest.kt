@@ -15,8 +15,8 @@ class HistoryCommandTest {
         assertEquals(HistoryCall("@ada", 10, 99), history.calls.single())
         assertEquals(
             listOf(
-                "id\ttime\tfrom\treply\tmedia\ttext",
-                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t\t\thello",
+                "id\ttime\tfrom\treply\tmedia\taction\ttext",
+                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t\t\t\thello",
             ),
             fixture.output.lines,
         )

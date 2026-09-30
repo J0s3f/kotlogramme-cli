@@ -26,6 +26,14 @@ class MessageRenderingTest {
             sentAt = Instant.parse("2026-01-01T12:31:00Z"),
             outgoing = false,
         ),
+        Message(
+            id = 9,
+            senderName = "Ada Lovelace",
+            text = "",
+            sentAt = Instant.parse("2026-01-01T12:32:00Z"),
+            outgoing = false,
+            action = "pinned a message",
+        ),
     )
 
     private fun render(format: OutputFormat, block: ConsoleOutput.() -> Unit): String {
@@ -35,16 +43,17 @@ class MessageRenderingTest {
     }
 
     @Test
-    fun `a table shows the sender, time, reply marker and media placeholder`() {
+    fun `a table shows the sender, time, reply marker, media placeholder and service action`() {
         val rendered = render(OutputFormat.TABLE) { renderMessages(messages) }
 
         val expected = listOf(
-            "+----+----------------------+--------------+-------+---------+------+",
-            "| id | time                 | from         | reply | media   | text |",
-            "+----+----------------------+--------------+-------+---------+------+",
-            "| 7  | 2026-01-01T12:30:00Z | Ada Lovelace | 5     | [photo] | look |",
-            "| 8  | 2026-01-01T12:31:00Z | Bob          |       |         | ok   |",
-            "+----+----------------------+--------------+-------+---------+------+",
+            "+----+----------------------+--------------+-------+---------+------------------+------+",
+            "| id | time                 | from         | reply | media   | action           | text |",
+            "+----+----------------------+--------------+-------+---------+------------------+------+",
+            "| 7  | 2026-01-01T12:30:00Z | Ada Lovelace | 5     | [photo] |                  | look |",
+            "| 8  | 2026-01-01T12:31:00Z | Bob          |       |         |                  | ok   |",
+            "| 9  | 2026-01-01T12:32:00Z | Ada Lovelace |       |         | pinned a message |      |",
+            "+----+----------------------+--------------+-------+---------+------------------+------+",
         ).joinToString("\n")
         assertEquals(expected, rendered)
     }
@@ -55,9 +64,10 @@ class MessageRenderingTest {
 
         assertEquals(
             listOf(
-                "id\ttime\tfrom\treply\tmedia\ttext",
-                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t5\t[photo]\tlook",
-                "8\t2026-01-01T12:31:00Z\tBob\t\t\tok",
+                "id\ttime\tfrom\treply\tmedia\taction\ttext",
+                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t5\t[photo]\t\tlook",
+                "8\t2026-01-01T12:31:00Z\tBob\t\t\t\tok",
+                "9\t2026-01-01T12:32:00Z\tAda Lovelace\t\t\tpinned a message",
             ),
             rendered.lines(),
         )
@@ -69,8 +79,11 @@ class MessageRenderingTest {
 
         assertEquals(
             """[{"id":"7","time":"2026-01-01T12:30:00Z","from":"Ada Lovelace","reply":"5",""" +
-                """"media":"[photo]","text":"look"},""" +
-                """{"id":"8","time":"2026-01-01T12:31:00Z","from":"Bob","reply":"","media":"","text":"ok"}]""",
+                """"media":"[photo]","action":"","text":"look"},""" +
+                """{"id":"8","time":"2026-01-01T12:31:00Z","from":"Bob","reply":"","media":"",""" +
+                """"action":"","text":"ok"},""" +
+                """{"id":"9","time":"2026-01-01T12:32:00Z","from":"Ada Lovelace","reply":"",""" +
+                """"media":"","action":"pinned a message","text":""}]""",
             rendered,
         )
     }
