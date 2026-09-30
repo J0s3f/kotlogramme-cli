@@ -156,7 +156,7 @@ Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
 
 ### Phase 8 — Packaging and release
 
-- **T8.1 Fat jar.** A single runnable jar (`kotlogramme-all.jar`) that contains every dependency,
+- [x] **T8.1 Fat jar.** A single runnable jar (`kotlogramme-all.jar`) that contains every dependency,
   including the `kotlogramme` jar and the six native libraries it bundles. The native loader must
   keep working from inside the shaded jar: `java -jar kotlogramme-all.jar --version` runs on a
   machine with only a JRE, and a command that needs Telegram fails with a credentials or connection

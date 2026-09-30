@@ -1,7 +1,10 @@
+import org.gradle.api.file.DuplicatesStrategy
+
 plugins {
     kotlin("jvm") version "2.4.20"
     kotlin("plugin.serialization") version "2.4.20"
     application
+    id("com.gradleup.shadow") version "9.6.1"
 }
 
 group = "io.github.j0s3f"
@@ -43,4 +46,26 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
+}
+
+// A single runnable jar, `build/libs/kotlogramme-all.jar`, that carries every runtime dependency.
+// The facade loads its native library with `ClassLoader.getResourceAsStream`, so the bundled
+// `native/<platform>/...` entries must survive shading at their original paths. Merging
+// `META-INF/services` keeps ServiceLoader working for JLine and kotlinx.serialization. Nothing is
+// relocated: the facade, the CLI and kotlinx.serialization are all found by their real names.
+tasks.shadowJar {
+    archiveFileName.set("kotlogramme-all.jar")
+    // Service files are duplicated across dependencies; they must reach the transformer so their
+    // contents are merged. Every other duplicate keeps the first entry, as usual.
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    mergeServiceFiles()
+    filesNotMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}
+
+// The fat jar is the default build output; `installDist`/`distZip` keep producing the plain
+// distribution from the `jar` task and the runtime classpath, which still works.
+tasks.named("assemble") {
+    dependsOn(tasks.shadowJar)
 }

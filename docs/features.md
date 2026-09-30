@@ -3,6 +3,15 @@
 User-facing features that actually ship, newest first. A feature appears here once it is usable, not
 when it is planned. See [`plan.md`](plan.md) for what is coming.
 
+## Diagnostics (Phase 8)
+
+- `doctor` — checks that the bundled native library can be loaded on this machine. It builds the
+  facade client once through the same factory the real commands use (which loads the library) and
+  closes it immediately, so it never contacts Telegram. It prints the API id, the session path, the
+  library status and where the facade classes came from (which is the fat jar when run from
+  `kotlogramme-all.jar`). A missing or incompatible library is reported as a one-line error, never
+  as an `UnsatisfiedLinkError` stack trace.
+
 ## Authentication (Phase 1)
 
 - `config` — shows the resolved config directory, session path, whether Telegram API credentials are

@@ -75,3 +75,32 @@ exercise a real account.
 **Why.** CI must be fast, deterministic and safe. Fakes at the port boundary cover the logic; the
 thin adapter is checked by mapping tests. Anything that needs the network is opt-in, mirroring the
 facade's own `LiveTelegramIntegrationTest`.
+
+## 0008 — GradleUp Shadow builds the fat jar
+
+**Decision.** `kotlogramme-all.jar` is built with the GradleUp Shadow plugin
+(`com.gradleup.shadow`) 9.6.1. Its `META-INF/services` entries are merged, nothing is relocated, and
+the facade's six `native/<platform>/…` libraries keep their paths.
+
+**Alternatives.** The original `com.github.johnrengelman.shadow` plugin is unmaintained and not
+tested against Gradle 9.8. A hand-rolled `Jar` with `from(configurations.runtimeClasspath…)` would
+have to reimplement duplicate handling, service-file merging and multi-release jars, and would drift
+from the standard behaviour. Shipping the `installDist`/`distZip` `lib/` directory avoids shading
+entirely, but it is many files to move onto a machine and the point of T8.1 is a single artifact.
+
+**Why.** Shadow is the standard tool and 9.6.1 is the newest published release whose compatibility
+matrix covers Gradle 9.8. The requirements decide the configuration:
+
+- `mergeServiceFiles()` keeps ServiceLoader working for JLine, Mordant and SLF4J, which the CLI
+  needs at runtime.
+- No relocation: the facade (`com.github.badoualy.telegram.api`), the CLI (`org.kotlogramme`) and
+  `kotlinx.serialization` are all resolved by their real names, and relocating
+  `kotlinx.serialization` would break the `@Serializable` metadata the config store relies on.
+- Shadow copies resources verbatim, so `native/<platform>/…` survives; the facade extracts the
+  library with `ClassLoader.getResourceAsStream`, so those paths must not move.
+- `duplicatesStrategy = INCLUDE`, with an `EXCLUDE` override for files outside
+  `META-INF/services/**`: Shadow's default `EXCLUDE` drops duplicate service descriptors before the
+  merge transformer sees them, so ServiceLoader would silently lose providers.
+- The artifact is named `kotlogramme-all.jar` (no version suffix) and `assemble` depends on
+  `shadowJar`, so the standard build produces it. The plain `jar` remains the input to
+  `installDist`/`distZip`, and Shadow adds `shadowDistZip`/`installShadowDist`; all four still work.

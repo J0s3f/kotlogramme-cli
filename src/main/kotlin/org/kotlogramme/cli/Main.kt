@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.path
 import org.kotlogramme.cli.adapter.cli.AppContext
 import org.kotlogramme.cli.adapter.cli.ConfigCommand
+import org.kotlogramme.cli.adapter.cli.DoctorCommand
 import org.kotlogramme.cli.adapter.cli.LoginCommand
 import org.kotlogramme.cli.adapter.cli.LogoutCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
@@ -31,6 +32,6 @@ class KotlogrammeCommand(
 fun main(args: Array<String>) {
     KotlogrammeCommand()
         .versionOption(VERSION)
-        .subcommands(ConfigCommand(), LoginCommand(), LogoutCommand(), WhoamiCommand())
+        .subcommands(ConfigCommand(), LoginCommand(), LogoutCommand(), WhoamiCommand(), DoctorCommand())
         .main(args)
 }
