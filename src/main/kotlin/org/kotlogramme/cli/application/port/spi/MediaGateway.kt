@@ -1,12 +1,16 @@
 package org.kotlogramme.cli.application.port.spi
 
 import org.kotlogramme.cli.domain.Message
+import java.io.InputStream
 import java.nio.file.Path
 
 /** The media operations the facade exposes, in domain terms. */
 interface MediaGateway {
     /** Uploads a local file and sends it, as a photo when [asPhoto] is set. */
     fun sendFile(reference: String, path: Path, caption: String, asPhoto: Boolean): Message
+
+    /** Uploads [data] under [name] and sends it, as a photo when [asPhoto] is set. */
+    fun sendStream(reference: String, name: String, data: InputStream, caption: String, asPhoto: Boolean): Message
 
     /** Lets Telegram fetch a URL and send it as media. */
     fun sendUrl(reference: String, url: String, caption: String, asPhoto: Boolean): Message

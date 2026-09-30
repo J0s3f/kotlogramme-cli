@@ -3,6 +3,8 @@ package org.kotlogramme.cli.adapter.telegram
 import com.github.badoualy.telegram.api.DownloadedMedia
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramPeer
+import com.github.badoualy.telegram.api.UploadedFile
+import java.io.InputStream
 import java.nio.file.Path
 
 /**
@@ -14,6 +16,12 @@ import java.nio.file.Path
 internal interface FacadeMediaOperations {
     /** Uploads [path] to [peer] as a photo or a document, which is `mediaSend`. */
     fun sendFile(peer: TelegramPeer, path: Path, caption: String, asPhoto: Boolean): Message
+
+    /** Uploads [data] under [name] and returns the handle a later send references. */
+    fun uploadStream(data: InputStream, name: String): UploadedFile
+
+    /** Sends the already-uploaded [file] to [peer], which is the `UploadedFile` overload of `mediaSend`. */
+    fun sendUploaded(peer: TelegramPeer, file: UploadedFile, caption: String, asPhoto: Boolean): Message
 
     /** Sends media Telegram fetches from [url], which is `mediaSendUrl`. */
     fun sendUrl(peer: TelegramPeer, url: String, caption: String, asPhoto: Boolean): Message
