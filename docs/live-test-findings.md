@@ -28,16 +28,39 @@ supergroup `@kotlogramme_test` (credentials in the library repository's `.secret
 | 4 | `messagesGetDialogFilters` failed with `CHANNEL_PRIVATE`. | library | **fixed** (`kotlogramme` `b8b17fda`) — a folder can reference an inaccessible channel; `peers_dto` now skips the peer it cannot resolve instead of failing the listing. Verified live. |
 | 5 | `messagesRemoveReaction` appeared to fail with `REACTION_EMPTY`. | — | **not a bug** — grammers' `InputReactions::remove()` (an empty vector) is correct. The failures came from removing a reaction that was not there, and from the channel allowing only a subset of reactions (👍 🔥 🎉 are rejected with `REACTION_INVALID`; ❤️ works). An attempted rework was reverted as unverified. |
 
-## Accident to repair
+## Accident, and the gap it exposed
 
 The `kick` smoke test was run without a second thought and removed the test bot
-(`@KotlogrammeDevBot`) from `@kotlogramme_test`. The client has no `invite` capability, so it could
-not be restored programmatically: the facade exposes `channelsJoinChannel`, `channelsLeaveChannel`,
-`channelsGetParticipants` and `channelsKickParticipant`, but nothing that adds a member
-(`channels.inviteToChannel` / `messages.addChatUser`).
+(`@KotlogrammeDevBot`) from `@kotlogramme_test`. The client had **no `invite` capability** at all:
+the facade exposed join, leave, participants and kick, but nothing that adds a member. That was an
+oversight in the parity work rather than a Telegram limitation.
 
-Two consequences:
+It is now fixed end to end: `channelsInviteToChannel` was added to the facade (0.3.0), the client
+gained `invite <peer> <user>`, and the bot is back in the supergroup as verified by `members`. The
+library's `LiveTelegramIntegrationTest` environment is whole again.
 
-- The library's `LiveTelegramIntegrationTest` needs the bot in that supergroup, so it will fail
-  until the bot is re-added (from the Telegram app, or by a new `invite` operation).
-- **`invite` is a real gap** and belongs in Phase 7 alongside `members`/`kick`.
+## Second pass, after the fixes
+
+Re-run against the built distribution, resolving `kotlogramme` 0.3.0 from Maven Central.
+
+Also verified:
+
+- `permissions <peer> <user>` — the member's rights as granted/denied.
+- `search <query> --in <peer>` — per-chat search.
+- `mark-read <peer>`.
+- `pin`, `unpin`, `forward --to`, `delete` (including deleting two ids at once).
+- Bot login: `login --bot-token …` then `whoami` reports the bot account.
+- `listen --once`: with the bot listening and the user sending it a direct message, the update was
+  printed (`kind`, `chat`, `message_id`, `from`, `time`, `text`) and the command exited by itself.
+
+### New finding
+
+**A bot cannot resolve a numeric peer id.** `send <numericId>` from a bot session fails with
+`BOT_METHOD_INVALID caused by messages.getDialogs`: the reference resolver looks a numeric id up in
+the dialog list, and bots may not call `messages.getDialogs`. A user session is unaffected. The fix
+belongs in `ChatReferenceResolver`: fall back to a direct peer lookup when the dialog listing is not
+available, or report the bot's restriction clearly. Recorded as a client task.
+
+Resolving `@username` from a bot is a separate Telegram restriction (`PEER_ID_INVALID` until the bot
+has seen the user), and is expected behaviour rather than a defect.
+

@@ -155,7 +155,11 @@ Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
 - **T7.4 Uploads from streams.** Use `uploadStream` for large files and stdin pipe input.
 - **T7.5 Invite members.** `invite <peer> <user>` over `channels.inviteToChannel` (channels) and
   `messages.addChatUser` (basic groups). Found missing during the live test, where a kicked member
-  could only be added back from the Telegram app.
+  could only be added back from the Telegram app. Done, with the facade at 0.3.0.
+- **T7.6 Bot-safe peer resolution.** `ChatReferenceResolver` looks a numeric id up in the dialog
+  list, and a bot may not call `messages.getDialogs`, so `send <numericId>` from a bot session fails
+  with `BOT_METHOD_INVALID`. Fall back to a direct peer lookup when the listing is unavailable, and
+  report the restriction clearly when neither works.
 
 ### Phase 8 — Packaging and release
 
