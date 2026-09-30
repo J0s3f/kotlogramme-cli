@@ -64,3 +64,29 @@ available, or report the bot's restriction clearly. Recorded as a client task.
 Resolving `@username` from a bot is a separate Telegram restriction (`PEER_ID_INVALID` until the bot
 has seen the user), and is expected behaviour rather than a defect.
 
+## Third pass, after the Phase 9 features
+
+Run against the fat jar, first resolving `kotlogramme` 0.5.0 and then 0.6.0 from Maven Central, to
+confirm the four Phase 9 commits against real Telegram. Messages 33-40 were left in
+`@kotlogramme_test`, as agreed.
+
+Verified:
+
+- `send-file clip.mkv --detect` → `[video 0:05 640x480]`, matching `ffprobe` on the same bytes
+  (5.000 s, 640x480). The WebM twin read correctly too (`3.52 s`, `320x240`) once probed directly.
+- `send-file clip.webm --detect --reply-to 33 --silent` → the reply column shows `33`.
+- An inline-bot result and a sticker both arrived via `inline @bold … --send 1` and
+  `send-sticker pepe_frog 1`, in the chat the prompt had open.
+- The shell's `members`, `folders`, `stickers` and `help` all work in interactive mode.
+
+### Findings
+
+| # | Finding | Owner | State |
+| --- | --- | --- | --- |
+| 6 | A video document was read back as `[document]`. | library | **fixed by 0.6.0** — the layer reports `messageMediaDocument` for a video, and 0.5.0 passed that variant name straight through, so `send-file --detect` on an MKV came back as `[document 33 KB]` and the terminal could not tell a video from a text file. 0.6.0 derives the kind from the document itself, and the same message now reads `[video 0:05 640x480]`. This is what made the version bump load-bearing rather than cosmetic. |
+| 7 | WebM/VP9 uploads keep no video metadata. | Telegram | **accepted** — the same 3.52 s 320x240 VP9 file uploaded with `--detect` and again with explicit `--video --duration 3.52 --width 320 --height 240` both came back as a bare `[video]`, while its H.264/Matroska sibling kept its duration and resolution. The client sends identical attributes for both, so the loss is Telegram's, not the client's. The file still arrives as a video; it simply has no duration or dimensions to show. |
+| 8 | The `via` column shows a numeric id, not `@username`. | library | **open** — the facade projects only `viaBotId`; `contactsResolveUsername` resolves the other direction and grammers exposes no `via_bot()` peer, so `@bold` is unreachable from the client. Recorded in the library README's known gaps; the client renderer already handles a username if one ever arrives. |
+
+Finding 6 is worth keeping in mind for any future client work: the label a message carries is the
+library's projection, so a client on an older release can look broken while being perfectly correct.
+
