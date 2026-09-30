@@ -37,10 +37,26 @@ supergroup `@kotlogramme_test` (credentials in the library repository's `.secret
 4. **`messagesGetDialogFilters` fails with `CHANNEL_PRIVATE caused by channels.getChannels`.** The
    folder projection resolves every peer through `channels.getChannels`, and one folder references
    a channel this account cannot access. A folder listing should skip or mark inaccessible peers
-   rather than failing the whole call.
+   rather than failing the whole call. **Fixed** in `kotlogramme` (`b8b17fda`): `peers_dto` now
+   skips the peer it cannot resolve, and the live test returns the real folders again.
 5. **`messagesRemoveReaction` fails with `REACTION_EMPTY caused by messages.sendReaction`.** Clearing
-   a reaction sends an empty reaction vector, which this layer rejects. Removing a reaction needs the
-   call the layer actually accepts (or the flag that marks the send as a removal).
+   a reaction sends an empty reaction vector, which this layer rejects. **Open.** The live test
+   could not separate two causes, because `react` itself cannot run on this machine: Windows
+   decodes command-line arguments in the ANSI code page, so the emoji never reaches the JVM as an
+   emoji and Telegram answers `REACTION_INVALID`. An attempted fix (omit the vector instead of
+   sending it empty) was reverted as unverified, since grammers' `InputReactions::remove()` is a
+   deliberate API and the empty vector may well be the correct form when a reaction is present.
 
-Both library findings are worth a fix in `kotlogramme` plus a regression test; they were found here
-because the client exercises the API for real.
+## Status
+
+| Finding | Owner | State |
+| --- | --- | --- |
+| 1 stack-trace dumps | client | open |
+| 2 not UTF-8 (output and input) | client | open |
+| 3 dialog table width | client | open |
+| 4 folders `CHANNEL_PRIVATE` | library | fixed (`b8b17fda`) |
+| 5 reaction removal | library | open, blocked on 2 |
+
+Finding 2 blocks finding 5: the client needs a way to express an emoji that survives a non-UTF-8
+command line (for example a `U+1F44D` escape that the client decodes), after which `react` and
+`unreact` can be exercised live.
