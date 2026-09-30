@@ -2,9 +2,10 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-09-30
 
-Initial project.
+The first tagged release. Built on `kotlogramme` 0.6.0 and published as a GitHub Release
+carrying the fat jar and the distribution archive.
 
 ### Features
 
@@ -36,7 +37,7 @@ Initial project.
 
 - Gradle build on the newest LTS JVM (JDK 25), Kotlin 2.4.20 and Gradle 9.8, with a toolchain
   resolver so the JDK is fetched where it is missing.
-- Dependencies: `kotlogramme` 0.2.0, Clikt 5, JLine 4, kotlinx.serialization 1.11.
+- Dependencies: `kotlogramme` 0.6.0, Clikt 5, JLine 4, kotlinx.serialization 1.11.
 - CI runs `clean test` on Linux, Windows and macOS.
 - A tag-driven release workflow: a `v*` tag, or a manual dispatch with a version, builds the fat jar
   and the `distZip` distribution under the release version, verifies the fat jar still bundles all

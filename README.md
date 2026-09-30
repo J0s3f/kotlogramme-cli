@@ -9,8 +9,9 @@ application.
 
 > **Status: usable.** Phases 1–8 are implemented: authentication, configuration, dialogs, history,
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
-> updates, an interactive shell, admin rights, stickers and inline, and a tagged release carrying
-> the fat jar. See [`docs/features.md`](docs/features.md) for what ships and
+> updates, an interactive shell, admin rights, stickers and inline, and the first tagged release,
+> [`v0.1.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.1.0), carrying the fat jar and
+> the distribution. See [`docs/features.md`](docs/features.md) for what ships and
 > [`docs/plan.md`](docs/plan.md) for what is left (album sends, media downloads, blocking, and the
 > bot-safe numeric peer lookup).
 
@@ -31,6 +32,20 @@ kotlogramme shell                                          # interactive REPL
 Every command renders as a table by default and can be switched to `--format plain` or `--format
 json` (via `config set --format`) for scripting. `kotlogramme doctor` checks the installation,
 including that the bundled native library loads.
+
+## Getting the client
+
+The first release is [`v0.1.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.1.0). Its
+GitHub Release carries two assets, both with every dependency and all six native libraries bundled,
+so nothing else has to be downloaded:
+
+- **`kotlogramme-all.jar`** — a single runnable fat jar. Run it with JDK 25:
+  ```bash
+  java -jar kotlogramme-all.jar --help
+  ```
+- **`kotlogramme-0.1.0.zip`** — the `distZip` distribution. Unpack it and run
+  `kotlogramme-0.1.0/bin/kotlogramme` (or `kotlogramme-0.1.0\bin\kotlogramme.bat` on Windows); the
+  jar and its dependencies live in `lib/`.
 
 ## Requirements
 
