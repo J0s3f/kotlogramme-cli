@@ -7,9 +7,27 @@ It aims to be two things at once: a genuinely useful, scriptable client for the 
 reference consumer that exercises the whole `kotlogramme` surface so its gaps are found by a real
 application.
 
-> **Status: early.** The project skeleton is in place (build, CI, architecture). Features land
-> phase by phase; see [`docs/plan.md`](docs/plan.md) for the roadmap and [`docs/features.md`](docs/features.md)
-> for what actually ships.
+> **Status: usable.** Phases 1–6 are implemented: authentication, configuration, dialogs, history,
+> sending and editing, media, contacts, search, chat members, dialog folders, live updates, and an
+> interactive shell. See [`docs/features.md`](docs/features.md) for what ships and
+> [`docs/plan.md`](docs/plan.md) for what is left (rights editing, stream uploads, stickers/inline,
+> packaging and release).
+
+## Quick start
+
+```bash
+kotlogramme config set --api-id <id> --api-hash <hash>   # from my.telegram.org
+kotlogramme login --phone +491700000000                  # prompts for the code, then 2FA if set
+kotlogramme dialogs --limit 20
+kotlogramme history @some_chat --limit 50
+kotlogramme send @some_chat "hello from the terminal"
+kotlogramme listen                                       # follow new messages
+kotlogramme shell                                        # interactive REPL
+```
+
+Every command renders as a table by default and can be switched to `--format plain` or `--format
+json` (via `config set --format`) for scripting. `kotlogramme doctor` checks the installation,
+including that the bundled native library loads.
 
 ## Requirements
 
