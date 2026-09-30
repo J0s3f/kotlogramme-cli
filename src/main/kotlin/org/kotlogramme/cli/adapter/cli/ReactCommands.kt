@@ -11,10 +11,11 @@ class ReactCommand : CliktCommand(name = "react") {
 
     private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")
     private val messageId by argument("messageId", help = "The message to react to").int()
-    private val emoji by argument("emoji", help = "The reaction emoji")
+    private val emoji by argument("emoji", help = "The reaction emoji, or a U+1F44D code point")
 
     override fun run() {
-        rejectInvalidInput { appContext.messageWriter().react(peer, messageId, emoji) }
+        val reaction = decodeEmojiArgument(emoji)
+        rejectInvalidInput { appContext.messageWriter().react(peer, messageId, reaction) }
         appContext.output.line("Reacted to message $messageId in $peer.")
     }
 }

@@ -38,7 +38,13 @@ application {
     mainClass.set("org.kotlogramme.cli.MainKt")
     // JLine reaches its native terminal support through JNA; JDK 24+ warns unless native access is
     // enabled, and a future release blocks it outright.
-    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
+    applicationDefaultJvmArgs = listOf(
+        "--enable-native-access=ALL-UNNAMED",
+        // Windows defaults stdout/stderr to the ANSI code page, which turns every non-ASCII
+        // character into `?`; the client is UTF-8 end to end.
+        "-Dstdout.encoding=UTF-8",
+        "-Dstderr.encoding=UTF-8",
+    )
 }
 
 tasks.test {

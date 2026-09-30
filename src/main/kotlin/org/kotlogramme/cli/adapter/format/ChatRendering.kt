@@ -23,5 +23,25 @@ internal fun chatRow(chat: Chat): List<String> = listOf(
     chat.title,
     chat.unreadCount.toString(),
     if (chat.pinned) "yes" else "",
-    chat.lastMessagePreview.orEmpty(),
+    previewOf(chat.lastMessagePreview),
 )
+
+/** Longest preview the dialog table shows before it is cut. */
+internal const val PREVIEW_LIMIT = 60
+
+/**
+ * Collapses [preview] to a single truncated line.
+ *
+ * A chat's last message can be an essay: rendered verbatim it pads the table to the width of the
+ * longest message, which is what a live run showed. Newlines would break the rows outright.
+ */
+internal fun previewOf(preview: String?): String {
+    val singleLine = preview.orEmpty().replace(WHITESPACE_RUN, " ").trim()
+    return if (singleLine.length <= PREVIEW_LIMIT) {
+        singleLine
+    } else {
+        singleLine.take(PREVIEW_LIMIT - 1).trimEnd() + "…"
+    }
+}
+
+private val WHITESPACE_RUN = Regex("\\s+")

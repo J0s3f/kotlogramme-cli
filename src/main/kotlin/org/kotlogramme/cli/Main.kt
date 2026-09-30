@@ -35,7 +35,9 @@ import org.kotlogramme.cli.adapter.cli.ShellCommand
 import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
+import org.kotlogramme.TelegramException
 import java.nio.file.Path
+import kotlin.system.exitProcess
 
 /** The root of the command tree. Every user-facing command hangs off this. */
 class KotlogrammeCommand(
@@ -59,35 +61,45 @@ class KotlogrammeCommand(
 }
 
 fun main(args: Array<String>) {
-    KotlogrammeCommand()
-        .versionOption(VERSION)
-        .subcommands(
-            ConfigCommand(),
-            LoginCommand(),
-            LogoutCommand(),
-            WhoamiCommand(),
-            DoctorCommand(),
-            DialogsCommand(),
-            HistoryCommand(),
-            SendCommand(),
-            EditCommand(),
-            DeleteCommand(),
-            ForwardCommand(),
-            PinCommand(),
-            UnpinCommand(),
-            ReactCommand(),
-            UnreactCommand(),
-            MarkReadCommand(),
-            ContactsCommand(),
-            SearchCommand(),
-            MembersCommand(),
-            KickCommand(),
-            PermissionsCommand(),
-            PromoteCommand(),
-            RestrictCommand(),
-            ListenCommand(),
-            FoldersCommand(),
-            ShellCommand(),
-        )
-        .main(args)
+    try {
+        KotlogrammeCommand()
+            .versionOption(VERSION)
+            .subcommands(
+                ConfigCommand(),
+                LoginCommand(),
+                LogoutCommand(),
+                WhoamiCommand(),
+                DoctorCommand(),
+                DialogsCommand(),
+                HistoryCommand(),
+                SendCommand(),
+                EditCommand(),
+                DeleteCommand(),
+                ForwardCommand(),
+                PinCommand(),
+                UnpinCommand(),
+                ReactCommand(),
+                UnreactCommand(),
+                MarkReadCommand(),
+                ContactsCommand(),
+                SearchCommand(),
+                MembersCommand(),
+                KickCommand(),
+                PermissionsCommand(),
+                PromoteCommand(),
+                RestrictCommand(),
+                ListenCommand(),
+                FoldersCommand(),
+                ShellCommand(),
+            )
+            .main(args)
+    } catch (error: TelegramException) {
+        // A rejected request is a normal outcome, not a crash: the live run showed this dumping a
+        // Java stack trace at the user.
+        System.err.println("Error: ${error.message ?: "the Telegram request failed."}")
+        exitProcess(1)
+    } catch (error: RuntimeException) {
+        System.err.println("Error: ${error.message ?: error::class.qualifiedName}")
+        exitProcess(1)
+    }
 }
