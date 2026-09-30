@@ -153,6 +153,9 @@ Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
 - **T7.2 Admin and rights.** Show and edit participant rights.
 - **T7.3 Stickers and inline.** Sticker-set listing; inline query and send.
 - **T7.4 Uploads from streams.** Use `uploadStream` for large files and stdin pipe input.
+- **T7.5 Invite members.** `invite <peer> <user>` over `channels.inviteToChannel` (channels) and
+  `messages.addChatUser` (basic groups). Found missing during the live test, where a kicked member
+  could only be added back from the Telegram app.
 
 ### Phase 8 — Packaging and release
 
