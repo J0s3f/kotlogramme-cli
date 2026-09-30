@@ -3,6 +3,20 @@
 User-facing features that actually ship, newest first. A feature appears here once it is usable, not
 when it is planned. See [`plan.md`](plan.md) for what is coming.
 
+## Media (Phases 4 and 7)
+
+- `send-file <peer> <path|-> [--caption <text>] [--photo] [--name <name>]` — uploads a local file as
+  a document, or as a photo with `--photo`. A `-` path reads standard input and uploads it as a
+  stream, named by `--name` and defaulting to `stdin`, so `cat cat.png | kotlogramme send-file @chat -`
+  works.
+- `send-media-url <peer> <url> [--caption <text>] [--photo]` — lets Telegram fetch the URL and send
+  it, so nothing is uploaded from this machine.
+- `copy-media <peer> <messageId> [--caption <text>]` — re-sends the media of an existing message
+  without uploading it again.
+
+A missing file, a blank URL and a non-positive message id are reported as one-line usage errors, not
+stack traces.
+
 ## Admin and ban rights (Phase 7)
 
 - `permissions <peer> <user>` — shows the member's admin rights as granted and denied, one right per

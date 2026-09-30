@@ -17,6 +17,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramFolderGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramFolderOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramInlineGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramInlineOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramMediaGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramMediaOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageSearchGateway
@@ -41,6 +43,7 @@ import org.kotlogramme.cli.application.port.api.Listen
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
+import org.kotlogramme.cli.application.port.api.SendMedia
 import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
@@ -57,6 +60,7 @@ import org.kotlogramme.cli.application.service.ListenService
 import org.kotlogramme.cli.application.service.MessageWritingService
 import org.kotlogramme.cli.application.service.ReadHistoryService
 import org.kotlogramme.cli.application.service.SearchMessagesService
+import org.kotlogramme.cli.application.service.SendMediaService
 import org.kotlogramme.cli.application.service.StickerService
 import java.nio.file.Path
 
@@ -85,6 +89,7 @@ class AppContext(
     private val listenFactory: (AppConfig) -> Listen = ::defaultListen,
     private val stickersFactory: (AppConfig) -> Stickers = ::defaultStickers,
     private val inlineFactory: (AppConfig) -> InlineBots = ::defaultInline,
+    private val sendMediaFactory: (AppConfig) -> SendMedia = ::defaultSendMedia,
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -141,6 +146,9 @@ class AppContext(
 
     /** The inline-bot use case, with the same missing-credentials error as [authenticate]. */
     fun inline(): InlineBots = inlineFactory(configured())
+
+    /** The media-sending use case, with the same missing-credentials error as [authenticate]. */
+    fun sendMedia(): SendMedia = sendMediaFactory(configured())
 
     private fun configured(): AppConfig {
         val config = config()
@@ -273,6 +281,15 @@ private fun defaultInline(config: AppConfig): InlineBots {
     )
 }
 
+private fun defaultSendMedia(config: AppConfig): SendMedia {
+    val client = clientFor(config)
+    return SendMediaService(
+        KotlogramMediaGateway(
+            KotlogramMediaOperations(client),
+            ChatReferenceResolver(KotlogramChatOperations(client)),
+        ),
+    )
+}
 
 private fun clientFor(config: AppConfig) =
     TelegramClientFactory().create(requireNotNull(config.credentials), config.sessionPath)
