@@ -33,6 +33,9 @@ dependencies {
 application {
     applicationName = "kotlogramme"
     mainClass.set("org.kotlogramme.cli.MainKt")
+    // JLine reaches its native terminal support through JNA; JDK 24+ warns unless native access is
+    // enabled, and a future release blocks it outright.
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }
 
 tasks.test {

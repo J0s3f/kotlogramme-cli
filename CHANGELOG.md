@@ -4,7 +4,14 @@ All notable changes to `kotlogramme-cli` are recorded here.
 
 ## 0.1.0 — unreleased
 
-Initial project. No user-facing commands yet.
+Initial project.
+
+### Features
+
+- `config` / `config set` — show or store the Telegram API credentials and the output format.
+- `login` (user phone code plus optional 2FA, or a bot token), `logout`, `whoami`.
+- Global `--config-dir` and `--version`; output as a table, plain text or JSON.
+- Credentials resolve from the config, falling back to `TG_API_ID` / `TG_API_HASH`.
 
 ### Project
 
