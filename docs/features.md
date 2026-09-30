@@ -6,30 +6,38 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
 ## Media (Phases 4 and 7)
 
 - `send-file <peer> <path|-> [--caption <text>] [--photo] [--video] [--detect] [--duration
-  <seconds>] [--width <px>] [--height <px>] [--name <name>]` — uploads a local file as a document,
-  as a photo with `--photo`, or as a streamable video with `--video` that Telegram plays in place
-  instead of offering as a download. The video's `--duration`, `--width` and `--height` describe it;
-  they are only accepted together with `--video` or `--detect`, and `--video` and `--photo` are
-  mutually exclusive. `--detect` works out the kind from the file's extension (`jpg`, `jpeg` and
-  `png` are photos; `mp4`, `m4v`, `mov`, `mkv`, `webm` and `avi` are videos; anything else is a
-  document) and reads the duration, width and height of an MP4, M4V or MOV file by parsing its
-  container, so nothing has to be typed; an explicit `--duration`, `--width` or `--height` overrides
-  the probe, and `--detect` cannot be combined with `--photo` or `--video`. A Matroska or AVI video
-  is still sent as a video, just without metadata, because this build does not parse those
-  containers. A `-` path reads standard input and uploads it as a plain stream named by `--name`,
-  defaulting to `stdin`, so `cat cat.png | kotlogramme send-file @chat -` works; a piped upload is
-  never streamable, so `--video` does not apply to it, and `--detect` uses the `--name` extension for
-  the kind only.
-- `send-media-url <peer> <url> [--caption <text>] [--photo]` — lets Telegram fetch the URL and send
-  it, so nothing is uploaded from this machine.
-- `copy-media <peer> <messageId> [--caption <text>]` — re-sends the media of an existing message
-  without uploading it again.
+  <seconds>] [--width <px>] [--height <px>] [--name <name>] [--reply-to <id>] [--silent]` — uploads
+  a local file as a document, as a photo with `--photo`, or as a streamable video with `--video`
+  that Telegram plays in place instead of offering as a download. The video's `--duration`, `--width`
+  and `--height` describe it; they are only accepted together with `--video` or `--detect`, and
+  `--video` and `--photo` are mutually exclusive. `--detect` works out the kind from the file's
+  extension (`jpg`, `jpeg` and `png` are photos; `mp4`, `m4v`, `mov`, `mkv`, `webm` and `avi` are
+  videos; anything else is a document) and reads the duration, width and height by parsing the file's
+  container — an ISO base media file (MP4, M4V, MOV) or a Matroska/WebM one (MKV, WEBM) — so nothing
+  has to be typed; an explicit `--duration`, `--width` or `--height` overrides the probe, and
+  `--detect` cannot be combined with `--photo` or `--video`. An AVI video is still sent as a video,
+  just without metadata, because this build does not parse that container. A `-` path reads standard
+  input and uploads it as a plain stream named by `--name`, defaulting to `stdin`, so
+  `cat cat.png | kotlogramme send-file @chat -` works; a piped upload is never streamable, so
+  `--video` does not apply to it, and `--detect` uses the `--name` extension for the kind only.
+- `send-media-url <peer> <url> [--caption <text>] [--photo] [--reply-to <id>] [--silent]` — lets
+  Telegram fetch the URL and send it, so nothing is uploaded from this machine.
+- `copy-media <peer> <messageId> [--caption <text>] [--reply-to <id>] [--silent]` — re-sends the
+  media of an existing message without uploading it again.
+
+`--reply-to <id>` quotes an existing message and `--silent` sends without a notification; all three
+media commands carry both, and so does a stdin stream.
 
 Media in a message view is labelled compactly by kind: a `video` or `animation` shows its duration
 and dimensions (`[video 0:03 320x240]`), an `audio` or `voice` its duration (`[audio 3:21]`), a
 `photo` its dimensions (`[photo 320x240]`) and a `document` its size (`[document 1.6 MB]`). Any
 other kind shows just the kind, and a detail the media does not carry is left out rather than shown
 as a placeholder.
+
+A message view also has a `via` column beside `from`, naming the inline bot a message came through.
+The facade projects only the numeric `viaBotId` — grammers 0.8.1 has no `via_bot()` peer accessor
+and carries no user vector to resolve it against — so the column shows a bare id, not `@username`,
+today. The renderer already prints `@username` if a username ever arrives.
 
 A missing file, a blank URL and a non-positive message id are reported as one-line usage errors, not
 stack traces.
@@ -58,10 +66,16 @@ back to their role.
   references, keeps a history file under the config directory, shows the current chat in the prompt
   and keeps the last messages of that chat in view. Commands: `help`, `dialogs`/`list`,
   `open <peer>`, `read [--limit N]`, `send <text...>`, `reply <id> <text...>`, `contacts`,
-  `search <query>`, `quit`/`exit`. It dispatches to the same use cases as the one-shot commands, so
-  anything available there is available in the shell.
+  `search <query>`, `stickers`, `sticker-set <set>`, `send-sticker <set> <index>`,
+  `inline <bot> <query> [--send <index>]`, `members [<peer>]`, `folders`, `quit`/`exit`. It
+  dispatches to the same use cases as the one-shot commands, so anything available there is
+  available in the shell.
 - `folders` — lists the account's dialog folders with their kind and how many peers each pins,
   includes or excludes.
+
+The shell's sticker, inline and member commands act on the current chat the prompt shows —
+`send-sticker`, `inline --send` and a bare `members` all default to it. The shell's `inline` takes
+no `--to`, because the current chat is already the destination.
 
 ## Reading and writing (Phases 2 and 3)
 

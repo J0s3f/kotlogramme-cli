@@ -43,7 +43,7 @@ target.
 | Live updates / notifications | yes | yes | yes | – | **yes** |
 | Mark read / typing | yes | yes | – | – | **yes** |
 | JSON output for scripting | – | – | – | – | **yes** |
-| Folders, stickers, inline, admin | some | some | – | – | yes (later) |
+| Folders, stickers, inline, admin | some | some | – | – | **yes** |
 
 ## Architecture at a glance
 
@@ -151,9 +151,9 @@ Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
 
 - **T7.1 Folders.** List and filter by dialog folder; `folders` command.
 - **T7.2 Admin and rights.** Show and edit participant rights.
-- **T7.3 Stickers and inline.** Sticker reads and sends are done (`stickers`, `sticker-set`,
-  `send-sticker`, with the facade at 0.4.0). The inline stack (adapter, service) is implemented but
-  its `inline` command is not wired into the CLI yet.
+- [x] **T7.3 Stickers and inline.** Sticker reads and sends (`stickers`, `sticker-set`,
+  `send-sticker`) and the one-shot `inline` command are done with the facade at 0.4.0; the shell
+  gained all four in T9.2.
 - **T7.4 Uploads from streams.** Use `uploadStream` for large files and stdin pipe input.
 - **T7.5 Invite members.** `invite <peer> <user>` over `channels.inviteToChannel` (channels) and
   `messages.addChatUser` (basic groups). Found missing during the live test, where a kicked member
@@ -172,14 +172,43 @@ Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
   error rather than `UnsatisfiedLinkError`. Shading must preserve `META-INF/services` entries
   (ServiceLoader) and the `native/<platform>/` resource paths, and must not relocate `kotlogramme`
   or `kotlinx.serialization`. Acceptance: the jar is exercised on Linux, Windows and macOS in CI.
-- **T8.2 Distributions and release.** `application`'s `installDist`/`distZip` still build, and a
-  tagged release publishes a GitHub Release carrying the fat jar and the distributions.
-- **T8.3 Documentation.** `docs/features.md` and `docs/decisions.md` complete, a `CHANGELOG.md`
-  entry, and a README status update.
+- [x] **T8.2 Distributions and release.** `application`'s `installDist`/`distZip` still build, and a
+  tagged release publishes a GitHub Release carrying the fat jar and the distributions (the
+  workflow's shape is recorded in `decisions.md`). [`docs/native-image.md`](native-image.md)
+  assesses the GraalVM alternative: **viable with caveats** — no GraalVM was available on the build
+  machine, so nothing was built or run, the facade resolves its serializers reflectively so every
+  `@Serializable` payload would need registering, and the exe would land near the 39.4 MB fat jar,
+  the real win being startup and no JVM.
+- [x] **T8.3 Documentation.** `docs/features.md` and `docs/decisions.md` complete, a `CHANGELOG.md`
+  entry, and a README status update (finished in T9.6).
 
 The fat jar earns its keep because the alternative — a `distZip` with a `lib/` directory — is
 awkward to move around. The risk is exactly the native loading, which is why T8.1 is a task with its
 own acceptance check rather than a build tweak.
+
+### Phase 9 — Parity follow-ups
+
+- [x] **T9.1 Matroska metadata.** `FileMediaProbe` parses EBML for `.mkv`/`.webm` and returns the
+  duration (`ticks × TimecodeScale / 1e9`, default scale 1,000,000 ns) and the `Video` dimensions of
+  the `TrackType == 1` track, skipping clusters by size; a malformed or truncated file falls back to
+  the video kind with null metadata. `send-file --detect` on an mkv now sends a video with a
+  duration and a resolution. `ec69223`.
+- [x] **T9.2 Shell parity.** The shell gained `stickers`, `sticker-set <set>`,
+  `send-sticker <set> <index>`, `inline <bot> <query> [--send <index>]`, `members [<peer>]` and
+  `folders`, with `help` and the completer updated; the send and lookup commands act on the current
+  chat the prompt shows. `9897d46`.
+- [x] **T9.3 `via` column.** The message view shows the inline bot a message came through beside
+  `from`. The facade projects only a numeric `viaBotId`, so the column shows a bare id today; the
+  renderer falls back to `@username` if the facade ever supplies one. `1a31732`.
+- [x] **T9.4 Media reply and silent.** `send-file`, `send-media-url` and `copy-media` gained
+  `--reply-to <id>` and `--silent`, threaded through `SendMedia`/`MediaGateway` to the facade's
+  `mediaSend`/`mediaSendUrl`/`mediaCopy`. `25f970c`.
+- [x] **T9.5 Native-image assessment.** [`docs/native-image.md`](native-image.md) records whether a
+  GraalVM `native-image` build is worth it: viable with caveats, nothing built or run without
+  GraalVM, the facade's reflective serializers must all be registered, and the exe lands near the
+  fat jar's size. `60916ea`.
+- [x] **T9.6 Documentation.** These five changes recorded in `docs/features.md`,
+  `docs/decisions.md`, this plan, `CHANGELOG.md` and `README.md`.
 
 ## Verification strategy
 

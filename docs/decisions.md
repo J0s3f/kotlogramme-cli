@@ -104,3 +104,34 @@ matrix covers Gradle 9.8. The requirements decide the configuration:
 - The artifact is named `kotlogramme-all.jar` (no version suffix) and `assemble` depends on
   `shadowJar`, so the standard build produces it. The plain `jar` remains the input to
   `installDist`/`distZip`, and Shadow adds `shadowDistZip`/`installShadowDist`; all four still work.
+
+## 0009 — Tag-driven release workflow
+
+**Decision.** A release is cut by pushing a `v*` tag, or by a manual `workflow_dispatch` that takes
+the version; `.github/workflows/release.yml` then builds the fat jar and the `distZip` distribution
+under that version, verifies that the fat jar still bundles all six native libraries, and publishes
+both on a GitHub Release.
+
+**Alternatives.** Building and uploading a release from a local machine keeps the artifact off the
+runners but makes who-published-what untraceable, and the native-library check would still have to
+happen by hand. A per-push job that always publishes would ship every commit as a release.
+
+**Why.** The build and the check that matters — that shading did not drop `native/<platform>/…` —
+run on the same runner that publishes, so a release cannot go out with a jar that lost its `.dll`
+or `.so`. The release is independent of the library's own build, because the client consumes the
+facade from Maven Central and never needs its sources.
+
+## 0010 — Keep the `grammers-*` git dependencies on Codeberg
+
+**Decision.** The facade's three `grammers-*` git dependencies stay pinned to their Codeberg
+source, and the release is retried there. The `github.com/Lonami/grammers` mirror is not used.
+
+**Alternatives.** Switching the pins to the GitHub mirror. It was checked and is byte-identical for
+the pinned revision (tree `19634363…`, and `cargo fetch` resolves through it), which would unblock
+the current release.
+
+**Why.** The mirror is archived with a February-2026 `master` and no branch containing the pinned
+revision, so it would unblock this release and likely fail the next grammers bump. Codeberg was
+intermittently returning 503 to the runners, which is a transient failure to retry, not a reason to
+move onto a dead mirror. The client's own release does not depend on this: it resolves the facade
+from Maven Central.
