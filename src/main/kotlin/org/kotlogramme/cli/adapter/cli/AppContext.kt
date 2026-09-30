@@ -4,22 +4,35 @@ import com.github.ajalt.clikt.core.CliktError
 import org.kotlogramme.cli.adapter.config.ConfigPaths
 import org.kotlogramme.cli.adapter.config.JsonConfigStore
 import org.kotlogramme.cli.adapter.format.ConsoleOutput
+import org.kotlogramme.cli.adapter.telegram.ChatReferenceResolver
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramChatGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramChatOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramMessageGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramMessageOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteOperations
 import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
 import org.kotlogramme.cli.application.port.api.Authenticate
+import org.kotlogramme.cli.application.port.api.ListDialogs
+import org.kotlogramme.cli.application.port.api.MessageWriter
+import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.application.service.AuthenticateService
+import org.kotlogramme.cli.application.service.ListDialogsService
+import org.kotlogramme.cli.application.service.MessageWritingService
+import org.kotlogramme.cli.application.service.ReadHistoryService
 import java.nio.file.Path
 
 /**
  * The composition root: every dependency a command needs, built in one place.
  *
- * The config directory, the store and the output are resolved once; the [Authenticate] use case is
- * built on demand because it creates a Telegram client, which should only happen for commands that
+ * The config directory, the store and the output are resolved once; the use cases are built on
+ * demand because they create a Telegram client, which should only happen for commands that
  * actually talk to Telegram. The factories are constructor parameters so tests can swap in fakes.
  */
 class AppContext(
@@ -29,6 +42,9 @@ class AppContext(
     val output: Output,
     private val environment: Map<String, String>,
     private val authenticateFactory: (AppConfig) -> Authenticate = ::defaultAuthenticate,
+    private val listDialogsFactory: (AppConfig) -> ListDialogs = ::defaultListDialogs,
+    private val readHistoryFactory: (AppConfig) -> ReadHistory = ::defaultReadHistory,
+    private val messageWriterFactory: (AppConfig) -> MessageWriter = ::defaultMessageWriter,
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -51,10 +67,21 @@ class AppContext(
      * The error is a [CliktError] so the process prints the actionable message without a stack
      * trace.
      */
-    fun authenticate(): Authenticate {
+    fun authenticate(): Authenticate = authenticateFactory(configured())
+
+    /** The dialog-listing use case, with the same missing-credentials error as [authenticate]. */
+    fun listDialogs(): ListDialogs = listDialogsFactory(configured())
+
+    /** The history-reading use case, with the same missing-credentials error as [authenticate]. */
+    fun readHistory(): ReadHistory = readHistoryFactory(configured())
+
+    /** The message-writing use case, with the same missing-credentials error as [authenticate]. */
+    fun messageWriter(): MessageWriter = messageWriterFactory(configured())
+
+    private fun configured(): AppConfig {
         val config = config()
         val credentials = credentials(config) ?: throw MissingCredentialsError()
-        return authenticateFactory(config.copy(credentials = credentials))
+        return config.copy(credentials = credentials)
     }
 
     private fun environmentCredentials(): ApiCredentials? {
@@ -72,7 +99,7 @@ class AppContext(
 
         /**
          * Builds the production context: the file-backed store and console output, with the real
-         * Telegram client behind [Authenticate].
+         * Telegram client behind every use case.
          *
          * [configDir] is the `--config-dir` override; when it is null [ConfigPaths] falls back to
          * the platform default.
@@ -100,7 +127,31 @@ class MissingCredentialsError : CliktError(
 )
 
 private fun defaultAuthenticate(config: AppConfig): Authenticate {
-    val credentials = requireNotNull(config.credentials)
-    val client = TelegramClientFactory().create(credentials, config.sessionPath)
+    val client = clientFor(config)
     return AuthenticateService(KotlogramAccountGateway(KotlogramAccountOperations(client)))
 }
+
+private fun defaultListDialogs(config: AppConfig): ListDialogs =
+    ListDialogsService(KotlogramChatGateway(KotlogramChatOperations(clientFor(config))))
+
+private fun defaultReadHistory(config: AppConfig): ReadHistory {
+    val client = clientFor(config)
+    val chatOperations = KotlogramChatOperations(client)
+    return ReadHistoryService(
+        KotlogramMessageGateway(chatOperations, KotlogramMessageOperations(client)),
+    )
+}
+
+private fun defaultMessageWriter(config: AppConfig): MessageWriter {
+    val client = clientFor(config)
+    val chatOperations = KotlogramChatOperations(client)
+    return MessageWritingService(
+        KotlogramMessageWriteGateway(
+            KotlogramMessageWriteOperations(client),
+            ChatReferenceResolver(chatOperations),
+        ),
+    )
+}
+
+private fun clientFor(config: AppConfig) =
+    TelegramClientFactory().create(requireNotNull(config.credentials), config.sessionPath)
