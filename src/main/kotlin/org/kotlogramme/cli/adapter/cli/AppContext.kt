@@ -7,6 +7,8 @@ import org.kotlogramme.cli.adapter.format.ConsoleOutput
 import org.kotlogramme.cli.adapter.telegram.ChatReferenceResolver
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramAdminOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramAdminRightsGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramChatGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramChatOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramContactGateway
@@ -24,6 +26,7 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramSearchOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateSource
 import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
+import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
@@ -37,6 +40,7 @@ import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.Output
+import org.kotlogramme.cli.application.service.AdminRightsService
 import org.kotlogramme.cli.application.service.AuthenticateService
 import org.kotlogramme.cli.application.service.ChatMembersService
 import org.kotlogramme.cli.application.service.ContactsService
@@ -68,6 +72,7 @@ class AppContext(
     private val contactsFactory: (AppConfig) -> Contacts = ::defaultContacts,
     private val searchMessagesFactory: (AppConfig) -> SearchMessages = ::defaultSearchMessages,
     private val chatMembersFactory: (AppConfig) -> ChatMembers = ::defaultChatMembers,
+    private val adminRightsFactory: (AppConfig) -> AdminRights = ::defaultAdminRights,
     private val listFoldersFactory: (AppConfig) -> ListFolders = ::defaultListFolders,
     private val listenFactory: (AppConfig) -> Listen = ::defaultListen,
 ) {
@@ -111,6 +116,9 @@ class AppContext(
 
     /** The chat-membership use case, with the same missing-credentials error as [authenticate]. */
     fun chatMembers(): ChatMembers = chatMembersFactory(configured())
+
+    /** The admin-rights use case, with the same missing-credentials error as [authenticate]. */
+    fun adminRights(): AdminRights = adminRightsFactory(configured())
 
     /** The dialog-folder use case, with the same missing-credentials error as [authenticate]. */
     fun listFolders(): ListFolders = listFoldersFactory(configured())
@@ -212,6 +220,14 @@ private fun defaultChatMembers(config: AppConfig): ChatMembers {
             KotlogramParticipantOperations(client),
             ChatReferenceResolver(chatOperations),
         ),
+    )
+}
+
+private fun defaultAdminRights(config: AppConfig): AdminRights {
+    val client = clientFor(config)
+    val chatOperations = KotlogramChatOperations(client)
+    return AdminRightsService(
+        KotlogramAdminRightsGateway(KotlogramAdminOperations(client), ChatReferenceResolver(chatOperations)),
     )
 }
 

@@ -6,6 +6,7 @@ import org.kotlogramme.cli.KotlogrammeCommand
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryCheck
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryProbe
 import org.kotlogramme.cli.application.port.api.AccountStatus
+import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
@@ -22,6 +23,8 @@ import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.domain.Account
 import org.kotlogramme.cli.domain.Chat
+import org.kotlogramme.cli.domain.ChatRestrictions
+import org.kotlogramme.cli.domain.ChatRights
 import org.kotlogramme.cli.domain.Contact
 import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.IncomingUpdate
@@ -196,6 +199,50 @@ internal class FakeListFolders(private val folders: List<Folder> = emptyList()) 
     override fun list(): List<Folder> = folders
 }
 
+/** An admin-rights request: the chat and the member reference. */
+internal data class AdminRefs(val reference: String, val userReference: String)
+
+/** A promotion request with the rights it granted. */
+internal data class PromoteCall(val reference: String, val userReference: String, val rights: ChatRights)
+
+/** A restriction request with the restrictions it applied. */
+internal data class RestrictCall(
+    val reference: String,
+    val userReference: String,
+    val restrictions: ChatRestrictions,
+)
+
+/** An [AdminRights] returning canned rights and recording every request. */
+internal class FakeAdminRights(
+    private val rights: ChatRights = ChatRights.NONE,
+    private val rejection: IllegalArgumentException? = null,
+) : AdminRights {
+    val permissionCalls = mutableListOf<AdminRefs>()
+    val promotions = mutableListOf<PromoteCall>()
+    val restrictions = mutableListOf<RestrictCall>()
+
+    /** Simulates the use case rejecting the input before it reaches the gateway. */
+    private fun reject() {
+        rejection?.let { throw it }
+    }
+
+    override fun permissions(reference: String, userReference: String): ChatRights {
+        reject()
+        permissionCalls += AdminRefs(reference, userReference)
+        return rights
+    }
+
+    override fun promote(reference: String, userReference: String, rights: ChatRights) {
+        reject()
+        promotions += PromoteCall(reference, userReference, rights)
+    }
+
+    override fun restrict(reference: String, userReference: String, restrictions: ChatRestrictions) {
+        reject()
+        this.restrictions += RestrictCall(reference, userReference, restrictions)
+    }
+}
+
 /** A [Listen] that replays canned updates and stops as soon as the predicate asks it to. */
 internal class FakeListen(private val updates: List<IncomingUpdate> = emptyList()) : Listen {
     override fun run(stop: () -> Boolean, onUpdate: (IncomingUpdate) -> Unit): Int {
@@ -323,6 +370,7 @@ internal fun cliFixture(
     contacts: Contacts = FakeContacts(),
     searchMessages: SearchMessages = FakeSearchMessages(),
     chatMembers: ChatMembers = FakeChatMembers(),
+    adminRights: AdminRights = FakeAdminRights(),
     listFolders: ListFolders = FakeListFolders(),
     listen: Listen = FakeListen(),
     configDir: Path = Paths.get("config"),
@@ -341,6 +389,7 @@ internal fun cliFixture(
         contactsFactory = { contacts },
         searchMessagesFactory = { searchMessages },
         chatMembersFactory = { chatMembers },
+        adminRightsFactory = { adminRights },
         listFoldersFactory = { listFolders },
         listenFactory = { listen },
     )
@@ -366,6 +415,9 @@ internal fun cliFixture(
             SearchCommand(),
             MembersCommand(),
             KickCommand(),
+            PermissionsCommand(),
+            PromoteCommand(),
+            RestrictCommand(),
             ListenCommand(),
             FoldersCommand(),
             ShellCommand(),
