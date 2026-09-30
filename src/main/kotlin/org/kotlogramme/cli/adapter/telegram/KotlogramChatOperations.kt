@@ -13,4 +13,6 @@ internal class KotlogramChatOperations(private val client: TelegramClient) : Fac
     override fun parseInviteLink(link: String): String? = client.messagesParseInviteLink(link)
 
     override fun importChatInvite(link: String): TelegramPeer? = client.messagesImportChatInvite(link)
+
+    override fun resolvePeer(id: Long): TelegramPeer? = client.channelsResolvePeer(id)
 }

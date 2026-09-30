@@ -32,10 +32,27 @@ internal class ChatReferenceResolver(private val operations: FacadeChatOperation
     }
 
     private fun resolveId(id: Long): TelegramPeer =
-        operations.dialogs(DIALOG_LOOKUP_LIMIT)
-            .firstOrNull { !it.isFolder && it.peer.id == id }
+        directLookup(id)
+            ?: dialogLookup(id)
+            ?: throw IllegalArgumentException(
+                "No chat with id $id: this session knows no peer with that id. " +
+                    "List the dialogs to see the known chats, or use @username.",
+            )
+
+    /**
+     * The direct lookup, and the only one a bot can use: `messages.getDialogs` answers
+     * BOT_METHOD_INVALID for a bot session, so a numeric id has to resolve from what the session
+     * already knows.
+     */
+    private fun directLookup(id: Long): TelegramPeer? =
+        runCatching { operations.resolvePeer(id) }.getOrNull()
+
+    /** The dialog listing, which can name a peer the session has a dialog with but no handle for. */
+    private fun dialogLookup(id: Long): TelegramPeer? =
+        runCatching { operations.dialogs(DIALOG_LOOKUP_LIMIT) }
+            .getOrNull()
+            ?.firstOrNull { !it.isFolder && it.peer.id == id }
             ?.peer
-            ?: throw IllegalArgumentException("No dialog with id $id; list the dialogs to see known chats")
 
     private fun unknownReference(reference: String): String =
         "Cannot resolve '$reference': expected @username, a numeric id, or a Telegram invite link"

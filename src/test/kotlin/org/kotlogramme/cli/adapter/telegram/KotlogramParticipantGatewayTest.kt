@@ -102,4 +102,6 @@ internal class FakeParticipantChatOperations : FacadeChatOperations {
     override fun parseInviteLink(link: String): String? = null
 
     override fun importChatInvite(link: String): TelegramPeer? = null
+
+    override fun resolvePeer(id: Long): TelegramPeer? = null
 }

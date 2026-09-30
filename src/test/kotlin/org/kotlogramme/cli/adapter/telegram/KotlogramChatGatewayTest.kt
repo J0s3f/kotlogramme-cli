@@ -60,7 +60,7 @@ class KotlogramChatGatewayTest {
             KotlogramChatGateway(operations) { now }.resolve("123")
         }
 
-        assertTrue(error.message.orEmpty().contains("No dialog with id 123"))
+        assertTrue(error.message.orEmpty().contains("No chat with id 123"))
     }
 
     @Test
@@ -112,9 +112,11 @@ internal class FakeChatOperations : FacadeChatOperations {
     var resolvedPeer: TelegramPeer? = null
     var inviteHash: String? = null
     var importedPeer: TelegramPeer? = null
+    var peerById: TelegramPeer? = null
     val resolvedUsernames = mutableListOf<String>()
     val parsedLinks = mutableListOf<String>()
     val importedLinks = mutableListOf<String>()
+    val resolvedIds = mutableListOf<Long>()
 
     override fun dialogs(limit: Int): List<Dialog> {
         lastDialogsLimit = limit
@@ -134,5 +136,10 @@ internal class FakeChatOperations : FacadeChatOperations {
     override fun importChatInvite(link: String): TelegramPeer? {
         importedLinks += link
         return importedPeer
+    }
+
+    override fun resolvePeer(id: Long): TelegramPeer? {
+        resolvedIds += id
+        return peerById
     }
 }

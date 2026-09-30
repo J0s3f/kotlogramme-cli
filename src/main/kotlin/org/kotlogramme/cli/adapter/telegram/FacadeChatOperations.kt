@@ -25,4 +25,10 @@ internal interface FacadeChatOperations {
 
     /** Joins a private chat from its invite link, which is `messagesImportChatInvite`. */
     fun importChatInvite(link: String): TelegramPeer?
+
+    /**
+     * Resolves a Bot API dialog id from what the session already knows, which is
+     * `channelsResolvePeer`; `null` when the session has never seen that peer.
+     */
+    fun resolvePeer(id: Long): TelegramPeer?
 }
