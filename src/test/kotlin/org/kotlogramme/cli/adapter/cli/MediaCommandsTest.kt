@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.cli
 
 import org.junit.jupiter.api.io.TempDir
+import org.kotlogramme.cli.adapter.media.isoVideoBytes
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
@@ -174,5 +175,89 @@ class MediaCommandsTest {
         assertEquals(1, result.statusCode)
         assertTrue(result.stderr.contains("must be positive"), "stderr was: ${result.stderr}")
         assertTrue(media.copies.isEmpty())
+    }
+
+    @Test
+    fun `send-file detects a video file and sends it with the probed metadata`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--detect")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", 2610.0, 1920, 1080)), media.videoSends)
+    }
+
+    @Test
+    fun `send-file detects a photo and sends it as a photo`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(0))
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--detect")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "", true)), media.fileSends)
+    }
+
+    @Test
+    fun `send-file detects an unknown file and sends it as a document`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("notes.txt"), "hello".toByteArray())
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--detect")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "", false)), media.fileSends)
+    }
+
+    @Test
+    fun `send-file lets explicit metadata override the probe`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--detect", "--duration", "5")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", 5.0, 1920, 1080)), media.videoSends)
+    }
+
+    @Test
+    fun `send-file rejects detect together with an explicit kind`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.createFile(tempDir.resolve("clip.mp4"))
+
+        val video = fixture.run("send-file", "@ada", file.toString(), "--detect", "--video")
+        val photo = fixture.run("send-file", "@ada", file.toString(), "--detect", "--photo")
+
+        assertEquals(1, video.statusCode)
+        assertTrue(video.stderr.contains("cannot be combined"), "stderr was: ${video.stderr}")
+        assertEquals(1, photo.statusCode)
+        assertTrue(photo.stderr.contains("cannot be combined"), "stderr was: ${photo.stderr}")
+        assertTrue(media.videoSends.isEmpty())
+        assertTrue(media.fileSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file uses the name extension for the kind when detecting on stdin`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+
+        val photo = fixture.run("send-file", "@ada", "-", "--detect", "--name", "cat.png", stdin = "bytes")
+        val video = fixture.run("send-file", "@ada", "-", "--detect", "--name", "clip.mp4", stdin = "bytes")
+
+        assertEquals(0, photo.statusCode)
+        assertEquals(0, video.statusCode)
+        assertEquals(
+            listOf(
+                SendStreamCall("@ada", "cat.png", "bytes", "", true),
+                SendStreamCall("@ada", "clip.mp4", "bytes", "", false),
+            ),
+            media.streamSends,
+        )
     }
 }

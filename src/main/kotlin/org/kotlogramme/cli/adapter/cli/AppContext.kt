@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktError
 import org.kotlogramme.cli.adapter.config.ConfigPaths
 import org.kotlogramme.cli.adapter.config.JsonConfigStore
 import org.kotlogramme.cli.adapter.format.ConsoleOutput
+import org.kotlogramme.cli.adapter.media.FileMediaProbe
 import org.kotlogramme.cli.adapter.telegram.ChatReferenceResolver
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountOperations
@@ -48,6 +49,7 @@ import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
+import org.kotlogramme.cli.application.port.spi.MediaProbe
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.application.service.AdminRightsService
 import org.kotlogramme.cli.application.service.AuthenticateService
@@ -90,6 +92,7 @@ class AppContext(
     private val stickersFactory: (AppConfig) -> Stickers = ::defaultStickers,
     private val inlineFactory: (AppConfig) -> InlineBots = ::defaultInline,
     private val sendMediaFactory: (AppConfig) -> SendMedia = ::defaultSendMedia,
+    private val mediaProbeFactory: () -> MediaProbe = ::FileMediaProbe,
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -149,6 +152,9 @@ class AppContext(
 
     /** The media-sending use case, with the same missing-credentials error as [authenticate]. */
     fun sendMedia(): SendMedia = sendMediaFactory(configured())
+
+    /** The media probe: what a local file should be sent as, and the video metadata it carries. */
+    fun mediaProbe(): MediaProbe = mediaProbeFactory()
 
     private fun configured(): AppConfig {
         val config = config()

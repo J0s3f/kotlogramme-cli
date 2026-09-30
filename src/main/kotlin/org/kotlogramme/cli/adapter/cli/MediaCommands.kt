@@ -10,6 +10,9 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.int
 import org.kotlogramme.cli.adapter.format.renderMessages
+import org.kotlogramme.cli.adapter.media.mediaKindOf
+import org.kotlogramme.cli.application.port.spi.MediaKindHint
+import org.kotlogramme.cli.domain.Message
 import java.io.ByteArrayInputStream
 import java.nio.file.Path
 
@@ -20,6 +23,11 @@ import java.nio.file.Path
  * `stdin`, because Telegram needs a file name for an upload that has no path. A piped file is never
  * streamable, so `--video` and its metadata apply only to a real file. Any other path is handed to
  * the gateway as-is, so its file name names the upload.
+ *
+ * `--detect` asks the file itself: the extension picks the kind, and an ISO base media video
+ * supplies its duration, width and height. Explicit `--duration`, `--width` and `--height` still
+ * win over the probe. With `-` there is nothing to probe, so only the `--name` extension is used and
+ * no metadata is sent.
  */
 class SendFileCommand : CliktCommand(name = "send-file") {
     private val appContext by requireObject<AppContext>()
@@ -29,30 +37,55 @@ class SendFileCommand : CliktCommand(name = "send-file") {
     private val caption by option("--caption", help = "The caption").default("")
     private val photo by option("--photo", help = "Send as a photo instead of a document").flag()
     private val video by option("--video", help = "Send as a streamable video instead of a document").flag()
-    private val duration by option("--duration", help = "The video duration in seconds; only with --video")
+    private val detect by option("--detect", help = "Detect the kind and the video metadata from the file").flag()
+    private val duration by option("--duration", help = "The video duration in seconds; only with --video or --detect")
         .double()
-    private val width by option("--width", help = "The video width in pixels; only with --video").int()
-    private val height by option("--height", help = "The video height in pixels; only with --video").int()
+    private val width by option("--width", help = "The video width in pixels; only with --video or --detect").int()
+    private val height by option("--height", help = "The video height in pixels; only with --video or --detect").int()
     private val name by option("--name", help = "The upload file name for a stdin stream; defaults to stdin")
 
     override fun run() {
         val message = rejectInvalidInput {
             require(!(video && photo)) { "--video and --photo are mutually exclusive" }
-            require(video || isMetadataAbsent()) { "--duration, --width and --height require --video" }
+            require(!(detect && (video || photo))) { "--detect cannot be combined with --video or --photo" }
+            require(video || detect || isMetadataAbsent()) {
+                "--duration, --width and --height require --video or --detect"
+            }
             send()
         }
         appContext.output.renderMessages(listOf(message))
     }
 
     private fun send() =
-        if (path == STDIN) {
-            val data = ByteArrayInputStream(readStdin().toByteArray())
-            appContext.sendMedia().sendStream(peer, name ?: STDIN_NAME, data, caption, photo)
-        } else if (video) {
-            appContext.sendMedia().sendVideo(peer, Path.of(path), caption, duration, width, height)
-        } else {
-            appContext.sendMedia().sendFile(peer, Path.of(path), caption, photo)
+        when {
+            path == STDIN -> sendStdin()
+            detect -> sendDetected(Path.of(path))
+            video -> appContext.sendMedia().sendVideo(peer, Path.of(path), caption, duration, width, height)
+            else -> appContext.sendMedia().sendFile(peer, Path.of(path), caption, photo)
         }
+
+    private fun sendStdin(): Message {
+        val uploadName = name ?: STDIN_NAME
+        val data = ByteArrayInputStream(readStdin().toByteArray())
+        val asPhoto = detect && mediaKindOf(uploadName) == MediaKindHint.PHOTO
+        return appContext.sendMedia().sendStream(peer, uploadName, data, caption, asPhoto)
+    }
+
+    private fun sendDetected(file: Path): Message {
+        val probe = appContext.mediaProbe().probe(file)
+        return when (probe.kind) {
+            MediaKindHint.PHOTO -> appContext.sendMedia().sendFile(peer, file, caption, asPhoto = true)
+            MediaKindHint.VIDEO -> appContext.sendMedia().sendVideo(
+                peer,
+                file,
+                caption,
+                duration ?: probe.durationSeconds,
+                width ?: probe.width,
+                height ?: probe.height,
+            )
+            MediaKindHint.DOCUMENT -> appContext.sendMedia().sendFile(peer, file, caption, asPhoto = false)
+        }
+    }
 
     private fun isMetadataAbsent() = duration == null && width == null && height == null
 

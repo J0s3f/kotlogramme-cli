@@ -5,14 +5,21 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
 
 ## Media (Phases 4 and 7)
 
-- `send-file <peer> <path|-> [--caption <text>] [--photo] [--video] [--duration <seconds>]
-  [--width <px>] [--height <px>] [--name <name>]` — uploads a local file as a document, as a photo
-  with `--photo`, or as a streamable video with `--video` that Telegram plays in place instead of
-  offering as a download. The video's `--duration`, `--width` and `--height` describe it; they are
-  only accepted together with `--video`, and `--video` and `--photo` are mutually exclusive. A `-`
-  path reads standard input and uploads it as a plain stream named by `--name`, defaulting to
-  `stdin`, so `cat cat.png | kotlogramme send-file @chat -` works; a piped upload is never
-  streamable, so `--video` does not apply to it.
+- `send-file <peer> <path|-> [--caption <text>] [--photo] [--video] [--detect] [--duration
+  <seconds>] [--width <px>] [--height <px>] [--name <name>]` — uploads a local file as a document,
+  as a photo with `--photo`, or as a streamable video with `--video` that Telegram plays in place
+  instead of offering as a download. The video's `--duration`, `--width` and `--height` describe it;
+  they are only accepted together with `--video` or `--detect`, and `--video` and `--photo` are
+  mutually exclusive. `--detect` works out the kind from the file's extension (`jpg`, `jpeg` and
+  `png` are photos; `mp4`, `m4v`, `mov`, `mkv`, `webm` and `avi` are videos; anything else is a
+  document) and reads the duration, width and height of an MP4, M4V or MOV file by parsing its
+  container, so nothing has to be typed; an explicit `--duration`, `--width` or `--height` overrides
+  the probe, and `--detect` cannot be combined with `--photo` or `--video`. A Matroska or AVI video
+  is still sent as a video, just without metadata, because this build does not parse those
+  containers. A `-` path reads standard input and uploads it as a plain stream named by `--name`,
+  defaulting to `stdin`, so `cat cat.png | kotlogramme send-file @chat -` works; a piped upload is
+  never streamable, so `--video` does not apply to it, and `--detect` uses the `--name` extension for
+  the kind only.
 - `send-media-url <peer> <url> [--caption <text>] [--photo]` — lets Telegram fetch the URL and send
   it, so nothing is uploaded from this machine.
 - `copy-media <peer> <messageId> [--caption <text>]` — re-sends the media of an existing message
