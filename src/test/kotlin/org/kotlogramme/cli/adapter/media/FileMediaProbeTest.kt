@@ -90,7 +90,7 @@ class FileMediaProbeTest {
 
     @Test
     fun `leaves metadata null for a container this build does not parse`() {
-        val names = listOf("clip.mkv", "clip.webm", "clip.avi")
+        val names = listOf("clip.avi")
         names.forEach { name ->
             val file = Files.write(tempDir.resolve(name), isoVideoBytes())
 
@@ -101,6 +101,94 @@ class FileMediaProbeTest {
             assertNull(result.width, name)
             assertNull(result.height, name)
         }
+    }
+
+    @Test
+    fun `reads duration and dimensions from a Matroska video`() {
+        val file = Files.write(tempDir.resolve("clip.mkv"), mkvFileBytes())
+
+        val result = probe.probe(file)
+
+        assertEquals(MediaKindHint.VIDEO, result.kind)
+        assertEquals(5.0, result.durationSeconds)
+        assertEquals(1280, result.width)
+        assertEquals(720, result.height)
+    }
+
+    @Test
+    fun `applies a non-default timecode scale to the Matroska duration`() {
+        val file = Files.write(
+            tempDir.resolve("clip.webm"),
+            mkvFileBytes(timecodeScale = 100_000L, durationTicks = 5_000.0, width = 640, height = 360),
+        )
+
+        val result = probe.probe(file)
+
+        assertEquals(0.5, result.durationSeconds)
+        assertEquals(640, result.width)
+        assertEquals(360, result.height)
+    }
+
+    @Test
+    fun `reads a single precision Matroska duration`() {
+        val file = Files.write(
+            tempDir.resolve("clip.mkv"),
+            mkvFileBytes(durationTicks = 2_000.0, singlePrecisionDuration = true),
+        )
+
+        val result = probe.probe(file)
+
+        assertEquals(2.0, result.durationSeconds)
+    }
+
+    @Test
+    fun `reads only the duration when the Matroska file has no tracks`() {
+        val file = Files.write(tempDir.resolve("clip.mkv"), mkvFileBytes(includeTracks = false))
+
+        val result = probe.probe(file)
+
+        assertEquals(MediaKindHint.VIDEO, result.kind)
+        assertEquals(5.0, result.durationSeconds)
+        assertNull(result.width)
+        assertNull(result.height)
+    }
+
+    @Test
+    fun `ignores an audio-only Matroska track for dimensions`() {
+        val file = Files.write(tempDir.resolve("clip.webm"), mkvFileBytes(includeVideoTrack = false))
+
+        val result = probe.probe(file)
+
+        assertEquals(MediaKindHint.VIDEO, result.kind)
+        assertEquals(5.0, result.durationSeconds)
+        assertNull(result.width)
+        assertNull(result.height)
+    }
+
+    @Test
+    fun `skips Matroska clusters and still reads later metadata`() {
+        val file = Files.write(
+            tempDir.resolve("clip.mkv"),
+            mkvFileBytes(clusterFirst = true, clusterBytes = 4096),
+        )
+
+        val result = probe.probe(file)
+
+        assertEquals(5.0, result.durationSeconds)
+        assertEquals(1280, result.width)
+        assertEquals(720, result.height)
+    }
+
+    @Test
+    fun `falls back to the kind with null metadata for a truncated Matroska file`() {
+        val file = Files.write(tempDir.resolve("broken.mkv"), mkvFileBytes().copyOf(16))
+
+        val result = probe.probe(file)
+
+        assertEquals(MediaKindHint.VIDEO, result.kind)
+        assertNull(result.durationSeconds)
+        assertNull(result.width)
+        assertNull(result.height)
     }
 
     private fun emptyFile(name: String): Path = Files.write(tempDir.resolve(name), ByteArray(0))
