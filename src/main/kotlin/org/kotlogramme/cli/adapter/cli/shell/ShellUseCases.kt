@@ -1,10 +1,14 @@
 package org.kotlogramme.cli.adapter.cli.shell
 
+import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
+import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
+import org.kotlogramme.cli.application.port.api.Stickers
 
 /**
  * The inbound ports the shell dispatches to.
@@ -18,4 +22,8 @@ class ShellUseCases(
     val messageWriter: () -> MessageWriter,
     val contacts: () -> Contacts,
     val searchMessages: () -> SearchMessages,
+    val chatMembers: () -> ChatMembers,
+    val listFolders: () -> ListFolders,
+    val stickers: () -> Stickers,
+    val inline: () -> InlineBots,
 )

@@ -30,6 +30,10 @@ class ShellCommand : CliktCommand(name = "shell") {
             messageWriter = appContext::messageWriter,
             contacts = appContext::contacts,
             searchMessages = appContext::searchMessages,
+            chatMembers = appContext::chatMembers,
+            listFolders = appContext::listFolders,
+            stickers = appContext::stickers,
+            inline = appContext::inline,
         )
         val reader = LineReaderBuilder.builder()
             .terminal(terminal)

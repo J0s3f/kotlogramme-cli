@@ -1,21 +1,38 @@
 package org.kotlogramme.cli.adapter.cli.shell
 
+import org.kotlogramme.cli.adapter.cli.FakeChatMembers
 import org.kotlogramme.cli.adapter.cli.FakeContacts
+import org.kotlogramme.cli.adapter.cli.FakeInlineBots
 import org.kotlogramme.cli.adapter.cli.FakeListDialogs
+import org.kotlogramme.cli.adapter.cli.FakeListFolders
 import org.kotlogramme.cli.adapter.cli.FakeMessageWriter
 import org.kotlogramme.cli.adapter.cli.FakeReadHistory
 import org.kotlogramme.cli.adapter.cli.FakeSearchMessages
+import org.kotlogramme.cli.adapter.cli.FakeStickers
+import org.kotlogramme.cli.adapter.cli.InlineQueryCall
+import org.kotlogramme.cli.adapter.cli.InlineSendCall
+import org.kotlogramme.cli.adapter.cli.MemberCall
 import org.kotlogramme.cli.adapter.cli.MissingCredentialsError
 import org.kotlogramme.cli.adapter.cli.RecordingOutput
 import org.kotlogramme.cli.adapter.cli.SendCall
+import org.kotlogramme.cli.adapter.cli.StickerSendCall
+import org.kotlogramme.cli.adapter.cli.inlineResult
+import org.kotlogramme.cli.adapter.cli.testStickerSet
+import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
+import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
+import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatKind
+import org.kotlogramme.cli.domain.Folder
+import org.kotlogramme.cli.domain.InlineQuery
 import org.kotlogramme.cli.domain.Message
+import org.kotlogramme.cli.domain.Participant
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,7 +65,14 @@ class ShellTest {
         writer: MessageWriter = FakeMessageWriter(),
         contacts: Contacts = FakeContacts(),
         search: SearchMessages = FakeSearchMessages(),
-    ) = ShellUseCases({ dialogs }, { history }, { writer }, { contacts }, { search })
+        members: ChatMembers = FakeChatMembers(),
+        folders: ListFolders = FakeListFolders(),
+        stickers: Stickers = FakeStickers(),
+        inline: InlineBots = FakeInlineBots(),
+    ) = ShellUseCases(
+        { dialogs }, { history }, { writer }, { contacts }, { search },
+        { members }, { folders }, { stickers }, { inline },
+    )
 
     private fun run(
         lines: List<String>,
@@ -119,6 +143,10 @@ class ShellTest {
             messageWriter = { FakeMessageWriter() },
             contacts = { FakeContacts() },
             searchMessages = { FakeSearchMessages() },
+            chatMembers = { FakeChatMembers() },
+            listFolders = { FakeListFolders() },
+            stickers = { FakeStickers() },
+            inline = { FakeInlineBots() },
         )
 
         val output = run(listOf("list"), useCases = useCases)
@@ -152,6 +180,124 @@ class ShellTest {
             ),
             output.lines,
         )
+    }
+
+    @Test
+    fun `stickers lists the installed sets`() {
+        val stickers = FakeStickers(sets = listOf(testStickerSet()))
+
+        val output = run(listOf("stickers"), fakeUseCases(stickers = stickers))
+
+        val rows = output.lines.filter { it.contains("cats") }
+        assertTrue(rows.any { it.contains("Cats") }, output.text)
+    }
+
+    @Test
+    fun `sticker-set numbers the stickers for send-sticker`() {
+        val stickers = FakeStickers(setAnswer = testStickerSet())
+
+        val output = run(listOf("sticker-set cats"), fakeUseCases(stickers = stickers))
+
+        assertEquals(listOf("cats"), stickers.setRequests)
+        val rows = output.lines.filter { it.startsWith("0\t") || it.startsWith("1\t") }
+        assertEquals(listOf("0\t11\t🐱", "1\t22\t🐱"), rows)
+    }
+
+    @Test
+    fun `send-sticker sends into the current chat`() {
+        val stickers = FakeStickers()
+
+        run(listOf("open @ada", "send-sticker cats 1"), fakeUseCases(stickers = stickers))
+
+        assertEquals(StickerSendCall("@ada", "cats", 1, null, false), stickers.sends.single())
+    }
+
+    @Test
+    fun `send-sticker needs an open chat`() {
+        val stickers = FakeStickers()
+
+        val output = run(listOf("send-sticker cats 0"), fakeUseCases(stickers = stickers))
+
+        assertEquals(emptyList(), stickers.sends)
+        assertTrue(output.text.contains("No chat open"))
+    }
+
+    @Test
+    fun `inline sends the chosen result into the current chat`() {
+        val answer = InlineQuery(
+            queryId = 5L,
+            results = listOf(inlineResult("a", "First"), inlineResult("b", "Second")),
+        )
+        val inline = FakeInlineBots(answer = answer)
+
+        run(listOf("open @ada", "inline @gif cats --send 1"), fakeUseCases(inline = inline))
+
+        assertEquals(InlineQueryCall("@gif", "cats", "@ada"), inline.queries.single())
+        assertEquals(InlineSendCall("@ada", 5L, "b"), inline.sends.single())
+    }
+
+    @Test
+    fun `inline without --send only queries the current chat`() {
+        val inline = FakeInlineBots(
+            answer = InlineQuery(queryId = 5L, results = listOf(inlineResult("a", "First"))),
+        )
+
+        run(listOf("open @ada", "inline @gif cats"), fakeUseCases(inline = inline))
+
+        assertEquals(InlineQueryCall("@gif", "cats", "@ada"), inline.queries.single())
+        assertEquals(emptyList(), inline.sends)
+    }
+
+    @Test
+    fun `inline --send needs an open chat`() {
+        val inline = FakeInlineBots()
+
+        val output = run(listOf("inline @gif cats --send 0"), fakeUseCases(inline = inline))
+
+        assertEquals(emptyList(), inline.queries)
+        assertEquals(emptyList(), inline.sends)
+        assertTrue(output.text.contains("No chat open"))
+    }
+
+    @Test
+    fun `inline reports an out-of-range result index`() {
+        val inline = FakeInlineBots(
+            answer = InlineQuery(queryId = 5L, results = listOf(inlineResult("a", "First"))),
+        )
+
+        val output = run(listOf("open @ada", "inline @gif cats --send 4"), fakeUseCases(inline = inline))
+
+        assertEquals(emptyList(), inline.sends)
+        assertTrue(output.text.contains("No result at index 4"))
+    }
+
+    @Test
+    fun `members defaults to the current chat`() {
+        val members = FakeChatMembers(
+            listOf(Participant(id = 9, displayName = "Ada", username = "ada", role = "member")),
+        )
+
+        run(listOf("open @ada", "members"), fakeUseCases(members = members))
+
+        assertEquals(MemberCall("@ada", 50), members.lists.single())
+    }
+
+    @Test
+    fun `members accepts an explicit peer`() {
+        val members = FakeChatMembers()
+
+        run(listOf("members @club"), fakeUseCases(members = members))
+
+        assertEquals(MemberCall("@club", 50), members.lists.single())
+    }
+
+    @Test
+    fun `folders lists the dialog folders`() {
+        val folders = FakeListFolders(listOf(Folder(id = 1, title = "Work", kind = "filter")))
+
+        val output = run(listOf("folders"), fakeUseCases(folders = folders))
+
+        assertTrue(output.text.contains("Work"), output.text)
     }
 
     private fun message(id: Int, text: String, outgoing: Boolean = false) = Message(

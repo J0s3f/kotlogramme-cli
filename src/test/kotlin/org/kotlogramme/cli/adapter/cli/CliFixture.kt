@@ -19,6 +19,7 @@ import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
+import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
@@ -34,6 +35,8 @@ import org.kotlogramme.cli.domain.InlineQuery
 import org.kotlogramme.cli.domain.InlineResult
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
+import org.kotlogramme.cli.domain.StickerPack
+import org.kotlogramme.cli.domain.StickerSet
 import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -301,6 +304,58 @@ internal class FakeInlineBots(
 /** A result the inline tests can list or send. */
 internal fun inlineResult(id: String, title: String, text: String? = null) =
     InlineResult(id = id, type = "article", title = title, description = null, text = text)
+
+/** A sticker send request: the chat, the set, the index and the options the command parsed. */
+internal data class StickerSendCall(
+    val reference: String,
+    val setReference: String,
+    val index: Int,
+    val replyToMessageId: Int?,
+    val silent: Boolean,
+)
+
+/** A [Stickers] returning canned sets and recording every request. */
+internal class FakeStickers(
+    private val sets: List<StickerSet> = emptyList(),
+    private val setAnswer: StickerSet? = null,
+    private val sent: Message = testMessage,
+) : Stickers {
+    val setRequests = mutableListOf<String>()
+    val sends = mutableListOf<StickerSendCall>()
+
+    override fun sets(): List<StickerSet> = sets
+
+    override fun set(reference: String): StickerSet {
+        setRequests += reference
+        return setAnswer ?: error("no sticker set configured for '$reference'")
+    }
+
+    override fun send(
+        chatReference: String,
+        setReference: String,
+        index: Int,
+        replyToMessageId: Int?,
+        silent: Boolean,
+    ): Message {
+        sends += StickerSendCall(chatReference, setReference, index, replyToMessageId, silent)
+        return sent
+    }
+}
+
+/** A sticker set the shell tests can list and open, numbered by [documents]. */
+internal fun testStickerSet(
+    shortName: String = "cats",
+    title: String = "Cats",
+    documents: List<Long> = listOf(11L, 22L),
+) = StickerSet(
+    id = 42,
+    accessHash = 99,
+    title = title,
+    shortName = shortName,
+    count = documents.size,
+    packs = listOf(StickerPack(emoticon = "🐱", documentIds = documents)),
+    documents = documents,
+)
 
 /** A send request with every field the command parsed. */
 internal data class SendCall(val reference: String, val text: String, val replyToMessageId: Int?, val silent: Boolean)

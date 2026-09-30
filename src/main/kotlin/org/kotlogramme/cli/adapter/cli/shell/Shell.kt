@@ -2,7 +2,12 @@ package org.kotlogramme.cli.adapter.cli.shell
 
 import org.kotlogramme.cli.adapter.format.renderChats
 import org.kotlogramme.cli.adapter.format.renderContacts
+import org.kotlogramme.cli.adapter.format.renderFolders
+import org.kotlogramme.cli.adapter.format.renderInlineResults
 import org.kotlogramme.cli.adapter.format.renderMessages
+import org.kotlogramme.cli.adapter.format.renderParticipants
+import org.kotlogramme.cli.adapter.format.renderStickerSet
+import org.kotlogramme.cli.adapter.format.renderStickerSets
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.Message
@@ -54,6 +59,12 @@ class Shell(
                 "reply" -> reply(arguments)
                 "contacts" -> listContacts()
                 "search" -> search(arguments)
+                "stickers" -> listStickerSets()
+                "sticker-set" -> showStickerSet(arguments)
+                "send-sticker" -> sendSticker(arguments)
+                "inline" -> inline(arguments)
+                "members" -> listMembers(arguments)
+                "folders" -> listFolders()
                 else -> output.line("Unknown command: $name. Type `help` for the available commands.")
             }
         } catch (error: Exception) {
@@ -127,6 +138,85 @@ class Shell(
         output.renderMessages(useCases.searchMessages().search(scope, query, TRANSCRIPT_LIMIT))
     }
 
+    private fun listStickerSets() {
+        output.renderStickerSets(useCases.stickers().sets())
+    }
+
+    private fun showStickerSet(arguments: List<String>) {
+        val set = arguments.firstOrNull()
+        if (set == null) {
+            output.line("Usage: sticker-set <set>")
+            return
+        }
+        output.renderStickerSet(useCases.stickers().set(set))
+    }
+
+    /** Sends a sticker into the current chat, the one the prompt names. */
+    private fun sendSticker(arguments: List<String>) {
+        val chat = requireChat() ?: return
+        val set = arguments.firstOrNull()
+        val index = arguments.getOrNull(1)?.toIntOrNull()
+        if (set == null || index == null) {
+            output.line("Usage: send-sticker <set> <index>")
+            return
+        }
+        val sent = useCases.stickers().send(chat.reference, set, index)
+        remember(listOf(sent))
+        output.renderMessages(listOf(sent))
+    }
+
+    /**
+     * Asks an inline bot, and with `--send` posts the chosen result into the current chat.
+     *
+     * The current chat is both the context the query is asked in and the destination, so the
+     * one-shot command's `--to` is unnecessary here.
+     */
+    private fun inline(arguments: List<String>) {
+        val sendAt = arguments.indexOf(SEND_OPTION)
+        val sendIndex = if (sendAt >= 0) arguments.getOrNull(sendAt + 1)?.toIntOrNull() else null
+        if (sendAt >= 0 && sendIndex == null) {
+            output.line("Usage: inline <bot> <query> [--send <index>]")
+            return
+        }
+        val words = if (sendAt >= 0) {
+            arguments.filterIndexed { index, _ -> index != sendAt && index != sendAt + 1 }
+        } else {
+            arguments
+        }
+        val bot = words.firstOrNull()
+        val query = words.drop(1).joinToString(" ").trim()
+        if (bot == null || query.isEmpty()) {
+            output.line("Usage: inline <bot> <query> [--send <index>]")
+            return
+        }
+        val destination = if (sendIndex != null) requireChat() ?: return else currentChat
+        val answer = useCases.inline().query(bot, query, destination?.reference)
+        output.renderInlineResults(answer)
+        if (sendIndex == null) return
+        val result = answer.results.getOrNull(sendIndex)
+        if (result == null) {
+            output.line("No result at index $sendIndex: the bot returned ${answer.results.size}.")
+            return
+        }
+        val sent = useCases.inline().send(requireNotNull(destination).reference, answer.queryId, result.id)
+        if (sent == null) {
+            output.line("The bot did not report a message for result $sendIndex.")
+            return
+        }
+        remember(listOf(sent))
+        output.renderMessages(listOf(sent))
+    }
+
+    private fun listMembers(arguments: List<String>) {
+        val peer = arguments.firstOrNull()
+        val reference = peer ?: requireChat()?.reference ?: return
+        output.renderParticipants(useCases.chatMembers().list(reference, MEMBER_LIMIT))
+    }
+
+    private fun listFolders() {
+        output.renderFolders(useCases.listFolders().list())
+    }
+
     private fun resolve(peer: String): Chat? {
         val normalized = peer.removePrefix("@").lowercase()
         return useCases.listDialogs().list(DIALOG_LIMIT).firstOrNull { chat ->
@@ -169,8 +259,12 @@ class Shell(
         const val QUIT = "quit"
         const val EXIT = "exit"
         const val LIMIT_OPTION = "--limit"
+        const val SEND_OPTION = "--send"
         const val DIALOG_LIMIT = 100
         const val CONTACT_LIMIT = 50
+
+        /** How many members `members` asks for, matching the one-shot command's default. */
+        const val MEMBER_LIMIT = 50
 
         /** How many messages of the current chat the shell keeps in view. */
         const val TRANSCRIPT_LIMIT = 20
@@ -186,6 +280,12 @@ class Shell(
             "reply <id> <text...> reply to a message",
             "contacts             list contacts",
             "search <query>       search the current chat, or everywhere",
+            "stickers             list the installed sticker sets",
+            "sticker-set <set>    show a set with its stickers numbered",
+            "send-sticker <set> <index>  send a sticker in the current chat",
+            "inline <bot> <query> [--send <index>]  query a bot, send a result here",
+            "members [<peer>]     list the current chat's members",
+            "folders              list the dialog folders",
             "quit | exit          leave the shell",
         )
     }
