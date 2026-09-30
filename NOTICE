@@ -1,0 +1,10 @@
+kotlogramme includes and dynamically links the following third-party software:
+
+grammers
+https://codeberg.org/Lonami/grammers
+Licensed under either the Apache License, Version 2.0, or the MIT license, at the user's option.
+The applicable license texts are available in the grammers source distribution.
+
+JNI is provided by the jni Rust crate:
+https://crates.io/crates/jni
+Licensed under MIT or Apache-2.0.
