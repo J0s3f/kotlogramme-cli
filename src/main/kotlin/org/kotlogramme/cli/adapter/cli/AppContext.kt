@@ -15,6 +15,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramContactGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramContactOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramFolderGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramFolderOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramInlineGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramInlineOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageSearchGateway
@@ -32,6 +34,7 @@ import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
 import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.Listen
@@ -47,6 +50,7 @@ import org.kotlogramme.cli.application.service.AdminRightsService
 import org.kotlogramme.cli.application.service.AuthenticateService
 import org.kotlogramme.cli.application.service.ChatMembersService
 import org.kotlogramme.cli.application.service.ContactsService
+import org.kotlogramme.cli.application.service.InlineService
 import org.kotlogramme.cli.application.service.ListDialogsService
 import org.kotlogramme.cli.application.service.ListFoldersService
 import org.kotlogramme.cli.application.service.ListenService
@@ -80,6 +84,7 @@ class AppContext(
     private val listFoldersFactory: (AppConfig) -> ListFolders = ::defaultListFolders,
     private val listenFactory: (AppConfig) -> Listen = ::defaultListen,
     private val stickersFactory: (AppConfig) -> Stickers = ::defaultStickers,
+    private val inlineFactory: (AppConfig) -> InlineBots = ::defaultInline,
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -133,6 +138,9 @@ class AppContext(
 
     /** The sticker use case, with the same missing-credentials error as [authenticate]. */
     fun stickers(): Stickers = stickersFactory(configured())
+
+    /** The inline-bot use case, with the same missing-credentials error as [authenticate]. */
+    fun inline(): InlineBots = inlineFactory(configured())
 
     private fun configured(): AppConfig {
         val config = config()
@@ -250,6 +258,16 @@ private fun defaultStickers(config: AppConfig): Stickers {
     return StickerService(
         KotlogramStickerGateway(
             KotlogramStickerOperations(client),
+            ChatReferenceResolver(KotlogramChatOperations(client)),
+        ),
+    )
+}
+
+private fun defaultInline(config: AppConfig): InlineBots {
+    val client = clientFor(config)
+    return InlineService(
+        KotlogramInlineGateway(
+            KotlogramInlineOperations(client),
             ChatReferenceResolver(KotlogramChatOperations(client)),
         ),
     )

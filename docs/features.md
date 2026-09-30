@@ -69,6 +69,9 @@ trace.
 - `sticker-set <set>` — shows one set with its stickers numbered, which is the index `send-sticker`
   takes. The set is named by short name, or `id:accessHash` for one that is not installed.
 - `send-sticker <peer> <set> <index> [--reply-to <id>] [--silent]` — sends one sticker from a set.
+- `inline <bot> <query> [--in <peer>] [--send <index> --to <peer>]` — asks an inline bot and prints
+  its numbered results with the id, type, title, description and text of each. Adding `--send` and
+  `--to` posts that result in the same call, because Telegram expires the query id the send needs.
 
 ## Diagnostics (Phase 8)
 

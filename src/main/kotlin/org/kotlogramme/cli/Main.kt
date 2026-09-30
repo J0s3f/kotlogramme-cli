@@ -18,6 +18,7 @@ import org.kotlogramme.cli.adapter.cli.EditCommand
 import org.kotlogramme.cli.adapter.cli.FoldersCommand
 import org.kotlogramme.cli.adapter.cli.ForwardCommand
 import org.kotlogramme.cli.adapter.cli.HistoryCommand
+import org.kotlogramme.cli.adapter.cli.InlineCommand
 import org.kotlogramme.cli.adapter.cli.InviteCommand
 import org.kotlogramme.cli.adapter.cli.KickCommand
 import org.kotlogramme.cli.adapter.cli.ListenCommand
@@ -98,6 +99,7 @@ fun main(args: Array<String>) {
                 StickersCommand(),
                 StickerSetCommand(),
                 SendStickerCommand(),
+                InlineCommand(),
                 ShellCommand(),
             )
             .main(args)

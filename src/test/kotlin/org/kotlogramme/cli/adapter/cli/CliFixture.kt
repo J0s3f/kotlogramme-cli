@@ -10,6 +10,7 @@ import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
 import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.Listen
@@ -28,6 +29,8 @@ import org.kotlogramme.cli.domain.ChatRights
 import org.kotlogramme.cli.domain.Contact
 import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.IncomingUpdate
+import org.kotlogramme.cli.domain.InlineQuery
+import org.kotlogramme.cli.domain.InlineResult
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
 import java.nio.file.Path
@@ -248,8 +251,7 @@ internal class FakeAdminRights(
     }
 }
 
-/** A [Listen] that replays canned updates and stops as soon as the predicate asks it to. */
-internal class FakeListen(private val updates: List<IncomingUpdate> = emptyList()) : Listen {
+/** A [Listen] that replays canned updates and stops as soon as the predicate asks it to. */internal class FakeListen(private val updates: List<IncomingUpdate> = emptyList()) : Listen {
     override fun run(stop: () -> Boolean, onUpdate: (IncomingUpdate) -> Unit): Int {
         var handled = 0
         for (update in updates) {
@@ -260,6 +262,43 @@ internal class FakeListen(private val updates: List<IncomingUpdate> = emptyList(
         return handled
     }
 }
+
+/** An inline query: the bot, the query and the chat context it was asked in. */
+internal data class InlineQueryCall(val bot: String, val query: String, val reference: String?)
+
+/** An inline send: the destination, the query id carried from the answer and the result id. */
+internal data class InlineSendCall(val reference: String, val queryId: Long, val resultId: String)
+
+/** An [InlineBots] returning a canned answer and recording every query and send. */
+internal class FakeInlineBots(
+    private val answer: InlineQuery = InlineQuery(queryId = 1L, results = emptyList()),
+    private val sent: Message? = testMessage,
+    private val rejection: IllegalArgumentException? = null,
+) : InlineBots {
+    val queries = mutableListOf<InlineQueryCall>()
+    val sends = mutableListOf<InlineSendCall>()
+
+    /** Simulates the use case rejecting the input before it reaches the gateway. */
+    private fun reject() {
+        rejection?.let { throw it }
+    }
+
+    override fun query(bot: String, query: String, reference: String?): InlineQuery {
+        reject()
+        queries += InlineQueryCall(bot, query, reference)
+        return answer
+    }
+
+    override fun send(reference: String, queryId: Long, resultId: String): Message? {
+        reject()
+        sends += InlineSendCall(reference, queryId, resultId)
+        return sent
+    }
+}
+
+/** A result the inline tests can list or send. */
+internal fun inlineResult(id: String, title: String, text: String? = null) =
+    InlineResult(id = id, type = "article", title = title, description = null, text = text)
 
 /** A send request with every field the command parsed. */
 internal data class SendCall(val reference: String, val text: String, val replyToMessageId: Int?, val silent: Boolean)
@@ -378,6 +417,7 @@ internal fun cliFixture(
     adminRights: AdminRights = FakeAdminRights(),
     listFolders: ListFolders = FakeListFolders(),
     listen: Listen = FakeListen(),
+    inline: InlineBots = FakeInlineBots(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
     nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
@@ -397,6 +437,7 @@ internal fun cliFixture(
         adminRightsFactory = { adminRights },
         listFoldersFactory = { listFolders },
         listenFactory = { listen },
+        inlineFactory = { inline },
     )
     val root = KotlogrammeCommand { context }
         .subcommands(
@@ -425,6 +466,7 @@ internal fun cliFixture(
             RestrictCommand(),
             ListenCommand(),
             FoldersCommand(),
+            InlineCommand(),
             ShellCommand(),
         )
     return CliFixture(output, authenticate, root)
