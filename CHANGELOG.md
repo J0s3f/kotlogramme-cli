@@ -4,6 +4,37 @@ All notable changes to `kotlogramme-cli` are recorded here.
 
 ## Unreleased
 
+Built on the `kotlogram` `v0.9.8` tag, resolved from JitPack.
+
+### Features
+
+- **Contacts**: `contacts block`, `unblock`, `search`, `blocked`, `import` and `delete` manage the
+  account's contact list from the CLI.
+- **Sessions**: `sessions list`, `terminate` and `terminate-all` inspect and end other logins.
+  `terminate` takes an explicit session hash; `terminate-all` refuses without `--yes`, because it
+  signs every other device out and cannot be undone.
+- **Chat actions**: `chat-action` sends a typing or upload indicator to a chat.
+- **Pinned messages**: `pinned` reads a chat's pinned message; `unpin` removes one, or `--all`
+  removes them all.
+- **Photos**: `chat-photos` and `profile-photos` list a chat's or account's photos.
+- **Albums**: `send-album` sends several files as one grouped album.
+- **Saved Messages** is addressable as `me` or `@me`, and `list` shows it first. It is the private
+  chat with yourself, which the facade now exposes through its `getSelfPeer` operation; it never
+  appears in a dialog scan, so this needed the facade's `v0.9.8`.
+- **Shell**: `blocked`, `sessions`, `chat-action`, `pinned` and `unpin all` are available mid
+  conversation. `help commands` now lists the CLI's full command set and marks which names work in
+  the shell, instead of an ambiguous list that named commands the shell does not dispatch.
+
+### Fixed
+
+- **Non-ASCII and emoji render correctly on Windows.** Output used to go through `System.out`, whose
+  encoder follows the console code page, so anything outside it was replaced with `?` before the
+  terminal saw it - no font or terminal setting could recover it. The interactive shell now writes
+  through JLine's writer, which uses `WriteConsoleW` and needs no console change. A one-shot command
+  sets the console code page to UTF-8 and swaps the streams to match, then restores the code page it
+  actually read on exit. Both paths are strict no-ops when the environment is already correct, and
+  piped, redirected and JSON output is byte-for-byte unchanged.
+
 ## 0.3.1 - 2026-10-01
 
 Built on the `kotlogram` `v0.9.7` tag, resolved from JitPack.
