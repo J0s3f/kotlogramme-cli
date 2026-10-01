@@ -19,6 +19,7 @@ import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.Listen
 import org.kotlogramme.cli.application.port.api.LoginStep
 import org.kotlogramme.cli.application.port.api.MessageWriter
+import org.kotlogramme.cli.application.port.api.Photos
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
@@ -47,6 +48,7 @@ import org.kotlogramme.cli.domain.InlineResult
 import org.kotlogramme.cli.domain.MediaFileKind
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
+import org.kotlogramme.cli.domain.Photo
 import org.kotlogramme.cli.domain.Session
 import org.kotlogramme.cli.domain.StickerPack
 import org.kotlogramme.cli.domain.StickerSet
@@ -295,6 +297,25 @@ internal class FakeSessions(private val sessions: List<Session> = emptyList()) :
 
     override fun terminateAll() {
         terminateAllCount++
+    }
+}
+
+/** A [Photos] returning canned photos and recording every request. */
+internal class FakePhotos(
+    private val chatPhotoMessages: List<Message> = emptyList(),
+    private val profile: List<Photo> = emptyList(),
+) : Photos {
+    val chatPhotoCalls = mutableListOf<Pair<String, Int>>()
+    val profilePhotoCalls = mutableListOf<Pair<String, Int>>()
+
+    override fun chatPhotos(reference: String, limit: Int): List<Message> {
+        chatPhotoCalls += reference to limit
+        return chatPhotoMessages
+    }
+
+    override fun profilePhotos(reference: String, limit: Int): List<Photo> {
+        profilePhotoCalls += reference to limit
+        return profile
     }
 }
 
@@ -870,6 +891,7 @@ internal fun cliFixture(
     sendMedia: SendMedia = FakeSendMedia(),
     downloadMedia: DownloadMedia = FakeDownloadMedia(),
     sessions: Sessions = FakeSessions(),
+    photos: Photos = FakePhotos(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
     nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
@@ -895,6 +917,7 @@ internal fun cliFixture(
         inlineFactory = { inline },
         sendMediaFactory = { sendMedia },
         sessionsFactory = { sessions },
+        photosFactory = { photos },
         isInteractiveTerminal = interactiveTerminal,
         progressFactory = progressFactory,
         downloadMediaFactory = { downloadMedia },
@@ -940,6 +963,8 @@ internal fun cliFixture(
             ListenCommand(),
             FoldersCommand(),
             SessionsCommand(),
+            ChatPhotosCommand(),
+            ProfilePhotosCommand(),
             InlineCommand(),
             ShellCommand(),
         )

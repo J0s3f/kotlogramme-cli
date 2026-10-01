@@ -31,6 +31,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramPhotoGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramPhotoOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramSearchOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramSessionGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramSessionOperations
@@ -50,6 +52,7 @@ import org.kotlogramme.cli.application.port.api.ListDialogs
 import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.Listen
 import org.kotlogramme.cli.application.port.api.MessageWriter
+import org.kotlogramme.cli.application.port.api.Photos
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
@@ -72,6 +75,7 @@ import org.kotlogramme.cli.application.service.ListDialogsService
 import org.kotlogramme.cli.application.service.ListFoldersService
 import org.kotlogramme.cli.application.service.ListenService
 import org.kotlogramme.cli.application.service.MessageWritingService
+import org.kotlogramme.cli.application.service.PhotosService
 import org.kotlogramme.cli.application.service.ReadHistoryService
 import org.kotlogramme.cli.application.service.SearchMessagesService
 import org.kotlogramme.cli.application.service.SendMediaService
@@ -109,6 +113,7 @@ class AppContext(
     private val sendMediaFactory: (AppConfig) -> SendMedia = ::defaultSendMedia,
     private val downloadMediaFactory: (AppConfig) -> DownloadMedia = ::defaultDownloadMedia,
     private val sessionsFactory: (AppConfig) -> Sessions = ::defaultSessions,
+    private val photosFactory: (AppConfig) -> Photos = ::defaultPhotos,
     private val mediaProbeFactory: () -> MediaProbe = ::FileMediaProbe,
     /**
      * Whether the output is a terminal a person is watching, which is what puts an upload's progress
@@ -181,6 +186,9 @@ class AppContext(
 
     /** The session-management use case, with the same missing-credentials error as [authenticate]. */
     fun sessions(): Sessions = sessionsFactory(configured())
+
+    /** The photo-listing use case, with the same missing-credentials error as [authenticate]. */
+    fun photos(): Photos = photosFactory(configured())
 
     /** The media probe: what a local file should be sent as, and the video metadata it carries. */
     fun mediaProbe(): MediaProbe = mediaProbeFactory()
@@ -345,6 +353,12 @@ private fun defaultDownloadMedia(config: AppConfig): DownloadMedia = DownloadMed
 
 private fun defaultSessions(config: AppConfig): Sessions =
     SessionsService(KotlogramSessionGateway(KotlogramSessionOperations(clientFor(config))))
+
+private fun defaultPhotos(config: AppConfig): Photos {
+    val client = clientFor(config)
+    val operations = KotlogramPhotoOperations(client)
+    return PhotosService(KotlogramPhotoGateway(operations, ChatReferenceResolver(KotlogramChatOperations(client))))
+}
 
 /** The gateway both media commands share, so a send and a download resolve a peer the same way. */
 private fun mediaGateway(config: AppConfig): MediaGateway {

@@ -13,6 +13,7 @@ import org.kotlogramme.cli.adapter.cli.AppContext
 import org.kotlogramme.cli.adapter.cli.BlockCommand
 import org.kotlogramme.cli.adapter.cli.BlockedCommand
 import org.kotlogramme.cli.adapter.cli.ChatActionCommand
+import org.kotlogramme.cli.adapter.cli.ChatPhotosCommand
 import org.kotlogramme.cli.adapter.cli.ConfigCommand
 import org.kotlogramme.cli.adapter.cli.ContactsCommand
 import org.kotlogramme.cli.adapter.cli.CopyMediaCommand
@@ -38,6 +39,7 @@ import org.kotlogramme.cli.adapter.cli.MembersCommand
 import org.kotlogramme.cli.adapter.cli.PermissionsCommand
 import org.kotlogramme.cli.adapter.cli.PinCommand
 import org.kotlogramme.cli.adapter.cli.PinnedCommand
+import org.kotlogramme.cli.adapter.cli.ProfilePhotosCommand
 import org.kotlogramme.cli.adapter.cli.PromoteCommand
 import org.kotlogramme.cli.adapter.cli.ReactCommand
 import org.kotlogramme.cli.adapter.cli.RestrictCommand
@@ -137,6 +139,8 @@ fun main(args: Array<String>) {
                 ListenCommand(),
                 FoldersCommand(),
                 SessionsCommand(),
+                ChatPhotosCommand(),
+                ProfilePhotosCommand(),
                 StickersCommand(),
                 StickerSetCommand(),
                 SendStickerCommand(),
