@@ -76,7 +76,7 @@ the 39.4 MB fat jar, the real win being startup and no JVM.
 The client depends on the current Maven Central release of the facade. To test a different one:
 
 ```bash
-./gradlew test -PkotlogrammeVersion=0.6.0
+./gradlew test -PkotlogrammeVersion=0.7.0
 ```
 
 ## Documentation
