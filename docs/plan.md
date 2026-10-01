@@ -39,9 +39,9 @@ target.
 | Send files / media | yes | yes | – | yes | **yes** |
 | Download media | yes | yes | – | yes | **yes** |
 | Search messages | yes | yes | – | – | **yes** |
-| Contacts / block | yes | yes | – | – | **yes** |
+| Contacts / block | yes | yes | – | – | contacts **yes**; block later |
 | Live updates / notifications | yes | yes | yes | – | **yes** |
-| Mark read / typing | yes | yes | – | – | **yes** |
+| Mark read / typing | yes | yes | – | – | mark-read **yes**; typing later |
 | JSON output for scripting | – | – | – | – | **yes** |
 | Folders, stickers, inline, admin | some | some | – | – | **yes** |
 
@@ -112,7 +112,8 @@ snapshot-tested.
 - [x] **T3.2 Edit, delete, forward, pin.** `EditMessage`, `DeleteMessages`, `ForwardMessages`,
   `PinMessage`/`UnpinMessage`, each with CLI commands and tests.
 - [x] **T3.3 Reactions.** `React` / `RemoveReaction` over `sendReactions`.
-- [x] **T3.4 Read receipts and typing.** `MarkRead`, `sendChatAction` used by the interactive shell.
+- [x] **T3.4 Read receipts.** `MarkRead`, exposed as the `mark-read` command. **Typing is not
+  implemented**: `sendChatAction` has no call site anywhere, so nothing sends a typing indicator yet.
 
 Acceptance: each use case has a fake-gateway test asserting the exact gateway call; CLI commands are
 covered end-to-end against the fake.
@@ -134,11 +135,13 @@ supplies chunk bytes.
 
 ### Phase 5 — People, search and updates
 
-- **T5.1 Contacts.** `contacts`, `search-contacts`, `block`/`unblock`, `import`.
+- **T5.1 Contacts.** `contacts` ships. `search-contacts`, `block`/`unblock` and `import` are still
+  to do; the contact gateway already carries `block`/`unblock`, but no CLI command exposes them.
 - **T5.2 Search.** Global and per-chat search with totals and filters.
-- **T5.3 Update stream.** `listen` — subscribe to the update stream, print new messages (human or
-  JSON Lines), with `--once`, `--follow`, graceful Ctrl-C, and a `wait` command that blocks until
-  the next matching message.
+- **T5.3 Update stream.** `listen` ships: it follows the update stream and prints each update (human
+  or JSON Lines) with `--once` and `--json` and a graceful Ctrl-C. There is no `--follow` flag
+  (`listen` always follows until stopped, so there is nothing for it to turn on) and no `wait`
+  command; both were planned and neither was built.
 
 Acceptance: the update loop is driven by a fake stream; JSON Lines output is snapshot-tested.
 
@@ -146,7 +149,7 @@ Acceptance: the update loop is driven by a fake stream; JSON Lines output is sna
 
 - [x] **T6.1 JLine REPL.** History, completion for commands and peers, prompt showing the current chat,
   and line editing. One shell that dispatches to the same use cases as the one-shot commands.
-- [x] **T6.2 Shell workflow.** `open <peer>`, `list`, `read`, `send`, `reply`, `back`, `quit`, and a
+- [x] **T6.2 Shell workflow.** `open <peer>`, `list`, `read`, `send`, `reply`, `quit`, and a
   compact message view that keeps the last N messages of the current chat.
 
 Acceptance: the shell is unit-tested through its command dispatcher with a fake terminal.

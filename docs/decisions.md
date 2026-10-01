@@ -186,7 +186,7 @@ a deliberately raw upload — without making that the common path. Reusing `File
 be read is still a video with null metadata, a file with no extension is a document, and nothing is
 deleted or rewritten, so the changed default changes the bubble, not the payload.
 
-## 0010 — Progress as a port with the service owning the slot, not a rendering callback
+## 0013 — Progress as a port with the service owning the slot, not a rendering callback
 
 **Decision.** Upload progress is an `UploadProgressReporter` in `application/port/spi` that hands out
 an `UploadProgressSlot`. `SendMediaService` opens the slot once the input is known good and before any
@@ -208,7 +208,7 @@ service is that place, and it is also offline-testable, which a `TelegramClient`
 would not be. Putting the bar in `adapter/format` rather than `adapter/telegram` keeps the render
 loop out of the Telegram adapter, so no presentation concern is coupled to the library.
 
-## 0011 — The progress bar follows the terminal, like colour
+## 0014 — The progress bar follows the terminal, like colour
 
 **Decision.** The bar is on when `System.console() != null` and off otherwise. `--progress` forces it
 on, `--no-progress` forces it off and wins when both are given.
@@ -222,7 +222,7 @@ same question `--color` already asks, so the two now resolve identically and `--
 `--no-color`. On by default would break scripts silently; making the flag mandatory would put work on
 the common case, which is a person watching a terminal.
 
-## 0012 — Piped stdin is spooled to a temporary file rather than buffered
+## 0015 — Piped stdin is spooled to a temporary file rather than buffered
 
 **Decision.** A `-` path reads standard input as raw bytes into a `SpoolFile`, a temporary file that
 is measured for its length, uploaded from with a `FileInputStream` and deleted in a `finally`.
@@ -243,7 +243,7 @@ pass through the temporary directory, which is cheap next to a network upload an
 such. Deleting in a `finally` is why a failed upload leaves no spool file, and swallowing a deletion
 failure is why a cleanup problem never masks the outcome of the upload.
 
-## 0013 — The facade comes from JitPack rather than Maven Central
+## 0016 — The facade comes from JitPack rather than Maven Central
 
 **Decision.** The build resolves `com.github.J0s3f:kotlogram` from JitPack, pinned by tag
 (`v0.9.7`). `settings.gradle.kts` adds the JitPack repository beside Maven Central and sets

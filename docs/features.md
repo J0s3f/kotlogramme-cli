@@ -112,10 +112,13 @@ back to their role.
   references, keeps a history file under the config directory, shows the current chat in the prompt
   and keeps the last messages of that chat in view. Commands: `help`, `dialogs`/`list`,
   `open <peer>`, `read [--limit N]`, `send <text...>`, `reply <id> <text...>`, `contacts`,
-  `search <query>`, `stickers`, `sticker-set <set>`, `send-sticker <set> <index>`,
-  `inline <bot> <query> [--send <index>]`, `members [<peer>]`, `folders`, `quit`/`exit`. It
-  dispatches to the same use cases as the one-shot commands, so anything available there is
-  available in the shell.
+  `search <query>`, `files [<peer>] [--kind <kind>] [--limit N]`,
+  `download-media <peer> <message-id> [target]`, `stickers`, `sticker-set <set>`,
+  `send-sticker <set> <index>`, `inline <bot> <query> [--send <index>]`, `members [<peer>]`,
+  `folders`, `quit`/`exit`. It dispatches to the same use cases as the one-shot commands, so the
+  two modes share behaviour and rendering, but the shell is not a mirror of the CLI: it exposes the
+  verbs `Shell.kt` names, and a command is available in the shell only once a matching verb is
+  added there. Many one-shot commands, `shell` itself among them, have no shell verb.
 - `folders` — lists the account's dialog folders with their kind and how many peers each pins,
   includes or excludes.
 

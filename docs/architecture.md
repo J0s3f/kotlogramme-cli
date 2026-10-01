@@ -45,8 +45,10 @@ The real adapter is deliberately thin. It translates, it does not decide. Busine
 ## Commands as use cases
 
 A Clikt command is an adapter: it parses arguments, calls one inbound port, and hands the result to
-a renderer. The interactive shell dispatches to the same inbound ports, so a new capability is
-implemented once and is immediately available in both modes.
+a renderer. The interactive shell dispatches to the same inbound ports, so a capability's behaviour
+and rendering are implemented once and shared by both modes. The two are not automatically at
+parity, however: the shell reaches only the ports it is wired to and only the verbs its dispatcher
+names, so a new command is not available in the shell until a matching verb is added there.
 
 ## Configuration and state
 
