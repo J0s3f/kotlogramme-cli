@@ -857,9 +857,10 @@ internal class FakeDownloadMedia(
 /**
  * Drives the whole command tree the way `main` does, against injected fakes.
  *
- * [stdin] is the text a command that reads a message body from `-` sees. A command that reads raw
- * bytes takes its own stream instead, through [sendFileCommand], because text is the wrong shape for
- * bytes and pretending otherwise is the bug [CliFixture.sendFileWithBytes] exists to catch.
+ * [stdin] is the text Clikt's own terminal serves to a prompt or a read that goes through it. A
+ * command that reads raw bytes takes its own stream instead - `send -` through [sendCommand] and
+ * `send-file -` through [sendFileCommand] - because text is the wrong shape for bytes and pretending
+ * otherwise is the bug [sendWithBytes] and [sendFileWithBytes] exist to catch.
  */
 internal class CliFixture(
     val output: RecordingOutput,
@@ -880,6 +881,18 @@ internal fun sendFileWithBytes(bytes: ByteArray): SendFileCommand =
 
 /** [sendFileWithBytes] for a payload written as bytes in the test. */
 internal fun sendFileWithText(text: String): SendFileCommand = sendFileWithBytes(text.toByteArray())
+
+/**
+ * A `send` command whose `-` path reads [bytes] rather than the process's own stdin.
+ *
+ * Clikt's `test(args, stdin = "text")` feeds stdin as a *String* through Clikt's own terminal, so it
+ * can only exercise whatever charset that path happens to use. A real pipe carries bytes, and UTF-8 is
+ * what it carries, so the encoding fix has to be tested with bytes or it is not tested at all.
+ */
+internal fun sendWithBytes(bytes: ByteArray): SendCommand = SendCommand(ByteArrayInputStream(bytes))
+
+/** [sendWithBytes] for a message written as UTF-8 in the test. */
+internal fun sendWithUtf8(text: String): SendCommand = sendWithBytes(text.toByteArray(Charsets.UTF_8))
 
 internal fun cliFixture(
     config: AppConfig = AppConfig(
@@ -907,6 +920,7 @@ internal fun cliFixture(
     environment: Map<String, String> = emptyMap(),
     nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
     sendFileCommand: SendFileCommand = SendFileCommand(),
+    sendCommand: SendCommand = SendCommand(),
     interactiveTerminal: Boolean = false,
     progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
 ): CliFixture {
@@ -942,7 +956,7 @@ internal fun cliFixture(
             DoctorCommand(nativeLibraryProbe),
             DialogsCommand(),
             HistoryCommand(),
-            SendCommand(),
+            sendCommand,
             sendFileCommand,
             SendAlbumCommand(),
             SendMediaUrlCommand(),

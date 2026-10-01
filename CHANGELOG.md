@@ -27,6 +27,11 @@ Built on the `kotlogram` `v0.9.8` tag, resolved from JitPack.
 
 ### Fixed
 
+- **Message text piped to `send -` is decoded as UTF-8.** The dash form read through Clikt's
+  terminal, whose reader follows the JVM's platform charset - Cp1252 here - so a pipe or redirect
+  carrying UTF-8 was read as mojibake, and Telegram stored the mojibake. It now reads the bytes and
+  decodes them as UTF-8, which is what every pipe and editor selection carries. Verified live: a
+  Cyrillic body sent from a UTF-8 file round-trips through Telegram byte-for-byte.
 - **Non-ASCII and emoji render correctly on Windows.** Output used to go through `System.out`, whose
   encoder follows the console code page, so anything outside it was replaced with `?` before the
   terminal saw it - no font or terminal setting could recover it. The interactive shell now writes
