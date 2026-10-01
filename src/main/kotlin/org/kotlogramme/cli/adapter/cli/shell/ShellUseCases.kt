@@ -9,6 +9,7 @@ import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
+import org.kotlogramme.cli.application.port.api.SendMedia
 import org.kotlogramme.cli.application.port.api.Stickers
 
 /**
@@ -27,5 +28,6 @@ class ShellUseCases(
     val listFolders: () -> ListFolders,
     val stickers: () -> Stickers,
     val inline: () -> InlineBots,
+    val sendMedia: () -> SendMedia,
     val downloadMedia: () -> DownloadMedia,
 )

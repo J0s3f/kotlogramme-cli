@@ -1,6 +1,8 @@
 package org.kotlogramme.cli.adapter.cli.shell
 
 import org.kotlogramme.cli.adapter.cli.DownloadMediaCall
+import org.kotlogramme.cli.adapter.cli.DeleteCall
+import org.kotlogramme.cli.adapter.cli.EditCall
 import org.kotlogramme.cli.adapter.cli.FakeChatMembers
 import org.kotlogramme.cli.adapter.cli.FakeContacts
 import org.kotlogramme.cli.adapter.cli.FakeDownloadMedia
@@ -10,14 +12,20 @@ import org.kotlogramme.cli.adapter.cli.FakeListFolders
 import org.kotlogramme.cli.adapter.cli.FakeMessageWriter
 import org.kotlogramme.cli.adapter.cli.FakeReadHistory
 import org.kotlogramme.cli.adapter.cli.FakeSearchMessages
+import org.kotlogramme.cli.adapter.cli.FakeSendMedia
 import org.kotlogramme.cli.adapter.cli.FakeStickers
 import org.kotlogramme.cli.adapter.cli.FileSearchCall
+import org.kotlogramme.cli.adapter.cli.ForwardCall
 import org.kotlogramme.cli.adapter.cli.InlineQueryCall
 import org.kotlogramme.cli.adapter.cli.InlineSendCall
 import org.kotlogramme.cli.adapter.cli.MemberCall
+import org.kotlogramme.cli.adapter.cli.MessageIdCall
 import org.kotlogramme.cli.adapter.cli.MissingCredentialsError
+import org.kotlogramme.cli.adapter.cli.ReactCall
 import org.kotlogramme.cli.adapter.cli.RecordingOutput
 import org.kotlogramme.cli.adapter.cli.SendCall
+import org.kotlogramme.cli.adapter.cli.SendUrlCall
+import org.kotlogramme.cli.adapter.cli.CopyMediaCall
 import org.kotlogramme.cli.adapter.cli.StickerSendCall
 import org.kotlogramme.cli.adapter.cli.inlineResult
 import org.kotlogramme.cli.adapter.cli.testStickerSet
@@ -30,6 +38,7 @@ import org.kotlogramme.cli.application.port.api.ListFolders
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
+import org.kotlogramme.cli.application.port.api.SendMedia
 import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatKind
@@ -77,10 +86,11 @@ class ShellTest {
         folders: ListFolders = FakeListFolders(),
         stickers: Stickers = FakeStickers(),
         inline: InlineBots = FakeInlineBots(),
+        sendMedia: SendMedia = FakeSendMedia(),
         downloadMedia: DownloadMedia = FakeDownloadMedia(),
     ) = ShellUseCases(
         { dialogs }, { history }, { writer }, { contacts }, { search },
-        { members }, { folders }, { stickers }, { inline }, { downloadMedia },
+        { members }, { folders }, { stickers }, { inline }, { sendMedia }, { downloadMedia },
     )
 
     private fun run(
@@ -156,6 +166,7 @@ class ShellTest {
             listFolders = { FakeListFolders() },
             stickers = { FakeStickers() },
             inline = { FakeInlineBots() },
+            sendMedia = { FakeSendMedia() },
             downloadMedia = { FakeDownloadMedia() },
         )
 
@@ -372,6 +383,290 @@ class ShellTest {
             output.lines,
         )
         assertEquals(emptyList(), media.downloads)
+    }
+
+    @Test
+    fun `pin pins the message in the current chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "pin 7"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf(MessageIdCall("@ada", 7)), writer.pins)
+        assertTrue(output.text.contains("Pinned message 7."), output.text)
+    }
+
+    @Test
+    fun `unpin unpins the message in the current chat`() {
+        val writer = FakeMessageWriter()
+
+        run(listOf("open @ada", "unpin 7"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf(MessageIdCall("@ada", 7)), writer.unpins)
+    }
+
+    @Test
+    fun `pin needs an open chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("pin 7"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.pins)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `pin with a non-numeric id reports the usage`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "pin abc"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.pins)
+        assertTrue(output.text.contains("Usage: pin <id>"), output.text)
+    }
+
+    @Test
+    fun `react decodes the emoji into the reaction`() {
+        val writer = FakeMessageWriter()
+
+        run(listOf("open @ada", "react 7 U+1F44D"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf(ReactCall("@ada", 7, "👍")), writer.reactions)
+    }
+
+    @Test
+    fun `react needs an open chat and an emoji`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("react 7 👍"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.reactions)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `react with only an id reports the usage`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "react 7"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.reactions)
+        assertTrue(output.text.contains("Usage: react <id> <emoji>"), output.text)
+    }
+
+    @Test
+    fun `unreact removes the reaction`() {
+        val writer = FakeMessageWriter()
+
+        run(listOf("open @ada", "unreact 7"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf(MessageIdCall("@ada", 7)), writer.removals)
+    }
+
+    @Test
+    fun `delete removes the message from the transcript`() {
+        val history = FakeReadHistory(listOf(message(7, "old")))
+        val writer = FakeMessageWriter()
+        val output = RecordingOutput()
+
+        // Read first so the deleted message is in the transcript the shell would show again.
+        Shell(
+            ScriptedLineSource(listOf("open @ada", "read", "delete 7", "read")),
+            output,
+            fakeUseCases(history = history, writer = writer),
+        ).run()
+
+        assertEquals(listOf(DeleteCall("@ada", listOf(7))), writer.deletes)
+        assertTrue(output.text.contains("Deleted 1 message(s)."), output.text)
+    }
+
+    @Test
+    fun `delete needs an open chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("delete 7"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.deletes)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `delete with a non-numeric id reports the usage`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "delete x"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.deletes)
+        assertTrue(output.text.contains("Usage: delete <id>"), output.text)
+    }
+
+    @Test
+    fun `edit refreshes the stale transcript copy`() {
+        val history = FakeReadHistory(listOf(message(7, "old")))
+        val writer = FakeMessageWriter(edited = message(7, "new"))
+        val output = RecordingOutput()
+
+        Shell(
+            ScriptedLineSource(listOf("open @ada", "read", "edit 7 new", "read")),
+            output,
+            fakeUseCases(history = history, writer = writer),
+        ).run()
+
+        assertEquals(listOf(EditCall("@ada", 7, "new")), writer.edits)
+        // The last `read` must show the edited text, never the stale "old" copy.
+        assertTrue(output.text.contains("new"), output.text)
+    }
+
+    @Test
+    fun `edit needs an open chat and text`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "edit 7"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.edits)
+        assertTrue(output.text.contains("Usage: edit <id> <text...>"), output.text)
+    }
+
+    @Test
+    fun `forward sends a message of the current chat to another peer`() {
+        val writer = FakeMessageWriter()
+
+        run(listOf("open @ada", "forward 7 @bob"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf(ForwardCall("@ada", listOf(7), "@bob")), writer.forwards)
+    }
+
+    @Test
+    fun `forward needs an open chat and a destination`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("forward 7 @bob"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.forwards)
+        assertTrue(output.text.contains("No chat open"), output.text)
+
+        val missingTo = run(listOf("open @ada", "forward 7"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.forwards)
+        assertTrue(missingTo.text.contains("Usage: forward <id> <to>"), missingTo.text)
+    }
+
+    @Test
+    fun `mark-read marks the current chat read`() {
+        val writer = FakeMessageWriter()
+
+        run(listOf("open @ada", "mark-read"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf("@ada"), writer.markedRead)
+    }
+
+    @Test
+    fun `mark-read needs an open chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("mark-read"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.markedRead)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `invite adds a user to the current chat`() {
+        val members = FakeChatMembers()
+
+        run(listOf("open @ada", "invite @bob"), fakeUseCases(members = members))
+
+        assertEquals(listOf("@ada" to "@bob"), members.invites)
+    }
+
+    @Test
+    fun `kick removes a user from the current chat`() {
+        val members = FakeChatMembers()
+
+        run(listOf("open @ada", "kick @bob"), fakeUseCases(members = members))
+
+        assertEquals(listOf("@ada" to "@bob"), members.kicks)
+    }
+
+    @Test
+    fun `invite and kick need an open chat`() {
+        val members = FakeChatMembers()
+
+        val output = run(listOf("invite @bob", "kick @bob"), fakeUseCases(members = members))
+
+        assertEquals(emptyList(), members.invites)
+        assertEquals(emptyList(), members.kicks)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `invite and kick without a user report the usage`() {
+        val members = FakeChatMembers()
+
+        val output = run(listOf("open @ada", "invite", "kick"), fakeUseCases(members = members))
+
+        assertEquals(emptyList(), members.invites)
+        assertEquals(emptyList(), members.kicks)
+        assertTrue(output.text.contains("Usage: invite <user>"), output.text)
+        assertTrue(output.text.contains("Usage: kick <user>"), output.text)
+    }
+
+    @Test
+    fun `send-media-url sends into the current chat`() {
+        val media = FakeSendMedia()
+
+        run(listOf("open @ada", "send-media-url https://example.test/cat.png"), fakeUseCases(sendMedia = media))
+
+        assertEquals(
+            listOf(SendUrlCall("@ada", "https://example.test/cat.png", "", false, null, false)),
+            media.urlSends,
+        )
+    }
+
+    @Test
+    fun `send-media-url needs an open chat and a url`() {
+        val media = FakeSendMedia()
+
+        val output = run(listOf("send-media-url https://example.test/cat.png"), fakeUseCases(sendMedia = media))
+
+        assertEquals(emptyList(), media.urlSends)
+        assertTrue(output.text.contains("No chat open"), output.text)
+
+        val missingUrl = run(listOf("open @ada", "send-media-url"), fakeUseCases(sendMedia = media))
+
+        assertEquals(emptyList(), media.urlSends)
+        assertTrue(missingUrl.text.contains("Usage: send-media-url <url>"), missingUrl.text)
+    }
+
+    @Test
+    fun `copy-media copies into the current chat`() {
+        val media = FakeSendMedia()
+
+        run(listOf("open @ada", "copy-media 7"), fakeUseCases(sendMedia = media))
+
+        assertEquals(listOf(CopyMediaCall("@ada", 7, "", null, false)), media.copies)
+    }
+
+    @Test
+    fun `copy-media needs an open chat and a numeric id`() {
+        val media = FakeSendMedia()
+
+        val output = run(listOf("open @ada", "copy-media x"), fakeUseCases(sendMedia = media))
+
+        assertEquals(emptyList(), media.copies)
+        assertTrue(output.text.contains("Usage: copy-media <id>"), output.text)
+
+        val noChat = run(listOf("copy-media 7"), fakeUseCases(sendMedia = media))
+
+        assertTrue(noChat.text.contains("No chat open"), noChat.text)
+    }
+
+    @Test
+    fun `help commands lists the CLI commands and says it is CLI-only`() {
+        val output = run(listOf("help commands"))
+
+        assertTrue(output.text.contains("hand-maintained copy"), output.text)
+        assertTrue(output.text.contains("send-file"), output.text)
+        assertTrue(output.text.contains("permissions"), output.text)
     }
 
     private fun message(id: Int, text: String, outgoing: Boolean = false) = Message(
