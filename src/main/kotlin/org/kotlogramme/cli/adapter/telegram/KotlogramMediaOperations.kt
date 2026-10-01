@@ -138,7 +138,7 @@ internal class KotlogramMediaOperations(private val client: TelegramClient) : Fa
      * Reserves a facade progress slot for the upload of [path] and hands it to the slot, or returns
      * null when no bar is watching, which is grammers' own untracked upload.
      */
-    private fun UploadProgressSlot(pathHandle(client: TelegramClient, path: Path): Long? {
+    private fun UploadProgressSlot.pathHandle(client: TelegramClient, path: Path): Long? {
         if (!isWatched) return null
         val handle = client.uploadProgressBegin(Files.size(path))
         follow { client.uploadProgress(handle).toUploadProgress() }
