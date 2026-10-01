@@ -32,6 +32,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramMessageWriteOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramSearchOperations
+import org.kotlogramme.cli.adapter.telegram.KotlogramSessionGateway
+import org.kotlogramme.cli.adapter.telegram.KotlogramSessionOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramStickerGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramStickerOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateLoop
@@ -51,6 +53,7 @@ import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
+import org.kotlogramme.cli.application.port.api.Sessions
 import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
@@ -72,6 +75,7 @@ import org.kotlogramme.cli.application.service.MessageWritingService
 import org.kotlogramme.cli.application.service.ReadHistoryService
 import org.kotlogramme.cli.application.service.SearchMessagesService
 import org.kotlogramme.cli.application.service.SendMediaService
+import org.kotlogramme.cli.application.service.SessionsService
 import org.kotlogramme.cli.application.service.StickerService
 import java.nio.file.Path
 
@@ -104,6 +108,7 @@ class AppContext(
     private val inlineFactory: (AppConfig) -> InlineBots = ::defaultInline,
     private val sendMediaFactory: (AppConfig) -> SendMedia = ::defaultSendMedia,
     private val downloadMediaFactory: (AppConfig) -> DownloadMedia = ::defaultDownloadMedia,
+    private val sessionsFactory: (AppConfig) -> Sessions = ::defaultSessions,
     private val mediaProbeFactory: () -> MediaProbe = ::FileMediaProbe,
     /**
      * Whether the output is a terminal a person is watching, which is what puts an upload's progress
@@ -173,6 +178,9 @@ class AppContext(
 
     /** The media-downloading use case, with the same missing-credentials error as [authenticate]. */
     fun downloadMedia(): DownloadMedia = downloadMediaFactory(configured())
+
+    /** The session-management use case, with the same missing-credentials error as [authenticate]. */
+    fun sessions(): Sessions = sessionsFactory(configured())
 
     /** The media probe: what a local file should be sent as, and the video metadata it carries. */
     fun mediaProbe(): MediaProbe = mediaProbeFactory()
@@ -334,6 +342,9 @@ private fun defaultInline(config: AppConfig): InlineBots {
 private fun defaultSendMedia(config: AppConfig): SendMedia = SendMediaService(mediaGateway(config))
 
 private fun defaultDownloadMedia(config: AppConfig): DownloadMedia = DownloadMediaService(mediaGateway(config))
+
+private fun defaultSessions(config: AppConfig): Sessions =
+    SessionsService(KotlogramSessionGateway(KotlogramSessionOperations(clientFor(config))))
 
 /** The gateway both media commands share, so a send and a download resolve a peer the same way. */
 private fun mediaGateway(config: AppConfig): MediaGateway {

@@ -22,6 +22,7 @@ import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
+import org.kotlogramme.cli.application.port.api.Sessions
 import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
@@ -45,6 +46,7 @@ import org.kotlogramme.cli.domain.InlineResult
 import org.kotlogramme.cli.domain.MediaFileKind
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
+import org.kotlogramme.cli.domain.Session
 import org.kotlogramme.cli.domain.StickerPack
 import org.kotlogramme.cli.domain.StickerSet
 import java.io.ByteArrayInputStream
@@ -276,6 +278,22 @@ internal class FakeContacts(
 
     override fun delete(reference: String) {
         deleted += reference
+    }
+}
+
+/** A [Sessions] returning canned sessions and recording every termination. */
+internal class FakeSessions(private val sessions: List<Session> = emptyList()) : Sessions {
+    val terminated = mutableListOf<Long>()
+    var terminateAllCount = 0
+
+    override fun list(): List<Session> = sessions
+
+    override fun terminate(hash: Long) {
+        terminated += hash
+    }
+
+    override fun terminateAll() {
+        terminateAllCount++
     }
 }
 
@@ -827,6 +845,7 @@ internal fun cliFixture(
     inline: InlineBots = FakeInlineBots(),
     sendMedia: SendMedia = FakeSendMedia(),
     downloadMedia: DownloadMedia = FakeDownloadMedia(),
+    sessions: Sessions = FakeSessions(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
     nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
@@ -851,6 +870,7 @@ internal fun cliFixture(
         listenFactory = { listen },
         inlineFactory = { inline },
         sendMediaFactory = { sendMedia },
+        sessionsFactory = { sessions },
         isInteractiveTerminal = interactiveTerminal,
         progressFactory = progressFactory,
         downloadMediaFactory = { downloadMedia },
@@ -893,6 +913,7 @@ internal fun cliFixture(
             RestrictCommand(),
             ListenCommand(),
             FoldersCommand(),
+            SessionsCommand(),
             InlineCommand(),
             ShellCommand(),
         )

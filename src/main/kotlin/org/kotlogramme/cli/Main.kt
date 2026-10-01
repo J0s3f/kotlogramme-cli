@@ -45,6 +45,7 @@ import org.kotlogramme.cli.adapter.cli.SendCommand
 import org.kotlogramme.cli.adapter.cli.SendFileCommand
 import org.kotlogramme.cli.adapter.cli.SendMediaUrlCommand
 import org.kotlogramme.cli.adapter.cli.SendStickerCommand
+import org.kotlogramme.cli.adapter.cli.SessionsCommand
 import org.kotlogramme.cli.adapter.cli.ShellCommand
 import org.kotlogramme.cli.adapter.cli.StickerSetCommand
 import org.kotlogramme.cli.adapter.cli.StickersCommand
@@ -131,6 +132,7 @@ fun main(args: Array<String>) {
                 RestrictCommand(),
                 ListenCommand(),
                 FoldersCommand(),
+                SessionsCommand(),
                 StickersCommand(),
                 StickerSetCommand(),
                 SendStickerCommand(),
