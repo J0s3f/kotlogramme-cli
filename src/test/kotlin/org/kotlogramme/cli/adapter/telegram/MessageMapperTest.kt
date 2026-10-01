@@ -2,9 +2,11 @@ package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.MessageEntity
+import com.github.badoualy.telegram.api.MessageQuote
 import com.github.badoualy.telegram.api.User
 import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.MessageEntity as DomainMessageEntity
+import org.kotlogramme.cli.domain.MessageQuote as DomainMessageQuote
 import org.kotlogramme.protocol.MessageAction
 import java.time.Instant
 import kotlin.test.Test
@@ -154,5 +156,38 @@ class MessageMapperTest {
     @Test
     fun `a message without entities maps to an empty list`() {
         assertEquals(emptyList(), message(id = 1, text = "plain").toMessage().entities)
+    }
+
+    @Test
+    fun `maps the text and entities a reply quotes`() {
+        val mapped = message(
+            id = 1,
+            text = "ok",
+            replyToMessageId = 41,
+            quote = MessageQuote(
+                text = "see https://example.org",
+                entities = listOf(MessageEntity("textUrl", 4, 17, url = "https://example.org")),
+            ),
+        ).toMessage()
+
+        assertEquals(
+            DomainMessageQuote(
+                text = "see https://example.org",
+                entities = listOf(DomainMessageEntity("textUrl", 4, 17, url = "https://example.org")),
+            ),
+            mapped.quote,
+        )
+    }
+
+    @Test
+    fun `a message with no quote maps it to null`() {
+        assertNull(message(id = 1, text = "plain").toMessage().quote)
+    }
+
+    @Test
+    fun `a quote without entities maps to an empty list`() {
+        val mapped = message(id = 1, replyToMessageId = 41, quote = MessageQuote("just text")).toMessage()
+
+        assertEquals(DomainMessageQuote("just text", emptyList()), mapped.quote)
     }
 }

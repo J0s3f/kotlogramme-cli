@@ -70,6 +70,15 @@ is set; the global `--color` forces it on for a caller that is not a terminal, s
 escapes. Because the table
 measures a column by its visible width, the escapes never make the borders drift.
 
+A reply's quoted text is shown in the table's `quote` column as `"<text>"`, beside the id in the
+`reply` column. The quote carries its own formatting entities, and they go through the same styler as
+a message's own text, so a bold word inside a quote is bold and colour is still only used for the
+table format on a terminal. A reply whose header carries no text — a reply to a deleted message, a
+scheduled or service reply, a reply to a story — is `null` in the library and renders as an empty
+cell, never as empty quotes. A newline inside the quoted text becomes a space so the row stays one
+line, and a quote longer than 80 visible characters is truncated with an ellipsis so it cannot stretch
+the column. The plain and JSON formats carry the quoted text without escapes as well.
+
 A message view's `via` column names the inline bot a message came through as `@username`. A history
 page resolves the distinct `viaBotId`s on the page in one batched lookup, so the page costs at most
 one extra request. An id Telegram cannot resolve, a user without a username, or a failed lookup
@@ -122,7 +131,8 @@ used by every command.
 - `dialogs [--limit <n>]` — lists the conversations, newest first, with the unread count and a
   pinned marker.
 - `history <peer> [--limit <n>] [--before <messageId>]` — reads a page of a chat's messages with the
-  sender, the time, a reply marker, a media label (for example `[video 0:03 320x240]`) and, for a
+  sender, the time, a reply marker, the text the reply quotes, a media label (for example
+  `[video 0:03 320x240]`) and, for a
   service message, a human phrase for the action (for example "pinned a message" or "added a
   member"). A kind this build does not name still renders as `service action: <kind>` rather than as
   a blank row.

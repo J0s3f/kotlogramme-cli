@@ -26,4 +26,11 @@ data class Message(
     val viaBotUsername: String? = null,
     /** The formatting entities on [text], empty when the text is unformatted. */
     val entities: List<MessageEntity> = emptyList(),
+    /**
+     * The text this message quotes, when it is a reply whose header carries one, otherwise `null`.
+     *
+     * A reply to a deleted message, a scheduled or service reply and a reply to a story carry no
+     * text, so they are `null` here too and the renderer shows no quote rather than an empty one.
+     */
+    val quote: MessageQuote? = null,
 )

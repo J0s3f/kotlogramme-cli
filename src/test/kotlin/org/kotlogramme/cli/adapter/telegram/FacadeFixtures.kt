@@ -7,6 +7,7 @@ import com.github.badoualy.telegram.api.DialogNotifySettings
 import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.MessageEntity
+import com.github.badoualy.telegram.api.MessageQuote
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.User
 import org.kotlogramme.protocol.MessageAction
@@ -82,6 +83,7 @@ internal fun message(
     action: MessageAction? = null,
     viaBotId: Long? = null,
     entities: List<MessageEntity> = emptyList(),
+    quote: MessageQuote? = null,
 ): Message = Message(
     id = id,
     text = text,
@@ -97,6 +99,7 @@ internal fun message(
     action = action,
     viaBotId = viaBotId,
     entities = entities,
+    quote = quote,
 )
 
 private fun telegramPeerConstructor(): Constructor<*> = TelegramPeer::class.java.getDeclaredConstructor(

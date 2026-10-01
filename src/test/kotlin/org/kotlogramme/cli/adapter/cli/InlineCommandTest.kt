@@ -43,7 +43,7 @@ class InlineCommandTest {
 
         assertEquals(0, result.statusCode)
         assertEquals(listOf(InlineSendCall("@club", 42L, "b")), bots.sends)
-        assertEquals("7\t2026-01-01T12:30:00Z\tAda Lovelace\t\t\t\t\thello", fixture.output.lines.last())
+        assertEquals("7\t2026-01-01T12:30:00Z\tAda Lovelace\t\t\t\t\t\thello", fixture.output.lines.last())
     }
 
     @Test

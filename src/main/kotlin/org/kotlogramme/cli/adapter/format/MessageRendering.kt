@@ -3,6 +3,8 @@ package org.kotlogramme.cli.adapter.format
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
+import org.kotlogramme.cli.domain.MessageEntity
+import org.kotlogramme.cli.domain.MessageQuote
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -14,7 +16,8 @@ import kotlin.math.roundToInt
  * reply marker, the media label and the service action are their own columns, not concatenated
  * into the text.
  */
-internal val MESSAGE_HEADERS = listOf("id", "time", "from", "via", "reply", "media", "action", "text")
+internal val MESSAGE_HEADERS =
+    listOf("id", "time", "from", "via", "reply", "quote", "media", "action", "text")
 
 /** Prints the messages as the configured output format. */
 fun Output.renderMessages(messages: List<Message>, styler: MessageStyler = MessageStyler.PLAIN) {
@@ -28,6 +31,7 @@ internal fun messageRow(message: Message, styler: MessageStyler = MessageStyler.
     message.senderName,
     viaBotLabel(message),
     message.replyToMessageId?.toString().orEmpty(),
+    message.quote?.let { quoteLabel(it, styler) }.orEmpty(),
     message.media?.let(::mediaLabel).orEmpty(),
     message.action.orEmpty(),
     styler.style(message.text, message.entities),
@@ -40,6 +44,53 @@ internal fun messageRow(message: Message, styler: MessageStyler = MessageStyler.
  */
 internal fun viaBotLabel(message: Message): String =
     message.viaBotUsername?.let { "@$it" } ?: message.viaBotId?.toString().orEmpty()
+
+/**
+ * The quoted text of a reply, in the `reply` column beside the id it answers: `"<text>"`, styled
+ * with [styler] so the quote's own entities render exactly like the message's. A quote is only ever
+ * shown when it carries text — the domain leaves it `null` for a non-reply and for a reply whose
+ * header has none — so this never produces empty brackets.
+ *
+ * Telegram collapses the header's whitespace, but a newline can still survive in it and would break
+ * the table row onto a second line, so each line break becomes a single space. A quote longer than
+ * [QUOTE_LIMIT] visible characters is cut at that many and ends in an ellipsis, so one long quote
+ * cannot stretch the `quote` column without bound; the cut is by visible width, so styling inside
+ * the kept part never makes it overflow. Pure, so it can be snapshot-tested without an [Output].
+ */
+internal fun quoteLabel(quote: MessageQuote, styler: MessageStyler = MessageStyler.PLAIN): String {
+    val flattened = stripLineBreaks(quote.text)
+    val text = flattened.let(::truncateVisible).trimEnd()
+    if (text.isEmpty()) return ""
+    val entities = quote.entities.mapNotNull { it.shiftTo(text.length, flattened.length) }
+    return "\"${styler.style(text, entities)}\""
+}
+
+/** Each line break, in any of the forms Telegram may send, becomes one space so the row stays one line. */
+private fun stripLineBreaks(text: String): String = text
+    .replace("\r\n", " ")
+    .replace('\n', ' ')
+    .replace('\r', ' ')
+    .replace('\u2028', ' ')
+    .replace('\u2029', ' ')
+
+private fun truncateVisible(text: String): String =
+    if (text.length <= QUOTE_LIMIT) text else text.take(QUOTE_LIMIT - 1) + ELLIPSIS
+
+private const val QUOTE_LIMIT = 80
+
+private const val ELLIPSIS = '…'
+
+/**
+ * Moves an entity of the original, unflattened quote onto the truncated text, or drops it when it
+ * starts past the cut. Only a whole span is ever cut at the end, because every line-break
+ * replacement is one UTF-16 unit for one, so character offsets are preserved.
+ */
+private fun MessageEntity.shiftTo(textLength: Int, originalLength: Int): MessageEntity? {
+    if (offset < 0 || length <= 0 || offset + length > originalLength) return null
+    if (offset >= textLength) return null
+    val kept = minOf(length, textLength - offset)
+    return if (kept == length) this else copy(length = kept)
+}
 
 /**
  * The compact label for an attachment, driven by its kind: a video carries its duration and
