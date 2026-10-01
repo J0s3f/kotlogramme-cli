@@ -9,6 +9,7 @@ import java.nio.file.Paths
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ListenCommandTest {
     private val update = IncomingUpdate.NewMessage(
@@ -73,4 +74,20 @@ class ListenCommandTest {
         assertEquals(1, result.statusCode)
         assertEquals(emptyList(), fixture.output.lines)
     }
+
+    @Test
+    fun `listen stops promptly when the stream stays quiet`() {
+        // A source that never delivers an update used to keep the command for the facade's 30 s poll.
+        val fixture = cliFixture(listen = QuietListen())
+
+        val elapsed = measureMillis { fixture.run("listen", "--once") }
+
+        assertTrue(elapsed < 2_000, "listen took ${elapsed}ms to stop, which is not prompt")
+    }
+}
+
+private inline fun measureMillis(body: () -> Unit): Long {
+    val before = System.nanoTime()
+    body()
+    return (System.nanoTime() - before) / 1_000_000
 }

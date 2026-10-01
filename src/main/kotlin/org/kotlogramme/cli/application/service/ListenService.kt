@@ -1,32 +1,43 @@
 package org.kotlogramme.cli.application.service
 
 import org.kotlogramme.cli.application.port.api.Listen
-import org.kotlogramme.cli.application.port.spi.UpdateSource
+import org.kotlogramme.cli.application.port.spi.UpdateLoop
 import org.kotlogramme.cli.domain.IncomingUpdate
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Follows an [UpdateSource], forwarding each update until the stop predicate asks it to stop.
+ * Drives an [UpdateLoop] until the stop predicate asks it to stop.
  *
- * The source is polled with [timeoutMillis]; a `null` poll is a timeout, so the loop simply asks
- * again and only the stop predicate ends it. A quiet stream therefore keeps waiting rather than
- * looking like the end of updates.
+ * The service owns no thread of its own: [UpdateLoop.start] puts the facade's loop on one and
+ * [UpdateLoop.stop] joins it, so this waits for the loop rather than polling the stream. The wait
+ * ends when the stop predicate says so - checked after every update the loop delivers and again
+ * between the loop's short polls, so a quiet stream still answers a stop promptly - which costs the
+ * facade's short poll rather than its 30 s one.
+ *
+ * Returns how many updates were handled, [onUpdate] being called for each.
  */
-class ListenService(
-    private val source: UpdateSource,
-    private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS,
-) : Listen {
+class ListenService(private val loop: UpdateLoop) : Listen {
     override fun run(stop: () -> Boolean, onUpdate: (IncomingUpdate) -> Unit): Int {
-        var handled = 0
-        while (!stop()) {
-            val update = source.next(timeoutMillis) ?: continue
+        val handled = AtomicInteger(0)
+        val stopped = AtomicBoolean(false)
+        loop.start { update ->
             onUpdate(update)
-            handled++
+            handled.incrementAndGet()
+            if (stop()) stopped.set(true)
         }
-        return handled
+        // The loop owns the thread and the stop joins it, so the wait is for the loop to end and not
+        // for one poll: a quiet source keeps the loop polling in short waits, and the predicate is
+        // checked between them.
+        while (!stop() && !stopped.get() && loop.isRunning) {
+            Thread.sleep(IDLE_WAIT_MILLIS)
+        }
+        loop.stop()
+        return handled.get()
     }
 
     companion object {
-        /** Matches the facade's own default, so one poll waits about as long as the client would. */
-        const val DEFAULT_TIMEOUT_MILLIS = 30_000L
+        /** How often the predicate is checked while the loop is quiet; well under its poll. */
+        private const val IDLE_WAIT_MILLIS = 10L
     }
 }

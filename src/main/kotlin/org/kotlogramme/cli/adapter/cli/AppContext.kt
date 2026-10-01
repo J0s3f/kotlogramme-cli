@@ -34,8 +34,7 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramParticipantOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramSearchOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramStickerGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramStickerOperations
-import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateOperations
-import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateSource
+import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateLoop
 import org.kotlogramme.cli.adapter.telegram.KotlogramUserGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramUserOperations
 import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
@@ -307,7 +306,7 @@ private fun defaultAdminRights(config: AppConfig): AdminRights {
 }
 
 private fun defaultListen(config: AppConfig): Listen =
-    ListenService(KotlogramUpdateSource(KotlogramUpdateOperations(clientFor(config))))
+    ListenService(KotlogramUpdateLoop(clientFor(config)))
 
 private fun defaultListFolders(config: AppConfig): ListFolders =
     ListFoldersService(KotlogramFolderGateway(KotlogramFolderOperations(clientFor(config))))

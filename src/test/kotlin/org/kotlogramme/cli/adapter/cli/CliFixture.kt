@@ -328,7 +328,8 @@ internal class FakeAdminRights(
     }
 }
 
-/** A [Listen] that replays canned updates and stops as soon as the predicate asks it to. */internal class FakeListen(private val updates: List<IncomingUpdate> = emptyList()) : Listen {
+/** A [Listen] that replays canned updates and stops as soon as the predicate asks it to. */
+internal class FakeListen(private val updates: List<IncomingUpdate> = emptyList()) : Listen {
     override fun run(stop: () -> Boolean, onUpdate: (IncomingUpdate) -> Unit): Int {
         var handled = 0
         for (update in updates) {
@@ -337,6 +338,14 @@ internal class FakeAdminRights(
             handled++
         }
         return handled
+    }
+}
+
+/** A [Listen] that never delivers an update, for a test about stop latency. */
+internal class QuietListen(private val waitMillis: Long = 0L) : Listen {
+    override fun run(stop: () -> Boolean, onUpdate: (IncomingUpdate) -> Unit): Int {
+        if (waitMillis > 0) Thread.sleep(waitMillis)
+        return 0
     }
 }
 
