@@ -199,6 +199,37 @@ class KotlogramMediaGatewayTest {
         assertEquals(Path.of("media/out.bin"), written)
     }
 
+    @Test
+    fun `fileName resolves the reference and reads the media name off the message`() {
+        val operations = FakeMediaOperations().apply {
+            lookedUpMessage = message(id = 12, text = "", date = 1_000, media = Media(kind = "document", name = "notes.txt"))
+        }
+
+        val name = gatewayWith(operations).fileName("@ada", messageId = 12)
+
+        assertEquals("notes.txt", name)
+    }
+
+    @Test
+    fun `fileName returns null when the message carries no media`() {
+        val operations = FakeMediaOperations().apply {
+            lookedUpMessage = message(id = 12, text = "no media", date = 1_000)
+        }
+
+        val name = gatewayWith(operations).fileName("@ada", messageId = 12)
+
+        assertEquals(null, name)
+    }
+
+    @Test
+    fun `fileName returns null when the message does not resolve`() {
+        val operations = FakeMediaOperations()
+
+        val name = gatewayWith(operations).fileName("@ada", messageId = 12)
+
+        assertEquals(null, name)
+    }
+
     private fun gatewayWith(operations: FakeMediaOperations): KotlogramMediaGateway =
         KotlogramMediaGateway(
             operations,
@@ -360,4 +391,9 @@ internal class FakeMediaOperations : FacadeMediaOperations {
         downloads += DownloadCall(peer, messageId, target)
         return DownloadedMedia(downloadedPath, size = 10)
     }
+
+    override fun message(peer: TelegramPeer, messageId: Int): Message? = lookedUpMessage
+
+    /** The message a lookup answers, whatever peer and id were asked for. */
+    var lookedUpMessage: Message? = null
 }

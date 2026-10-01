@@ -3,15 +3,21 @@ package org.kotlogramme.cli.adapter.cli.shell
 import org.kotlogramme.cli.adapter.format.MessageStyler
 import org.kotlogramme.cli.adapter.format.renderChats
 import org.kotlogramme.cli.adapter.format.renderContacts
+import org.kotlogramme.cli.adapter.format.renderFiles
 import org.kotlogramme.cli.adapter.format.renderFolders
 import org.kotlogramme.cli.adapter.format.renderInlineResults
 import org.kotlogramme.cli.adapter.format.renderMessages
 import org.kotlogramme.cli.adapter.format.renderParticipants
 import org.kotlogramme.cli.adapter.format.renderStickerSet
 import org.kotlogramme.cli.adapter.format.renderStickerSets
+import org.kotlogramme.cli.adapter.cli.DEFAULT_FILE_KIND
+import org.kotlogramme.cli.adapter.cli.downloadFileName
+import org.kotlogramme.cli.adapter.cli.mediaFileKindOf
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.Message
+import java.nio.file.Files
+import java.nio.file.Path
 
 /** The greeting shown once, so a first-time user knows `help` exists. */
 internal const val SHELL_WELCOME = "kotlogramme shell - type `help` for commands, `quit` to exit."
@@ -61,6 +67,8 @@ class Shell(
                 "reply" -> reply(arguments)
                 "contacts" -> listContacts()
                 "search" -> search(arguments)
+                "files" -> listFiles(arguments)
+                "download-media" -> downloadMedia(arguments)
                 "stickers" -> listStickerSets()
                 "sticker-set" -> showStickerSet(arguments)
                 "send-sticker" -> sendSticker(arguments)
@@ -100,7 +108,7 @@ class Shell(
 
     private fun read(arguments: List<String>) {
         val chat = requireChat() ?: return
-        val limit = readLimit(arguments) ?: return
+        val limit = pageLimit(arguments, READ_USAGE) ?: return
         remember(useCases.readHistory().read(chat.reference, limit, beforeMessageId = null))
         output.renderMessages(orderedTranscript(), messageStyler)
     }
@@ -222,6 +230,41 @@ class Shell(
         output.renderFolders(useCases.listFolders().list())
     }
 
+    /**
+     * Lists the files of the chat the line names, or of the one the prompt shows.
+     *
+     * `--kind` names the media filter and `--limit` the page size, both as the one-shot command takes
+     * them; an unknown kind is reported by the parser the command shares.
+     */
+    private fun listFiles(arguments: List<String>) {
+        val peer = wordsOf(arguments).firstOrNull() ?: requireChat()?.reference ?: return
+        val kind = mediaFileKindOf(valueAfter(arguments, KIND_OPTION) ?: DEFAULT_FILE_KIND)
+        // `--kind` is parsed above, so the limit check only sees the `--limit` a line carries.
+        val limit = pageLimit(without(arguments, KIND_OPTION), FILES_USAGE) ?: return
+        output.renderFiles(useCases.searchMessages().files(peer, kind, limit))
+    }
+
+    /**
+     * Writes a message's media to a local file, the one-shot command's behaviour in one line.
+     *
+     * Without a target the media's own name is used in the working directory, as the command does,
+     * and the line reports the path and the byte count it holds.
+     */
+    private fun downloadMedia(arguments: List<String>) {
+        val peer = arguments.getOrNull(0)
+        val messageId = arguments.getOrNull(1)?.toIntOrNull()
+        if (peer == null || messageId == null) {
+            output.line(DOWNLOAD_USAGE)
+            return
+        }
+        val useCase = useCases.downloadMedia()
+        val target = arguments.getOrNull(2)?.let(Path::of)
+            ?: Path.of(downloadFileName(useCase.fileName(peer, messageId), messageId))
+        target.toAbsolutePath().parent?.let(Files::createDirectories)
+        val path = useCase.download(peer, messageId, target)
+        output.line("$path\t${Files.size(path)}")
+    }
+
     private fun resolve(peer: String): Chat? {
         val normalized = peer.removePrefix("@").lowercase()
         return useCases.listDialogs().list(DIALOG_LIMIT).firstOrNull { chat ->
@@ -237,15 +280,49 @@ class Shell(
         return currentChat
     }
 
-    private fun readLimit(arguments: List<String>): Int? {
+    /**
+     * The `--limit` a verb carries, or [TRANSCRIPT_LIMIT]; a value that is not a positive number
+     * reports [usage] and gives nothing, the way the shell reports every other malformed line.
+     */
+    private fun pageLimit(arguments: List<String>, usage: String): Int? {
         if (arguments.isEmpty()) return TRANSCRIPT_LIMIT
         val index = arguments.indexOf(LIMIT_OPTION)
         val limit = arguments.getOrNull(index + 1)?.toIntOrNull()
         if (index < 0 || limit == null || limit <= 0) {
-            output.line("Usage: read [--limit N]")
+            output.line(usage)
             return null
         }
         return limit
+    }
+
+    /** The words of [arguments] that are neither an option nor the value it was given. */
+    private fun wordsOf(arguments: List<String>): List<String> {
+        val words = mutableListOf<String>()
+        var index = 0
+        while (index < arguments.size) {
+            val word = arguments[index]
+            when {
+                valueAfter(arguments, word) != null -> index++
+                word.startsWith(OPTION_PREFIX) -> Unit
+                else -> words += word
+            }
+            index++
+        }
+        return words
+    }
+
+    /** The word that follows [option], or null when [option] is absent or has no value after it. */
+    private fun valueAfter(arguments: List<String>, option: String): String? {
+        if (!option.startsWith(OPTION_PREFIX)) return null
+        val index = arguments.indexOf(option)
+        val value = arguments.getOrNull(index + 1) ?: return null
+        return value.takeUnless { it.startsWith(OPTION_PREFIX) }
+    }
+
+    /** The arguments without [option] and the value it was given. */
+    private fun without(arguments: List<String>, option: String): List<String> {
+        val index = arguments.indexOf(option)
+        return if (index < 0) arguments else arguments.filterIndexed { i, _ -> i != index && i != index + 1 }
     }
 
     /** Keeps [messages] as the most recent context, replacing any earlier copy by id. */
@@ -263,7 +340,9 @@ class Shell(
     private companion object {
         const val QUIT = "quit"
         const val EXIT = "exit"
+        const val OPTION_PREFIX = "--"
         const val LIMIT_OPTION = "--limit"
+        const val KIND_OPTION = "--kind"
         const val SEND_OPTION = "--send"
         const val DIALOG_LIMIT = 100
         const val CONTACT_LIMIT = 50
@@ -276,6 +355,12 @@ class Shell(
 
         const val NO_CHAT_PROMPT = "> "
 
+        const val READ_USAGE = "Usage: read [--limit N]"
+
+        const val FILES_USAGE = "Usage: files [<peer>] [--kind <kind>] [--limit N]"
+
+        const val DOWNLOAD_USAGE = "Usage: download-media <peer> <message-id> [target]"
+
         val HELP = listOf(
             "help                 show this help",
             "dialogs | list       list conversations",
@@ -285,6 +370,8 @@ class Shell(
             "reply <id> <text...> reply to a message",
             "contacts             list contacts",
             "search <query>       search the current chat, or everywhere",
+            "files [<peer>] [--kind <kind>] [--limit N]  list the files of a chat",
+            "download-media <peer> <message-id> [target]  save a message's media",
             "stickers             list the installed sticker sets",
             "sticker-set <set>    show a set with its stickers numbered",
             "send-sticker <set> <index>  send a sticker in the current chat",

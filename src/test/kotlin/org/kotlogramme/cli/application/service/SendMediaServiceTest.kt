@@ -590,6 +590,10 @@ private class FakeMediaGateway(
         this.downloaded = target
         return target
     }
+
+    override fun fileName(reference: String, messageId: Int): String? = mediaName
+
+    var mediaName: String? = "cat.png"
 }
 
 private val message = Message(

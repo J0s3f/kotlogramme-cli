@@ -131,11 +131,14 @@ internal class KotlogramMediaOperations(private val client: TelegramClient) : Fa
     override fun download(peer: TelegramPeer, messageId: Int, target: Path): DownloadedMedia =
         client.downloadMedia(peer, messageId, target)
 
+    override fun message(peer: TelegramPeer, messageId: Int): Message? =
+        client.messagesGetMessages(peer, listOf(messageId)).firstOrNull()
+
     /**
      * Reserves a facade progress slot for the upload of [path] and hands it to the slot, or returns
      * null when no bar is watching, which is grammers' own untracked upload.
      */
-    private fun UploadProgressSlot.pathHandle(client: TelegramClient, path: Path): Long? {
+    private fun UploadProgressSlot(pathHandle(client: TelegramClient, path: Path): Long? {
         if (!isWatched) return null
         val handle = client.uploadProgressBegin(Files.size(path))
         follow { client.uploadProgress(handle).toUploadProgress() }

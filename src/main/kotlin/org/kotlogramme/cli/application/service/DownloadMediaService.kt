@@ -20,6 +20,11 @@ class DownloadMediaService(private val gateway: MediaGateway) : DownloadMedia {
         return gateway.download(reference, messageId, target)
     }
 
+    override fun fileName(reference: String, messageId: Int): String? {
+        require(messageId > 0) { "message id must be positive but was $messageId" }
+        return gateway.fileName(reference, messageId)
+    }
+
     private fun requireParentDirectory(target: Path) {
         val parent = target.toAbsolutePath().parent ?: return
         require(Files.isDirectory(parent)) { "download directory does not exist: $parent" }

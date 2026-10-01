@@ -2,6 +2,7 @@ package org.kotlogramme.cli.adapter.cli.shell
 
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.DownloadMedia
 import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
 import org.kotlogramme.cli.application.port.api.ListFolders
@@ -26,4 +27,5 @@ class ShellUseCases(
     val listFolders: () -> ListFolders,
     val stickers: () -> Stickers,
     val inline: () -> InlineBots,
+    val downloadMedia: () -> DownloadMedia,
 )

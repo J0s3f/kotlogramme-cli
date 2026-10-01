@@ -76,4 +76,7 @@ internal interface FacadeMediaOperations {
 
     /** Downloads the media of message [messageId] in [peer] into [target], which is `downloadMedia`. */
     fun download(peer: TelegramPeer, messageId: Int, target: Path): DownloadedMedia
+
+    /** The message [messageId] of [peer], or `null` when it does not resolve, which is `getMessages`. */
+    fun message(peer: TelegramPeer, messageId: Int): Message?
 }

@@ -1,7 +1,9 @@
 package org.kotlogramme.cli.adapter.cli.shell
 
+import org.kotlogramme.cli.adapter.cli.DownloadMediaCall
 import org.kotlogramme.cli.adapter.cli.FakeChatMembers
 import org.kotlogramme.cli.adapter.cli.FakeContacts
+import org.kotlogramme.cli.adapter.cli.FakeDownloadMedia
 import org.kotlogramme.cli.adapter.cli.FakeInlineBots
 import org.kotlogramme.cli.adapter.cli.FakeListDialogs
 import org.kotlogramme.cli.adapter.cli.FakeListFolders
@@ -9,6 +11,7 @@ import org.kotlogramme.cli.adapter.cli.FakeMessageWriter
 import org.kotlogramme.cli.adapter.cli.FakeReadHistory
 import org.kotlogramme.cli.adapter.cli.FakeSearchMessages
 import org.kotlogramme.cli.adapter.cli.FakeStickers
+import org.kotlogramme.cli.adapter.cli.FileSearchCall
 import org.kotlogramme.cli.adapter.cli.InlineQueryCall
 import org.kotlogramme.cli.adapter.cli.InlineSendCall
 import org.kotlogramme.cli.adapter.cli.MemberCall
@@ -20,6 +23,7 @@ import org.kotlogramme.cli.adapter.cli.inlineResult
 import org.kotlogramme.cli.adapter.cli.testStickerSet
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.DownloadMedia
 import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
 import org.kotlogramme.cli.application.port.api.ListFolders
@@ -31,8 +35,12 @@ import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatKind
 import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.InlineQuery
+import org.kotlogramme.cli.domain.MediaFileKind
+import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -69,9 +77,10 @@ class ShellTest {
         folders: ListFolders = FakeListFolders(),
         stickers: Stickers = FakeStickers(),
         inline: InlineBots = FakeInlineBots(),
+        downloadMedia: DownloadMedia = FakeDownloadMedia(),
     ) = ShellUseCases(
         { dialogs }, { history }, { writer }, { contacts }, { search },
-        { members }, { folders }, { stickers }, { inline },
+        { members }, { folders }, { stickers }, { inline }, { downloadMedia },
     )
 
     private fun run(
@@ -147,6 +156,7 @@ class ShellTest {
             listFolders = { FakeListFolders() },
             stickers = { FakeStickers() },
             inline = { FakeInlineBots() },
+            downloadMedia = { FakeDownloadMedia() },
         )
 
         val output = run(listOf("list"), useCases = useCases)
@@ -300,12 +310,85 @@ class ShellTest {
         assertTrue(output.text.contains("Work"), output.text)
     }
 
+    @Test
+    fun `files lists the current chat's files with the default kind and limit`() {
+        val search = FakeSearchMessages(fileResults = listOf(fileMessage(7, "clip.mp4")))
+
+        val output = run(listOf("open @ada", "files"), fakeUseCases(search = search))
+
+        assertEquals(FileSearchCall("@ada", MediaFileKind.PHOTO_VIDEO, 20), search.fileSearches.single())
+        assertTrue(output.text.contains("clip.mp4"), output.text)
+    }
+
+    @Test
+    fun `files accepts an explicit peer, kind and limit`() {
+        val search = FakeSearchMessages(fileResults = listOf(fileMessage(7, "clip.mp4")))
+
+        run(listOf("files @club --kind video --limit 5"), fakeUseCases(search = search))
+
+        assertEquals(FileSearchCall("@club", MediaFileKind.VIDEO, 5), search.fileSearches.single())
+    }
+
+    @Test
+    fun `files reports an unknown kind`() {
+        val search = FakeSearchMessages()
+
+        val output = run(listOf("open @ada", "files --kind nope"), fakeUseCases(search = search))
+
+        assertTrue(output.text.contains("unknown file kind 'nope'"), output.text)
+        assertEquals(emptyList(), search.fileSearches)
+    }
+
+    @Test
+    fun `download-media saves the media and reports the path and size`() {
+        val media = FakeDownloadMedia(mediaName = "cat.png")
+
+        val output = run(listOf("download-media @ada 12"), fakeUseCases(downloadMedia = media))
+
+        assertEquals(listOf(DownloadMediaCall("@ada", 12, Path.of("cat.png"))), media.downloads)
+        assertEquals(listOf(SHELL_WELCOME, "cat.png\t64"), output.lines)
+        Files.deleteIfExists(Path.of("cat.png"))
+    }
+
+    @Test
+    fun `download-media accepts an explicit target`() {
+        val media = FakeDownloadMedia(mediaName = "cat.png")
+
+        val output = run(listOf("download-media @ada 12 out.bin"), fakeUseCases(downloadMedia = media))
+
+        assertEquals(listOf(DownloadMediaCall("@ada", 12, Path.of("out.bin"))), media.downloads)
+        assertEquals(listOf(SHELL_WELCOME, "out.bin\t64"), output.lines)
+        Files.deleteIfExists(Path.of("out.bin"))
+    }
+
+    @Test
+    fun `download-media needs a peer and a message id`() {
+        val media = FakeDownloadMedia()
+
+        val output = run(listOf("download-media @ada"), fakeUseCases(downloadMedia = media))
+
+        assertEquals(
+            listOf(SHELL_WELCOME, "Usage: download-media <peer> <message-id> [target]"),
+            output.lines,
+        )
+        assertEquals(emptyList(), media.downloads)
+    }
+
     private fun message(id: Int, text: String, outgoing: Boolean = false) = Message(
         id = id,
         senderName = if (outgoing) "You" else "Ada",
         text = text,
         sentAt = Instant.parse("2026-01-01T00:00:00Z"),
         outgoing = outgoing,
+    )
+
+    private fun fileMessage(id: Int, name: String) = Message(
+        id = id,
+        senderName = "Ada",
+        text = "",
+        sentAt = Instant.parse("2026-01-01T00:00:00Z"),
+        outgoing = false,
+        media = MediaInfo(kind = "video", sizeBytes = 1024, name = name),
     )
 
     private fun row(id: Int, text: String, outgoing: Boolean = false) =

@@ -32,7 +32,7 @@ class ShellCompleter(private val peers: () -> List<String>) : Completer {
 
         val commands = listOf(
             "help", "dialogs", "list", "open", "read",
-            "send", "reply", "contacts", "search",
+            "send", "reply", "contacts", "search", "files", "download-media",
             "stickers", "sticker-set", "send-sticker", "inline", "members", "folders",
             "quit", "exit",
         )

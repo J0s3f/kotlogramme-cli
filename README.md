@@ -27,10 +27,22 @@ kotlogramme send @some_chat "hello from the terminal"
 kotlogramme send-file @some_chat clip.mp4                  # detects the kind: a streamable video
 kotlogramme send-file @some_chat clip.mp4 --no-detect       # ...or send the raw bytes as a document
 cat photo.png | kotlogramme send-file @some_chat - --name photo.png   # ...or pipe the bytes on stdin
+kotlogramme list-files @some_chat --kind video             # the chat's videos, filtered by Telegram
+kotlogramme download-media @some_chat 12345                # save a message's media, named after it
 kotlogramme stickers                                       # installed sticker sets
 kotlogramme listen                                         # follow new messages
 kotlogramme shell                                          # interactive REPL
 ```
+
+`list-files <peer>` lists a chat's files, filtered by media kind on Telegram's side rather than by
+scanning history, so it reaches the whole chat and not just the part a history read has covered.
+`--kind` names the filter (`photo`, `video`, `photo-video`, `document`, `audio`, `voice`, `gif`,
+`animation`), `--limit` caps the page, and `--total` prints just how many files the chat holds.
+
+`download-media <peer> <message-id> [<target>]` writes a message's media to a local file. Without a
+target the file is named after the media's own name, falling back to the message id, and lands in
+the working directory; missing parent directories are created and an existing file is overwritten.
+The command prints the path and the byte count, so a script can read either.
 
 Every command renders as a table by default and can be switched to `--format plain` or `--format
 json` (via `config set --format`) for scripting. `kotlogramme doctor` checks the installation,

@@ -6,4 +6,12 @@ import java.nio.file.Path
 interface DownloadMedia {
     /** Writes the media of [messageId] in [reference] to [target] and returns the path written. */
     fun download(reference: String, messageId: Int, target: Path): Path
+
+    /**
+     * The file name the media of [messageId] carries, or `null` when it has none.
+     *
+     * It is what a caller names the file after when no target was given; a message whose media has
+     * no name of its own leaves the choice to the caller.
+     */
+    fun fileName(reference: String, messageId: Int): String?
 }

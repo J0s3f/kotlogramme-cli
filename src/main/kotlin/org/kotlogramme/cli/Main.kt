@@ -16,6 +16,7 @@ import org.kotlogramme.cli.adapter.cli.CopyMediaCommand
 import org.kotlogramme.cli.adapter.cli.DeleteCommand
 import org.kotlogramme.cli.adapter.cli.DialogsCommand
 import org.kotlogramme.cli.adapter.cli.DoctorCommand
+import org.kotlogramme.cli.adapter.cli.DownloadMediaCommand
 import org.kotlogramme.cli.adapter.cli.EditCommand
 import org.kotlogramme.cli.adapter.cli.FoldersCommand
 import org.kotlogramme.cli.adapter.cli.ForwardCommand
@@ -23,6 +24,7 @@ import org.kotlogramme.cli.adapter.cli.HistoryCommand
 import org.kotlogramme.cli.adapter.cli.InlineCommand
 import org.kotlogramme.cli.adapter.cli.InviteCommand
 import org.kotlogramme.cli.adapter.cli.KickCommand
+import org.kotlogramme.cli.adapter.cli.ListFilesCommand
 import org.kotlogramme.cli.adapter.cli.ListenCommand
 import org.kotlogramme.cli.adapter.cli.LoginCommand
 import org.kotlogramme.cli.adapter.cli.LogoutCommand
@@ -97,6 +99,8 @@ fun main(args: Array<String>) {
                 SendFileCommand(),
                 SendMediaUrlCommand(),
                 CopyMediaCommand(),
+                DownloadMediaCommand(),
+                ListFilesCommand(),
                 EditCommand(),
                 DeleteCommand(),
                 ForwardCommand(),
