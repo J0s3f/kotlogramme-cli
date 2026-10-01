@@ -261,13 +261,17 @@ class AppContext(
             val configStore = JsonConfigStore(dir)
             val format = configStore.load().outputFormat
             val terminal = System.console() != null
+            // A one-shot command has no JLine terminal, and building one would start a background
+            // console reader that would steal stdin from `send-file -`. Instead, fix the process's
+            // own stdout in place: on a Windows console at a legacy code page the JVM's encoder turns
+            // non-ASCII into `?` before the terminal ever sees it. This is a strict no-op off
+            // Windows, off a console, and when the console and the stream are already UTF-8 — so
+            // redirected runs stay byte-identical. The interactive shell then swaps in its own
+            // writer through [outputOn]; JLine renders via `WriteConsoleW` and needs none of this.
+            WindowsConsoleUtf8.apply(terminal = terminal)
             val styled = colorEnabled(noColor, color, environment, terminal = terminal)
-            // Output and the progress bar keep `System.out` here: a one-shot command has no JLine
-            // terminal, and building one would start a background console reader that would steal
-            // stdin from `send-file -`. The interactive shell, which already owns a terminal, swaps
-            // in its writer through [outputOn]; JLine then renders through `WriteConsoleW` and keeps
-            // non-ASCII intact. Redirected runs are unaffected either way, because the fallback is
-            // exactly the `System.out` encoder the JVM chose.
+            // Output and the progress bar keep `System.out` here, which is now the stream the call
+            // above replaced when a fix was warranted.
             return AppContext(
                 configDir = dir,
                 configStore = configStore,
