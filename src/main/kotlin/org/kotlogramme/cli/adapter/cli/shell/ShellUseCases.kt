@@ -10,6 +10,7 @@ import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
+import org.kotlogramme.cli.application.port.api.Sessions
 import org.kotlogramme.cli.application.port.api.Stickers
 
 /**
@@ -30,4 +31,5 @@ class ShellUseCases(
     val inline: () -> InlineBots,
     val sendMedia: () -> SendMedia,
     val downloadMedia: () -> DownloadMedia,
+    val sessions: () -> Sessions,
 )

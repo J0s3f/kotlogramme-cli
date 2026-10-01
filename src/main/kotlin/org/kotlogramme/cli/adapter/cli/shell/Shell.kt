@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.cli.shell
 
 import org.kotlogramme.cli.adapter.format.MessageStyler
+import org.kotlogramme.cli.adapter.format.renderBlockedContacts
 import org.kotlogramme.cli.adapter.format.renderChats
 import org.kotlogramme.cli.adapter.format.renderContacts
 import org.kotlogramme.cli.adapter.format.renderFiles
@@ -8,9 +9,12 @@ import org.kotlogramme.cli.adapter.format.renderFolders
 import org.kotlogramme.cli.adapter.format.renderInlineResults
 import org.kotlogramme.cli.adapter.format.renderMessages
 import org.kotlogramme.cli.adapter.format.renderParticipants
+import org.kotlogramme.cli.adapter.format.renderSessions
 import org.kotlogramme.cli.adapter.format.renderStickerSet
 import org.kotlogramme.cli.adapter.format.renderStickerSets
 import org.kotlogramme.cli.adapter.cli.DEFAULT_FILE_KIND
+import org.kotlogramme.cli.adapter.cli.chatActivityNames
+import org.kotlogramme.cli.adapter.cli.chatActivityOf
 import org.kotlogramme.cli.adapter.cli.decodeEmojiArgument
 import org.kotlogramme.cli.adapter.cli.downloadFileName
 import org.kotlogramme.cli.adapter.cli.mediaFileKindOf
@@ -71,12 +75,15 @@ class Shell(
                 "forward" -> forward(arguments)
                 "pin" -> pin(arguments)
                 "unpin" -> unpin(arguments)
+                "pinned" -> pinned()
                 "react" -> react(arguments)
                 "unreact" -> unreact(arguments)
+                "chat-action" -> chatAction(arguments)
                 "mark-read" -> markRead()
                 "invite" -> invite(arguments)
                 "kick" -> kick(arguments)
                 "contacts" -> listContacts()
+                "blocked" -> listBlocked()
                 "search" -> search(arguments)
                 "files" -> listFiles(arguments)
                 "download-media" -> downloadMedia(arguments)
@@ -88,6 +95,7 @@ class Shell(
                 "inline" -> inline(arguments)
                 "members" -> listMembers(arguments)
                 "folders" -> listFolders()
+                "sessions" -> sessions(arguments)
                 else -> output.line("Unknown command: $name. Type `help` for the available commands.")
             }
         } catch (error: Exception) {
@@ -206,9 +214,51 @@ class Shell(
         output.line("Pinned message $id.")
     }
 
-    private fun unpin(arguments: List<String>) = messageIdVerb(arguments, "unpin") { chat, id ->
-        useCases.messageWriter().unpin(chat, id)
-        output.line("Unpinned message $id.")
+    /**
+     * Unpins one message, or with `all` every pinned message in the current chat.
+     *
+     * `all` is a word rather than an id: a chat's ids are numbers, so the two never collide, and the
+     * one-shot command's `--all` reads oddly in a REPL line.
+     */
+    private fun unpin(arguments: List<String>) {
+        val chat = requireChat() ?: return
+        if (arguments.singleOrNull()?.equals(ALL, ignoreCase = true) == true) {
+            useCases.messageWriter().unpinAll(chat.reference)
+            output.line("Unpinned every message in ${chat.title}.")
+            return
+        }
+        val messageId = arguments.firstOrNull()?.toIntOrNull()
+        if (messageId == null) {
+            output.line("Usage: unpin <id> | unpin all")
+            return
+        }
+        useCases.messageWriter().unpin(chat.reference, messageId)
+        output.line("Unpinned message $messageId.")
+    }
+
+    /** Shows the current chat's pinned message, or says that it has none. */
+    private fun pinned() {
+        val chat = requireChat() ?: return
+        val message = useCases.messageWriter().pinnedMessage(chat.reference)
+        if (message == null) {
+            output.line("No pinned message in ${chat.title}.")
+        } else {
+            output.renderMessages(listOf(message), messageStyler)
+        }
+    }
+
+    /**
+     * Reports a chat action to the current chat; the action defaults to the typing indicator.
+     *
+     * The one-shot command takes a peer and an `--action`; in the REPL the open chat is the target,
+     * so the line is just the action and the shared parser rejects a name that is not a status.
+     */
+    private fun chatAction(arguments: List<String>) {
+        val chat = requireChat() ?: return
+        val name = arguments.firstOrNull() ?: DEFAULT_CHAT_ACTION
+        val activity = chatActivityOf(name)
+        useCases.messageWriter().sendChatAction(chat.reference, activity)
+        output.line("Sent the '$name' action to ${chat.title}.")
     }
 
     /** Reacts to a message; the emoji is decoded the way the one-shot command decodes it. */
@@ -271,6 +321,11 @@ class Shell(
 
     private fun listContacts() {
         output.renderContacts(useCases.contacts().list(CONTACT_LIMIT))
+    }
+
+    /** Lists the blocked accounts, the read-only half of the contact surface. */
+    private fun listBlocked() {
+        output.renderBlockedContacts(useCases.contacts().blocked(BLOCKED_LIMIT))
     }
 
     private fun search(arguments: List<String>) {
@@ -363,6 +418,32 @@ class Shell(
 
     private fun listFolders() {
         output.renderFolders(useCases.listFolders().list())
+    }
+
+    /**
+     * Lists the account's active sessions, or drops one with `terminate <hash>`.
+     *
+     * The hash is the exact one the listing reported, matching the one-shot command; `terminate-all`
+     * is deliberately absent because a REPL line cannot carry the `--yes` confirmation that guards it.
+     */
+    private fun sessions(arguments: List<String>) {
+        val sessions = useCases.sessions()
+        val verb = arguments.firstOrNull()
+        if (verb == null) {
+            output.renderSessions(sessions.list())
+            return
+        }
+        if (!verb.equals(TERMINATE, ignoreCase = true)) {
+            output.line("Usage: sessions [terminate <hash>]")
+            return
+        }
+        val hash = arguments.getOrNull(1)?.toLongOrNull()
+        if (hash == null) {
+            output.line("Usage: sessions terminate <hash>")
+            return
+        }
+        sessions.terminate(hash)
+        output.line("Terminated session $hash.")
     }
 
     /**
@@ -506,8 +587,14 @@ class Shell(
         const val KIND_OPTION = "--kind"
         const val SEND_OPTION = "--send"
         const val COMMANDS_HELP = "commands"
+        const val ALL = "all"
+        const val TERMINATE = "terminate"
+        const val DEFAULT_CHAT_ACTION = "typing"
         const val DIALOG_LIMIT = 100
         const val CONTACT_LIMIT = 50
+
+        /** How many blocked accounts `blocked` asks for, matching the one-shot command's default. */
+        const val BLOCKED_LIMIT = 50
 
         /** How many members `members` asks for, matching the one-shot command's default. */
         const val MEMBER_LIMIT = 50
@@ -534,11 +621,15 @@ class Shell(
             "delete <id>          delete a message in the current chat",
             "forward <id> <to>    forward a message to another peer",
             "pin <id> | unpin <id>  pin or unpin a message",
+            "unpin all            unpin every message in the current chat",
+            "pinned               show the current chat's pinned message",
             "react <id> <emoji> | unreact <id>  react to a message",
+            "chat-action [<action>]  report a chat status (default typing)",
             "mark-read            mark the current chat read",
             "invite <user>        add a user to the current chat",
             "kick <user>          remove a user from the current chat",
             "contacts             list contacts",
+            "blocked              list the blocked accounts",
             "search <query>       search the current chat, or everywhere",
             "files [<peer>] [--kind <kind>] [--limit N]  list the files of a chat",
             "download-media <peer> <message-id> [target]  save a message's media",
@@ -550,47 +641,74 @@ class Shell(
             "inline <bot> <query> [--send <index>]  query a bot, send a result here",
             "members [<peer>]     list the current chat's members",
             "folders              list the dialog folders",
+            "sessions [terminate <hash>]  list active sessions, or drop one",
             "quit | exit          leave the shell",
         )
 
         /**
-         * The whole CLI's commands, for `help commands`.
+         * The whole CLI's command set, for `help commands`.
          *
-         * Hand-maintained: the shell reaches ten ports, the CLI has commands beyond them, and this
-         * copy says so plainly. It is not generated from the command tree, so a command added to the
-         * CLI does not appear here on its own.
+         * This is the CLI's command tree, not the shell's verb set: every entry runs as
+         * `kotlogramme <command>`, and the shell column says whether the REPL also takes it. A
+         * verb that only exists in the shell (such as `open` or `reply`) is not listed here, because
+         * this list answers "what can the tool do", and `help` answers "what can this prompt do".
+         *
+         * Hand-maintained: the shell reaches a dozen ports, the CLI has commands beyond them, and a
+         * command added to [org.kotlogramme.cli.main] does not appear here on its own.
          */
         val CLI_COMMANDS = listOf(
-            "Shell commands (this list is a hand-maintained copy; every command below also runs as `kotlogramme <command>`):",
+            "CLI commands (run as `kotlogramme <command>`; the shell column names the shell verbs, if any):",
             "",
-            "dialogs | list        list conversations",
-            "history              read a chat's history",
-            "send                 send a text message",
-            "send-file            send a local file",
-            "send-media-url       send media Telegram fetches from a URL",
-            "copy-media           re-send an existing message's media",
-            "download-media       save a message's media to a file",
-            "files                list the files of a chat",
-            "edit                 edit a message",
-            "delete               delete messages",
-            "forward              forward messages to another chat",
-            "pin | unpin          pin or unpin a message",
-            "react | unreact      react to a message",
-            "mark-read            mark a chat read",
-            "contacts             list contacts",
-            "search               search messages",
-            "members              list a chat's members",
-            "invite               add a member to a chat",
-            "kick                 remove a member from a chat",
-            "permissions          show a member's rights",
-            "promote              grant admin rights",
-            "restrict             apply restrictions",
-            "listen               follow incoming updates",
-            "folders              list dialog folders",
-            "inline               query an inline bot",
-            "login | logout       account lifecycle",
-            "whoami | config | doctor  account and configuration",
-            "shell                start this shell",
+            "command                 where       what it does",
+            "help                    shell       show the shell's help, or this list",
+            "dialogs | list          both        list conversations",
+            "history                 cli         read a chat's history",
+            "open                    shell       open a chat",
+            "read                    shell       read the current chat",
+            "send                    both        send a text message",
+            "send-file               cli         send a local file",
+            "send-album              cli         send several files as one album",
+            "send-media-url          both        send media Telegram fetches from a URL",
+            "copy-media              both        re-send an existing message's media",
+            "download-media          both        save a message's media to a file",
+            "files                   shell       list the files of a chat",
+            "list-files              cli         list a chat's files by kind",
+            "edit                    both        edit a message",
+            "delete                  both        delete messages",
+            "reply                   shell       reply to a message",
+            "forward                 both        forward messages to another chat",
+            "pin | unpin             both        pin or unpin a message (`unpin all` in the shell)",
+            "pinned                  both        show a chat's pinned message",
+            "react | unreact         both        react to a message",
+            "chat-action             both        report a chat status such as typing",
+            "mark-read               both        mark a chat read",
+            "contacts                both        list contacts",
+            "search-contacts         cli         search contacts and the public directory",
+            "block                   cli         block a peer",
+            "unblock                 cli         unblock a peer",
+            "blocked                 both        list the blocked accounts",
+            "import-contacts         cli         import a phone number as a contact",
+            "delete-contact          cli         remove a peer from contacts",
+            "search                  both        search messages",
+            "members                 both        list a chat's members",
+            "invite                  cli         add a member to a chat",
+            "kick                    cli         remove a member from a chat",
+            "permissions             cli         show a member's rights",
+            "promote                 cli         grant admin rights",
+            "restrict                cli         apply restrictions",
+            "listen                  cli         follow incoming updates",
+            "folders                 both        list dialog folders",
+            "sessions                both        list active sessions, or drop one",
+            "chat-photos             cli         list a chat's photo messages",
+            "profile-photos          cli         list a user's profile photos",
+            "stickers                both        list the installed sticker sets",
+            "sticker-set             both        show a set with its stickers numbered",
+            "send-sticker            both        send a sticker into a chat",
+            "inline                  both        query an inline bot",
+            "login | logout          cli         account lifecycle",
+            "whoami | config | doctor  cli       account and configuration",
+            "shell                   cli         start the interactive shell",
+            "quit | exit             shell       leave the shell",
         )
     }
 }

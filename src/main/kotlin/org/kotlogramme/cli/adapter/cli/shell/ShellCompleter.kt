@@ -33,9 +33,10 @@ class ShellCompleter(private val peers: () -> List<String>) : Completer {
         val commands = listOf(
             "help", "dialogs", "list", "open", "read",
             "send", "reply", "edit", "delete", "forward",
-            "pin", "unpin", "react", "unreact", "mark-read", "invite", "kick",
-            "contacts", "search", "files", "download-media", "send-media-url", "copy-media",
-            "stickers", "sticker-set", "send-sticker", "inline", "members", "folders",
+            "pin", "unpin", "pinned", "react", "unreact", "chat-action",
+            "mark-read", "invite", "kick",
+            "contacts", "blocked", "search", "files", "download-media", "send-media-url", "copy-media",
+            "stickers", "sticker-set", "send-sticker", "inline", "members", "folders", "sessions",
             "quit", "exit",
         )
     }

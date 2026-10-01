@@ -36,6 +36,7 @@ class ShellCommand : CliktCommand(name = "shell") {
             inline = appContext::inline,
             sendMedia = appContext::sendMedia,
             downloadMedia = appContext::downloadMedia,
+            sessions = appContext::sessions,
         )
         val reader = LineReaderBuilder.builder()
             .terminal(terminal)

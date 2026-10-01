@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.cli.shell
 import org.kotlogramme.cli.adapter.cli.DownloadMediaCall
 import org.kotlogramme.cli.adapter.cli.DeleteCall
 import org.kotlogramme.cli.adapter.cli.EditCall
+import org.kotlogramme.cli.adapter.cli.ChatActionCall
 import org.kotlogramme.cli.adapter.cli.FakeChatMembers
 import org.kotlogramme.cli.adapter.cli.FakeContacts
 import org.kotlogramme.cli.adapter.cli.FakeDownloadMedia
@@ -13,6 +14,7 @@ import org.kotlogramme.cli.adapter.cli.FakeMessageWriter
 import org.kotlogramme.cli.adapter.cli.FakeReadHistory
 import org.kotlogramme.cli.adapter.cli.FakeSearchMessages
 import org.kotlogramme.cli.adapter.cli.FakeSendMedia
+import org.kotlogramme.cli.adapter.cli.FakeSessions
 import org.kotlogramme.cli.adapter.cli.FakeStickers
 import org.kotlogramme.cli.adapter.cli.FileSearchCall
 import org.kotlogramme.cli.adapter.cli.ForwardCall
@@ -39,8 +41,11 @@ import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.api.ReadHistory
 import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
+import org.kotlogramme.cli.application.port.api.Sessions
 import org.kotlogramme.cli.application.port.api.Stickers
+import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Chat
+import org.kotlogramme.cli.domain.ChatActivity
 import org.kotlogramme.cli.domain.ChatKind
 import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.InlineQuery
@@ -48,6 +53,7 @@ import org.kotlogramme.cli.domain.MediaFileKind
 import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
+import org.kotlogramme.cli.domain.Session
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -88,9 +94,10 @@ class ShellTest {
         inline: InlineBots = FakeInlineBots(),
         sendMedia: SendMedia = FakeSendMedia(),
         downloadMedia: DownloadMedia = FakeDownloadMedia(),
+        sessions: Sessions = FakeSessions(),
     ) = ShellUseCases(
         { dialogs }, { history }, { writer }, { contacts }, { search },
-        { members }, { folders }, { stickers }, { inline }, { sendMedia }, { downloadMedia },
+        { members }, { folders }, { stickers }, { inline }, { sendMedia }, { downloadMedia }, { sessions },
     )
 
     private fun run(
@@ -168,6 +175,7 @@ class ShellTest {
             inline = { FakeInlineBots() },
             sendMedia = { FakeSendMedia() },
             downloadMedia = { FakeDownloadMedia() },
+            sessions = { FakeSessions() },
         )
 
         val output = run(listOf("list"), useCases = useCases)
@@ -402,6 +410,170 @@ class ShellTest {
         run(listOf("open @ada", "unpin 7"), fakeUseCases(writer = writer))
 
         assertEquals(listOf(MessageIdCall("@ada", 7)), writer.unpins)
+    }
+
+    @Test
+    fun `unpin all unpins every message in the current chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "unpin all"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.unpins)
+        assertEquals(listOf("@ada"), writer.unpinnedAll)
+        assertTrue(output.text.contains("Unpinned every message in Ada."), output.text)
+    }
+
+    @Test
+    fun `unpin all needs an open chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("unpin all"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.unpinnedAll)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `unpin with a non-numeric id reports the usage`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "unpin abc"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.unpins)
+        assertEquals(emptyList(), writer.unpinnedAll)
+        assertTrue(output.text.contains("Usage: unpin <id> | unpin all"), output.text)
+    }
+
+    @Test
+    fun `pinned shows the current chat's pinned message`() {
+        val writer = FakeMessageWriter(pinned = message(7, "important"))
+
+        val output = run(listOf("open @ada", "pinned"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf("@ada"), writer.pinnedRequests)
+        assertTrue(output.text.contains("important"), output.text)
+    }
+
+    @Test
+    fun `pinned says when the current chat has none`() {
+        val writer = FakeMessageWriter(pinned = null)
+
+        val output = run(listOf("open @ada", "pinned"), fakeUseCases(writer = writer))
+
+        assertTrue(output.text.contains("No pinned message in Ada."), output.text)
+    }
+
+    @Test
+    fun `pinned needs an open chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("pinned"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.pinnedRequests)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `chat-action defaults to typing in the current chat`() {
+        val writer = FakeMessageWriter()
+
+        run(listOf("open @ada", "chat-action"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf(ChatActionCall("@ada", ChatActivity.TYPING)), writer.chatActions)
+    }
+
+    @Test
+    fun `chat-action sends the named status to the current chat`() {
+        val writer = FakeMessageWriter()
+
+        run(listOf("open @ada", "chat-action upload-photo"), fakeUseCases(writer = writer))
+
+        assertEquals(listOf(ChatActionCall("@ada", ChatActivity.UPLOAD_PHOTO)), writer.chatActions)
+    }
+
+    @Test
+    fun `chat-action needs an open chat`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("chat-action"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.chatActions)
+        assertTrue(output.text.contains("No chat open"), output.text)
+    }
+
+    @Test
+    fun `chat-action reports an unknown status`() {
+        val writer = FakeMessageWriter()
+
+        val output = run(listOf("open @ada", "chat-action nope"), fakeUseCases(writer = writer))
+
+        assertEquals(emptyList(), writer.chatActions)
+        assertTrue(output.text.contains("unknown chat action 'nope'"), output.text)
+    }
+
+    @Test
+    fun `blocked lists the blocked accounts`() {
+        val contacts = FakeContacts(
+            blockedContacts = listOf(
+                BlockedContact(9, "Mallory", "mal", Instant.parse("2026-01-02T00:00:00Z")),
+            ),
+        )
+
+        val output = run(listOf("blocked"), fakeUseCases(contacts = contacts))
+
+        assertEquals(listOf(50), contacts.blockedLimits)
+        assertTrue(output.text.contains("Mallory"), output.text)
+    }
+
+    @Test
+    fun `sessions lists the active sessions`() {
+        val sessions = FakeSessions(listOf(session(11)))
+
+        val output = run(listOf("sessions"), fakeUseCases(sessions = sessions))
+
+        assertTrue(output.text.contains("11"), output.text)
+        assertTrue(output.text.contains("Desktop"), output.text)
+    }
+
+    @Test
+    fun `sessions terminate takes the exact hash`() {
+        val sessions = FakeSessions()
+
+        val output = run(listOf("sessions terminate 22"), fakeUseCases(sessions = sessions))
+
+        assertEquals(listOf(22L), sessions.terminated)
+        assertTrue(output.text.contains("Terminated session 22."), output.text)
+    }
+
+    @Test
+    fun `sessions terminate requires a numeric hash`() {
+        val sessions = FakeSessions()
+
+        val output = run(listOf("sessions terminate abc"), fakeUseCases(sessions = sessions))
+
+        assertEquals(emptyList(), sessions.terminated)
+        assertTrue(output.text.contains("Usage: sessions terminate <hash>"), output.text)
+    }
+
+    @Test
+    fun `sessions reports an unknown subcommand`() {
+        val sessions = FakeSessions()
+
+        val output = run(listOf("sessions frobnicate"), fakeUseCases(sessions = sessions))
+
+        assertTrue(output.text.contains("Usage: sessions [terminate <hash>]"), output.text)
+    }
+
+    @Test
+    fun `help commands lists the CLI commands and marks CLI-only ones`() {
+        val output = run(listOf("help commands"))
+
+        assertTrue(output.text.contains("CLI commands"), output.text)
+        // The list is the CLI's, so a CLI-only command is named and marked as such.
+        assertTrue(output.text.contains("send-file"), output.text)
+        assertTrue(output.text.contains("permissions"), output.text)
+        // And it must never claim a non-verb works in the shell.
+        assertTrue(output.text.contains("cli"), output.text)
     }
 
     @Test
@@ -660,14 +832,16 @@ class ShellTest {
         assertTrue(noChat.text.contains("No chat open"), noChat.text)
     }
 
-    @Test
-    fun `help commands lists the CLI commands and says it is CLI-only`() {
-        val output = run(listOf("help commands"))
-
-        assertTrue(output.text.contains("hand-maintained copy"), output.text)
-        assertTrue(output.text.contains("send-file"), output.text)
-        assertTrue(output.text.contains("permissions"), output.text)
-    }
+    private fun session(hash: Long) = Session(
+        hash = hash,
+        deviceModel = "Desktop",
+        platform = "Windows",
+        appVersion = "0.4.0",
+        ip = "203.0.113.7",
+        country = "AT",
+        createdAt = Instant.parse("2026-01-01T12:30:00Z"),
+        current = true,
+    )
 
     private fun message(id: Int, text: String, outgoing: Boolean = false) = Message(
         id = id,

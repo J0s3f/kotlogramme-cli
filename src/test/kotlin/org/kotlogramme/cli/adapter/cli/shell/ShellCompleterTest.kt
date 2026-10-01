@@ -10,6 +10,7 @@ import org.kotlogramme.cli.adapter.cli.FakeMessageWriter
 import org.kotlogramme.cli.adapter.cli.FakeReadHistory
 import org.kotlogramme.cli.adapter.cli.FakeSearchMessages
 import org.kotlogramme.cli.adapter.cli.FakeSendMedia
+import org.kotlogramme.cli.adapter.cli.FakeSessions
 import org.kotlogramme.cli.adapter.cli.FakeStickers
 import org.kotlogramme.cli.adapter.cli.RecordingOutput
 import kotlin.test.Test
@@ -74,6 +75,6 @@ class ShellCompleterTest {
     private fun fakeUseCases() = ShellUseCases(
         { FakeListDialogs() }, { FakeReadHistory() }, { FakeMessageWriter() }, { FakeContacts() },
         { FakeSearchMessages() }, { FakeChatMembers() }, { FakeListFolders() }, { FakeStickers() },
-        { FakeInlineBots() }, { FakeSendMedia() }, { FakeDownloadMedia() },
+        { FakeInlineBots() }, { FakeSendMedia() }, { FakeDownloadMedia() }, { FakeSessions() },
     )
 }
