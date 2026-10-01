@@ -4,6 +4,7 @@ import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.MessageEntity
+import org.kotlogramme.cli.domain.MessageQuote
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.time.Instant
@@ -52,13 +53,13 @@ class MessageRenderingTest {
         val rendered = render(OutputFormat.TABLE) { renderMessages(messages) }
 
         val expected = listOf(
-            "+----+----------------------+--------------+-----+-------+---------+------------------+------+",
-            "| id | time                 | from         | via | reply | media   | action           | text |",
-            "+----+----------------------+--------------+-----+-------+---------+------------------+------+",
-            "| 7  | 2026-01-01T12:30:00Z | Ada Lovelace |     | 5     | [photo] |                  | look |",
-            "| 8  | 2026-01-01T12:31:00Z | Bob          | 99  |       |         |                  | ok   |",
-            "| 9  | 2026-01-01T12:32:00Z | Ada Lovelace |     |       |         | pinned a message |      |",
-            "+----+----------------------+--------------+-----+-------+---------+------------------+------+",
+            "+----+----------------------+--------------+-----+-------+-------+---------+------------------+------+",
+            "| id | time                 | from         | via | reply | quote | media   | action           | text |",
+            "+----+----------------------+--------------+-----+-------+-------+---------+------------------+------+",
+            "| 7  | 2026-01-01T12:30:00Z | Ada Lovelace |     | 5     |       | [photo] |                  | look |",
+            "| 8  | 2026-01-01T12:31:00Z | Bob          | 99  |       |       |         |                  | ok   |",
+            "| 9  | 2026-01-01T12:32:00Z | Ada Lovelace |     |       |       |         | pinned a message |      |",
+            "+----+----------------------+--------------+-----+-------+-------+---------+------------------+------+",
         ).joinToString("\n")
         assertEquals(expected, rendered)
     }
@@ -69,10 +70,10 @@ class MessageRenderingTest {
 
         assertEquals(
             listOf(
-                "id\ttime\tfrom\tvia\treply\tmedia\taction\ttext",
-                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t\t5\t[photo]\t\tlook",
-                "8\t2026-01-01T12:31:00Z\tBob\t99\t\t\t\tok",
-                "9\t2026-01-01T12:32:00Z\tAda Lovelace\t\t\t\tpinned a message",
+                "id\ttime\tfrom\tvia\treply\tquote\tmedia\taction\ttext",
+                "7\t2026-01-01T12:30:00Z\tAda Lovelace\t\t5\t\t[photo]\t\tlook",
+                "8\t2026-01-01T12:31:00Z\tBob\t99\t\t\t\t\tok",
+                "9\t2026-01-01T12:32:00Z\tAda Lovelace\t\t\t\t\tpinned a message",
             ),
             rendered.lines(),
         )
@@ -84,11 +85,11 @@ class MessageRenderingTest {
 
         assertEquals(
             """[{"id":"7","time":"2026-01-01T12:30:00Z","from":"Ada Lovelace","via":"",""" +
-                """"reply":"5","media":"[photo]","action":"","text":"look"},""" +
+                """"reply":"5","quote":"","media":"[photo]","action":"","text":"look"},""" +
                 """{"id":"8","time":"2026-01-01T12:31:00Z","from":"Bob","via":"99",""" +
-                """"reply":"","media":"","action":"","text":"ok"},""" +
+                """"reply":"","quote":"","media":"","action":"","text":"ok"},""" +
                 """{"id":"9","time":"2026-01-01T12:32:00Z","from":"Ada Lovelace","via":"",""" +
-                """"reply":"","media":"","action":"pinned a message","text":""}]""",
+                """"reply":"","quote":"","media":"","action":"pinned a message","text":""}]""",
             rendered,
         )
     }
@@ -113,6 +114,156 @@ class MessageRenderingTest {
         // The escapes must not count towards a column, or every border would drift.
         assertEquals(1, lines.map(::visibleLength).distinct().size, rendered)
         assertEquals(lines[3], lines[4].replace(Regex("\u001B\\[[0-9;]*m"), ""))
+    }
+
+    @Test
+    fun `a reply shows its quoted text`() {
+        val message = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "sure",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            replyToMessageId = 5,
+            quote = MessageQuote("where is the file?"),
+        )
+
+        assertEquals("\"where is the file?\"", quoteLabel(message.quote!!))
+        assertTrue(render(OutputFormat.TABLE) { renderMessages(listOf(message)) }.contains("\"where is the file?\""))
+    }
+
+    @Test
+    fun `the entities inside a quote are styled like any other entity`() {
+        val plain = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            replyToMessageId = 5,
+            quote = MessageQuote("please see the file", listOf(MessageEntity("bold", 11, 4))),
+        )
+
+        val styled = render(OutputFormat.TABLE) {
+            renderMessages(listOf(plain), MessageStyler.table(color = true))
+        }
+        assertTrue(styled.contains("\u001B[1m"), styled)
+
+        val pipeless = render(OutputFormat.TABLE) {
+            renderMessages(listOf(plain), MessageStyler.table(color = false))
+        }
+        assertFalse(pipeless.contains("\u001B"), pipeless)
+        assertTrue(pipeless.contains("\"please see the file\""), pipeless)
+    }
+
+    @Test
+    fun `a quote whose entities are styled keeps the table aligned`() {
+        val plain = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "hi",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            replyToMessageId = 5,
+            quote = MessageQuote("plain quote"),
+        )
+        val styled = plain.copy(quote = MessageQuote("bold quote", listOf(MessageEntity("bold", 0, 4))))
+
+        val rendered = render(OutputFormat.TABLE) {
+            renderMessages(listOf(plain, styled), MessageStyler.table(color = true))
+        }
+        val lines = rendered.lines()
+
+        assertTrue(rendered.contains("\u001B[1m"), rendered)
+        // A styled quote must not count its escapes towards the column.
+        assertEquals(1, lines.map(::visibleLength).distinct().size, rendered)
+    }
+
+    @Test
+    fun `a non-reply renders unchanged`() {
+        val message = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "hello",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+        )
+
+        val rendered = render(OutputFormat.TABLE) { renderMessages(listOf(message)) }
+
+        assertFalse(rendered.contains("\"\""), rendered)
+        // The new, always-present quote column is empty; every other cell is what it was.
+        assertEquals(
+            listOf(
+                "1", "1970-01-01T00:00:00Z", "Ada", "", "", "", "", "", "hello",
+            ),
+            messageRow(message),
+        )
+    }
+
+    @Test
+    fun `a reply whose header carries no text shows no quote`() {
+        val message = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "ok",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            replyToMessageId = 5,
+        )
+
+        val rendered = render(OutputFormat.TABLE) { renderMessages(listOf(message)) }
+
+        // A reply with an absent quote renders no empty brackets and no empty string.
+        assertFalse(rendered.contains("\""), rendered)
+        assertEquals("""5""", messageRow(message)[4])
+        assertEquals("", messageRow(message)[5])
+    }
+
+    @Test
+    fun `a quote containing a newline does not break the table`() {
+        val plain = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            replyToMessageId = 5,
+            quote = MessageQuote("line one"),
+        )
+        val multiline = plain.copy(quote = MessageQuote("line one\nline two"))
+
+        val rendered = render(OutputFormat.TABLE) { renderMessages(listOf(plain, multiline), MessageStyler.table(color = true)) }
+        val lines = rendered.lines()
+
+        // One table is six lines (three borders and three rows); a newline would push it past that.
+        assertEquals(6, lines.size, rendered)
+        assertEquals(1, lines.map(::visibleLength).distinct().size, rendered)
+        assertTrue(rendered.contains("\"line one line two\""), rendered)
+    }
+
+    @Test
+    fun `a very long quote is truncated and the table still lines up`() {
+        val long = (1..200).joinToString(" ") { "word" }
+        val message = Message(
+            id = 1,
+            senderName = "Ada",
+            text = "",
+            sentAt = Instant.EPOCH,
+            outgoing = false,
+            replyToMessageId = 5,
+            quote = MessageQuote(long),
+        )
+
+        val rendered = render(OutputFormat.TABLE) { renderMessages(listOf(message), MessageStyler.table(color = true)) }
+        val lines = rendered.lines()
+        val label = quoteLabel(message.quote!!)
+
+        assertEquals(1, lines.map(::visibleLength).distinct().size, rendered)
+        assertTrue(label.endsWith("…\""), label)
+        // Two quotes plus the visible truncation limit (ellipsis included).
+        assertEquals(82, label.length, label)
+        assertEquals(80, label.removeSurrounding("\"").length, label)
     }
 
     @Test

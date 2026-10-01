@@ -4,6 +4,19 @@ All notable changes to `kotlogramme-cli` are recorded here.
 
 ## Unreleased
 
+### Features
+
+- A reply's quoted text is now shown. Received messages carry the text a reply quotes into the
+  domain as `MessageQuote` (the text plus its own entities; the facade's own HTML/CommonMark
+  renderings are dropped as the writer's concern), and the table renders it in a new `quote` column
+  as `"<text>"` beside the `reply` id. The quote's entities go through the same styler as a
+  message's own text, so they are styled with colour on a terminal and plain otherwise, and the
+  column is measured by visible width like every other. A quote absent in the library - a non-reply,
+  or a reply to a deleted message, a scheduled/service reply or a story - stays absent and renders an
+  empty cell, never empty quotes. A newline in the quoted text becomes a space, and a quote longer
+  than 80 visible characters is truncated with an ellipsis, so one long quote cannot break the row or
+  stretch the column. The plain and JSON formats carry the quoted text with no escapes.
+
 ### Fixed
 
 - `listen` stops promptly on Ctrl-C. The command used to poll the update stream with the facade's

@@ -3,10 +3,12 @@ package org.kotlogramme.cli.adapter.telegram
 import com.github.badoualy.telegram.api.Media as FacadeMedia
 import com.github.badoualy.telegram.api.Message as FacadeMessage
 import com.github.badoualy.telegram.api.MessageEntity as FacadeEntity
+import com.github.badoualy.telegram.api.MessageQuote as FacadeQuote
 import com.github.badoualy.telegram.api.User
 import org.kotlogramme.cli.domain.MediaInfo
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.MessageEntity
+import org.kotlogramme.cli.domain.MessageQuote
 import java.time.Instant
 
 /**
@@ -28,6 +30,16 @@ internal fun FacadeMessage.toMessage(): Message = Message(
     media = media?.toMediaInfo(),
     action = action?.kind?.let(::serviceAction),
     viaBotId = viaBotId,
+    entities = entities.map { it.toMessageEntity() },
+    quote = quote?.toMessageQuote(),
+)
+
+/**
+ * The facade's quote is collapsed to the [text] and its entities: the client styles the entities
+ * itself, so the facade's own `htmlText`/`markdownText` renderings are dropped here.
+ */
+private fun FacadeQuote.toMessageQuote(): MessageQuote = MessageQuote(
+    text = text,
     entities = entities.map { it.toMessageEntity() },
 )
 
