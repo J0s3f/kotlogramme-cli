@@ -151,3 +151,27 @@ messages **46, 45, 44, 43, 39, 35, 34, 29, 28, 25** in one call - the whole chan
 twenty-message window, including a 1.6 GB video. A client-side scan of the last page would have
 stopped around message 30 and reported a false negative. `--kind video` and `--total` (4) both answer
 correctly, and an unknown kind is refused with the valid names rather than silently matching nothing.
+
+### The upload progress bar, checked live
+
+`send-file` gained a progress bar in this release. Both directions were checked against the real
+channel with a 28 MB file.
+
+**Off by default when piped.** A plain `send-file` with stdout captured produced **no carriage return
+and no percent sign at all** - 0 CRs in the captured stream - so a script or a pipeline gets clean
+output with nothing to strip. This is the property the default exists for.
+
+**`--progress` forces it on.** Captured to a file and read back as bytes, the same upload produced
+**34 `0x0D` bytes and 0 `0x1B` (ESC) bytes**: one line rewritten in place, with no ANSI styling
+because the output is not a terminal. The line carries the percentage, the bytes sent against the
+total and the transfer rate:
+
+```
+[#-------------------]  7% 2.0 MB/28 MB  22 MB/s
+[##------------------] 10% 3.0 MB/28 MB 9.9 MB/s
+[####----------------] 23% 6.5 MB/28 MB  11 MB/s
+```
+
+The first tick reads high because the rate is a running average taken over a very short elapsed time;
+it settles to the real figure within a few ticks. That is the intended behaviour rather than a
+glitch, and the finished line is erased on success, failure and interrupt alike.
