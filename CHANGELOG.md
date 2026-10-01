@@ -19,6 +19,13 @@ Built on `kotlogramme` 0.7.0.
 - The `via` column resolves a message's inline bot to `@username` through one batched lookup of the
   distinct ids on the page. A failed lookup or an unresolved id falls back to the numeric id and never
   fails the command; only the history path pays for the lookup, not `listen` or search.
+- `send-file` detects a real file's kind by default. A plain `send-file @chat clip.mp4` now goes out
+  as a streamable video with the duration and resolution read from the container, a `.png` as a
+  photo, and anything else as a document. `--detect` is the explicit form of that default, and the
+  new `--no-detect` turns detection off and sends the bytes as a plain document. `--photo` and
+  `--video` force the kind and win over detection; each is mutually exclusive with the other and
+  with `--detect`/`--no-detect`, and explicit `--duration`/`--width`/`--height` still require
+  `--video` or `--detect`.
 
 ### Project
 

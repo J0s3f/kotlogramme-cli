@@ -24,7 +24,8 @@ kotlogramme login --phone +491700000000                  # prompts for the code,
 kotlogramme dialogs --limit 20
 kotlogramme history @some_chat --limit 50
 kotlogramme send @some_chat "hello from the terminal"
-kotlogramme send-file @some_chat cat.png --detect          # probe the kind and the video metadata
+kotlogramme send-file @some_chat clip.mp4                  # detects the kind: a streamable video
+kotlogramme send-file @some_chat clip.mp4 --no-detect       # ...or send the raw bytes as a document
 kotlogramme stickers                                       # installed sticker sets
 kotlogramme listen                                         # follow new messages
 kotlogramme shell                                          # interactive REPL

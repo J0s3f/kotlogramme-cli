@@ -228,6 +228,21 @@ Acceptance: the offline suite covers the styling (alignment, colour on/off, mask
 the batched lookup (resolution, fallback, failure) and the JSON shape; the client still builds
 against the published facade. Verified offline; the live pass is run by the orchestrator.
 
+### Phase 11 — Send-file kind by default
+
+- [x] **T11.1 Detect the file kind by default.** `SendFileCommand` probes a real file with the
+  existing `FileMediaProbe`/`MediaKindHint` path and sends a video as a streamable video with its
+  metadata, a photo as a photo and anything else as a document, so a plain `send-file clip.mp4` is no
+  longer a document. `--detect` is the explicit form of the default and the new `--no-detect` forces
+  a plain document; `--photo`/`--video` force the kind and win over detection, and the combinations
+  with the detector flags are rejected rather than left undefined. `docs/features.md`,
+  `docs/decisions.md` (0012) and `CHANGELOG.md` record the change.
+
+Acceptance: the offline suite covers the default for a video, a photo, an unknown file and a file
+with no extension, a video whose metadata cannot be read still going as a video, the `--no-detect`
+opt-out, `--photo`/`--video` winning over detection, and the rejected combinations; every existing
+test stays green. Verified offline; the live pass is run by the orchestrator.
+
 ## Verification strategy
 
 - `gradle clean test` is the gate for every task: fast, offline, deterministic.

@@ -161,3 +161,28 @@ check are the conventional three ways a user turns colour off, and all three are
 is the matching way to ask for colour when the consumer is a pipe, which is what a pager such as
 `less -R` needs.
 
+## 0012 — Detect a sent file's kind by default, with `--no-detect` to opt out
+
+**Decision.** A plain `send-file <peer> <path>` probes the file and sends it by the kind it finds: an
+ISO base media or Matroska video goes out as a streamable video with its duration and dimensions, a
+`jpg`/`jpeg`/`png` as a photo, and anything else as a document. `--detect` is the explicit spelling of
+that default, `--no-detect` forces a plain document with no probing, and `--photo`/`--video` force
+the kind and win over detection. The two detector flags are mutually exclusive with each other and
+with the forcing flags, and explicit `--duration`/`--width`/`--height` still require `--video` or
+`--detect`.
+
+**Alternatives.** Keep `--detect` opt-in and document the trap, leaving a plain send as a document.
+That is what shipped first, and it is wrong: a `.mp4` is a video to every user and every other
+client, so the obvious command produced a download bubble with a file name and an audio-looking
+duration. Making `--video` the default for every file would push a `.txt` or a `.zip` out as a video
+the facade cannot describe. A separate `--document` flag lost to the negative `--no-detect`, which
+matches the existing `--no-color` vocabulary and names exactly what it turns off.
+
+**Why.** The kind is a property of the file, not of the command line, so the tool should read it
+rather than make the user repeat what the extension already says. The opt-out keeps the escape hatch
+for a caller who wants the bytes sent verbatim — a file the probe would mistake for a media type, or
+a deliberately raw upload — without making that the common path. Reusing `FileMediaProbe` and
+`MediaKindHint` keeps one detector, and the failure modes stay safe: a video whose container cannot
+be read is still a video with null metadata, a file with no extension is a document, and nothing is
+deleted or rewritten, so the changed default changes the bubble, not the payload.
+

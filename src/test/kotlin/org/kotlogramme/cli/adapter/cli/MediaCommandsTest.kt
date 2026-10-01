@@ -265,6 +265,155 @@ class MediaCommandsTest {
     }
 
     @Test
+    fun `send-file sends an mp4 as a video by default with the probed metadata`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString())
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", 2610.0, 1920, 1080, null, false)), media.videoSends)
+        assertTrue(media.fileSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file sends a png as a photo by default`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(0))
+
+        val result = fixture.run("send-file", "@ada", file.toString())
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "", true, null, false)), media.fileSends)
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file sends an unknown file as a document by default`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("notes.txt"), "hello".toByteArray())
+
+        val result = fixture.run("send-file", "@ada", file.toString())
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "", false, null, false)), media.fileSends)
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file sends a file with no extension as a document by default`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("README"), "hello".toByteArray())
+
+        val result = fixture.run("send-file", "@ada", file.toString())
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "", false, null, false)), media.fileSends)
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file sends a video whose metadata cannot be read as a video by default`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.avi"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString())
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", null, null, null, null, false)), media.videoSends)
+        assertTrue(media.fileSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file --no-detect forces a plain document for a video file`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--no-detect")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "", false, null, false)), media.fileSends)
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file --photo wins over detection for a video file`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--photo")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendFileCall("@ada", file, "", true, null, false)), media.fileSends)
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file --video wins over detection for a photo file`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(0))
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--video")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(SendVideoCall("@ada", file, "", null, null, null, null, false)), media.videoSends)
+        assertTrue(media.fileSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file rejects --no-detect together with --detect`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--no-detect", "--detect")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("mutually exclusive"), "stderr was: ${result.stderr}")
+        assertTrue(media.fileSends.isEmpty())
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file rejects --no-detect together with an explicit kind`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val video = fixture.run("send-file", "@ada", file.toString(), "--no-detect", "--video")
+        val photo = fixture.run("send-file", "@ada", file.toString(), "--no-detect", "--photo")
+
+        assertEquals(1, video.statusCode)
+        assertTrue(video.stderr.contains("cannot be combined"), "stderr was: ${video.stderr}")
+        assertEquals(1, photo.statusCode)
+        assertTrue(photo.stderr.contains("cannot be combined"), "stderr was: ${photo.stderr}")
+        assertTrue(media.fileSends.isEmpty())
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
+    fun `send-file rejects metadata together with --no-detect`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--no-detect", "--duration", "5")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("require --video"), "stderr was: ${result.stderr}")
+        assertTrue(media.fileSends.isEmpty())
+        assertTrue(media.videoSends.isEmpty())
+    }
+
+    @Test
     fun `send-file forwards the reply-to and silent flags`() {
         val media = FakeSendMedia()
         val fixture = cliFixture(sendMedia = media)

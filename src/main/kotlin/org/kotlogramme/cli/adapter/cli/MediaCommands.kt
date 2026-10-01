@@ -19,15 +19,20 @@ import java.nio.file.Path
 /**
  * Sends a local file, or the bytes piped on standard input, as a document, a photo or a video.
  *
+ * A real file's kind is detected by default. The extension picks the kind — `jpg`, `jpeg` and `png`
+ * are photos, `mp4`, `m4v`, `mov`, `mkv`, `webm` and `avi` are videos, anything else a document —
+ * and a video supplies the duration, width and height read from its container, so a `.mp4` goes out
+ * as a streamable video with its metadata without any flag. `--detect` spells that default out and
+ * `--no-detect` turns it off, sending the bytes as a plain document with no kind inference and no
+ * metadata.
+ *
+ * `--photo` and `--video` force the kind and win over detection. Each is mutually exclusive with the
+ * other and with `--detect`/`--no-detect`. Explicit `--duration`, `--width` and `--height` describe
+ * a video; they are only accepted with `--video` or `--detect`, where they override the probe.
+ *
  * A `-` path reads standard input and uploads it as a stream named by `--name`, defaulting to
  * `stdin`, because Telegram needs a file name for an upload that has no path. A piped file is never
- * streamable, so `--video` and its metadata apply only to a real file. Any other path is handed to
- * the gateway as-is, so its file name names the upload.
- *
- * `--detect` asks the file itself: the extension picks the kind, and an ISO base media video
- * supplies its duration, width and height. Explicit `--duration`, `--width` and `--height` still
- * win over the probe. With `-` there is nothing to probe, so only the `--name` extension is used and
- * no metadata is sent.
+ * streamable, so it is sent as a document, or as a photo with `--detect` when `--name` names one.
  *
  * `--reply-to` quotes an existing message and `--silent` suppresses the notification; both reach the
  * service for every form of the send, including a stdin stream.
@@ -38,9 +43,10 @@ class SendFileCommand : CliktCommand(name = "send-file") {
     private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")
     private val path by argument("path", help = "The file to send, or - to read the bytes from stdin")
     private val caption by option("--caption", help = "The caption").default("")
-    private val photo by option("--photo", help = "Send as a photo instead of a document").flag()
-    private val video by option("--video", help = "Send as a streamable video instead of a document").flag()
-    private val detect by option("--detect", help = "Detect the kind and the video metadata from the file").flag()
+    private val photo by option("--photo", help = "Force a photo send, overriding detection").flag()
+    private val video by option("--video", help = "Force a streamable video send, overriding detection").flag()
+    private val detect by option("--detect", help = "Detect the kind and the video metadata (the default for a real file)").flag()
+    private val noDetect by option("--no-detect", help = "Send a real file as a plain document without detecting its kind").flag()
     private val duration by option("--duration", help = "The video duration in seconds; only with --video or --detect")
         .double()
     private val width by option("--width", help = "The video width in pixels; only with --video or --detect").int()
@@ -52,7 +58,9 @@ class SendFileCommand : CliktCommand(name = "send-file") {
     override fun run() {
         val message = rejectInvalidInput {
             require(!(video && photo)) { "--video and --photo are mutually exclusive" }
+            require(!(detect && noDetect)) { "--detect and --no-detect are mutually exclusive" }
             require(!(detect && (video || photo))) { "--detect cannot be combined with --video or --photo" }
+            require(!(noDetect && (video || photo))) { "--no-detect cannot be combined with --video or --photo" }
             require(video || detect || isMetadataAbsent()) {
                 "--duration, --width and --height require --video or --detect"
             }
@@ -61,10 +69,17 @@ class SendFileCommand : CliktCommand(name = "send-file") {
         appContext.output.renderMessages(listOf(message), appContext.messageStyler)
     }
 
-    private fun send() =
+    private fun send(): Message =
         when {
             path == STDIN -> sendStdin()
-            detect -> sendDetected(Path.of(path))
+            photo -> appContext.sendMedia().sendFile(
+                peer,
+                Path.of(path),
+                caption,
+                asPhoto = true,
+                replyToMessageId = replyTo,
+                silent = silent,
+            )
             video -> appContext.sendMedia().sendVideo(
                 peer,
                 Path.of(path),
@@ -75,7 +90,15 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 replyTo,
                 silent,
             )
-            else -> appContext.sendMedia().sendFile(peer, Path.of(path), caption, photo, replyTo, silent)
+            noDetect -> appContext.sendMedia().sendFile(
+                peer,
+                Path.of(path),
+                caption,
+                asPhoto = false,
+                replyToMessageId = replyTo,
+                silent = silent,
+            )
+            else -> sendDetected(Path.of(path))
         }
 
     private fun sendStdin(): Message {
