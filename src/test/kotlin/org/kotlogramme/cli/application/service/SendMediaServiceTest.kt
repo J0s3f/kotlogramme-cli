@@ -2,6 +2,9 @@ package org.kotlogramme.cli.application.service
 
 import org.junit.jupiter.api.io.TempDir
 import org.kotlogramme.cli.application.port.spi.MediaGateway
+import org.kotlogramme.cli.application.port.spi.UploadProgress
+import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
+import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Message
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -9,9 +12,14 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+
+/** The reporter a test passes when the bar is off, which is the common case in this suite. */
+private val SILENT = UploadProgressReporter.SILENT
 
 class SendMediaServiceTest {
     @field:TempDir
@@ -22,7 +30,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
         val file = Files.createFile(tempDir.resolve("cat.png"))
 
-        val sent = SendMediaService(gateway).sendFile("@ada", file, caption = "a cat", asPhoto = true, null, false)
+        val sent = SendMediaService(gateway).sendFile("@ada", file, caption = "a cat", asPhoto = true, null, false, SILENT)
 
         assertEquals(SendFileCall("@ada", file, "a cat", true, null, false), gateway.fileSends.single())
         assertEquals(gateway.sent, sent)
@@ -33,7 +41,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
         val file = Files.createFile(tempDir.resolve("cat.png"))
 
-        SendMediaService(gateway).sendFile("@ada", file, caption = "", asPhoto = false, null, false)
+        SendMediaService(gateway).sendFile("@ada", file, caption = "", asPhoto = false, null, false, SILENT)
 
         assertEquals(SendFileCall("@ada", file, "", false, null, false), gateway.fileSends.single())
     }
@@ -52,6 +60,7 @@ class SendMediaServiceTest {
             height = 1080,
             replyToMessageId = null,
             silent = false,
+            progress = SILENT,
         )
 
         assertEquals(SendVideoCall("@ada", file, "a clip", 12.5, 1920, 1080, null, false), gateway.videoSends.single())
@@ -63,7 +72,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
         val file = Files.createFile(tempDir.resolve("clip.mp4"))
 
-        SendMediaService(gateway).sendVideo("@ada", file, caption = "", null, null, null, null, false)
+        SendMediaService(gateway).sendVideo("@ada", file, "", null, null, null, null, false, SILENT)
 
         assertEquals(SendVideoCall("@ada", file, "", null, null, null, null, false), gateway.videoSends.single())
     }
@@ -74,7 +83,7 @@ class SendMediaServiceTest {
         val missing = tempDir.resolve("nope.mp4")
 
         val error = assertFailsWith<IllegalArgumentException> {
-            SendMediaService(gateway).sendVideo("@ada", missing, "", null, null, null, null, false)
+            SendMediaService(gateway).sendVideo("@ada", missing, "", null, null, null, null, false, SILENT)
         }
 
         assertTrue(error.message.orEmpty().contains("does not exist"))
@@ -86,7 +95,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
 
         val error = assertFailsWith<IllegalArgumentException> {
-            SendMediaService(gateway).sendVideo("@ada", tempDir, "", null, null, null, null, false)
+            SendMediaService(gateway).sendVideo("@ada", tempDir, "", null, null, null, null, false, SILENT)
         }
 
         assertTrue(error.message.orEmpty().contains("not a regular file"))
@@ -105,6 +114,8 @@ class SendMediaServiceTest {
             asPhoto = true,
             replyToMessageId = null,
             silent = false,
+            size = 3,
+            progress = SILENT,
         )
 
         assertEquals(
@@ -118,7 +129,7 @@ class SendMediaServiceTest {
     fun `sendStream accepts an empty stream and an empty caption`() {
         val gateway = FakeMediaGateway()
 
-        SendMediaService(gateway).sendStream("@ada", "empty.bin", ByteArrayInputStream(ByteArray(0)), "", false, null, false)
+        SendMediaService(gateway).sendStream("@ada", "empty.bin", ByteArrayInputStream(ByteArray(0)), "", false, null, false, 0, SILENT)
 
         assertEquals(
             SendStreamCall("@ada", "empty.bin", "", "", false, null, false),
@@ -131,7 +142,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
 
         val error = assertFailsWith<IllegalArgumentException> {
-            SendMediaService(gateway).sendStream("@ada", "  ", ByteArrayInputStream(ByteArray(0)), "", false, null, false)
+            SendMediaService(gateway).sendStream("@ada", "  ", ByteArrayInputStream(ByteArray(0)), "", false, null, false, 0, SILENT)
         }
 
         assertTrue(error.message.orEmpty().contains("name"))
@@ -167,7 +178,7 @@ class SendMediaServiceTest {
         val missing = tempDir.resolve("nope.png")
 
         val error = assertFailsWith<IllegalArgumentException> {
-            SendMediaService(gateway).sendFile("@ada", missing, "", asPhoto = false, null, false)
+            SendMediaService(gateway).sendFile("@ada", missing, "", asPhoto = false, null, false, SILENT)
         }
 
         assertTrue(error.message.orEmpty().contains("does not exist"))
@@ -179,7 +190,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
 
         val error = assertFailsWith<IllegalArgumentException> {
-            SendMediaService(gateway).sendFile("@ada", tempDir, "", asPhoto = false, null, false)
+            SendMediaService(gateway).sendFile("@ada", tempDir, "", asPhoto = false, null, false, SILENT)
         }
 
         assertTrue(error.message.orEmpty().contains("not a regular file"))
@@ -202,7 +213,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
         val file = Files.createFile(tempDir.resolve("cat.png"))
 
-        SendMediaService(gateway).sendFile("@ada", file, "", asPhoto = false, replyToMessageId = 5, silent = true)
+        SendMediaService(gateway).sendFile("@ada", file, "", asPhoto = false, replyToMessageId = 5, silent = true, progress = SILENT)
 
         assertEquals(SendFileCall("@ada", file, "", false, 5, true), gateway.fileSends.single())
     }
@@ -212,7 +223,7 @@ class SendMediaServiceTest {
         val gateway = FakeMediaGateway()
         val file = Files.createFile(tempDir.resolve("clip.mp4"))
 
-        SendMediaService(gateway).sendVideo("@ada", file, "", null, null, null, replyToMessageId = 5, silent = true)
+        SendMediaService(gateway).sendVideo("@ada", file, "", null, null, null, replyToMessageId = 5, silent = true, progress = SILENT)
 
         assertEquals(SendVideoCall("@ada", file, "", null, null, null, 5, true), gateway.videoSends.single())
     }
@@ -229,6 +240,8 @@ class SendMediaServiceTest {
             false,
             replyToMessageId = 5,
             silent = true,
+            size = 3,
+            progress = SILENT,
         )
 
         assertEquals(SendStreamCall("@ada", "cat.png", "cat", "", false, 5, true), gateway.streamSends.single())
@@ -261,10 +274,148 @@ class SendMediaServiceTest {
         val file = Files.createFile(tempDir.resolve("cat.png"))
 
         assertFailsWith<IllegalArgumentException> {
-            SendMediaService(gateway).sendFile("@ada", file, "", asPhoto = false, replyToMessageId = 0, silent = false)
+            SendMediaService(gateway).sendFile("@ada", file, "", asPhoto = false, replyToMessageId = 0, silent = false, progress = SILENT)
         }
 
         assertEquals(emptyList(), gateway.fileSends)
+    }
+
+    @Test
+    fun `rejects a negative stream size before the gateway`() {
+        val gateway = FakeMediaGateway()
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            SendMediaService(gateway).sendStream(
+                "@ada",
+                "cat.png",
+                ByteArrayInputStream("cat".toByteArray()),
+                "",
+                false,
+                null,
+                false,
+                -1,
+                SILENT,
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("must not be negative"))
+        assertEquals(emptyList(), gateway.streamSends)
+    }
+
+    @Test
+    fun `sendFile declares the file's own length as the upload total`() {
+        val reporter = RecordingProgressReporter()
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(2_048))
+
+        SendMediaService(FakeMediaGateway()).sendFile("@ada", file, "", asPhoto = false, null, false, reporter)
+
+        assertEquals(listOf(2_048L), reporter.totals)
+    }
+
+    @Test
+    fun `sendStream declares the measured length as the upload total`() {
+        val reporter = RecordingProgressReporter()
+
+        SendMediaService(FakeMediaGateway()).sendStream(
+            "@ada",
+            "cat.png",
+            ByteArrayInputStream(ByteArray(700)),
+            "",
+            false,
+            null,
+            false,
+            700,
+            reporter,
+        )
+
+        assertEquals(listOf(700L), reporter.totals)
+    }
+
+    @Test
+    fun `a successful upload closes the progress slot`() {
+        val reporter = RecordingProgressReporter()
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(16))
+
+        SendMediaService(FakeMediaGateway()).sendFile("@ada", file, "", asPhoto = false, null, false, reporter)
+
+        assertEquals(1, reporter.slot.closed)
+    }
+
+    @Test
+    fun `a failed upload closes the progress slot`() {
+        val reporter = RecordingProgressReporter()
+        val gateway = FakeMediaGateway(uploadFailure = IllegalStateException("the upload was refused"))
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(16))
+
+        assertFailsWith<IllegalStateException> {
+            SendMediaService(gateway).sendFile("@ada", file, "", false, null, false, reporter)
+        }
+
+        assertEquals(1, reporter.slot.closed)
+    }
+
+    @Test
+    fun `a silent reporter watches nothing`() {
+        val slot = UploadProgressReporter.SILENT.begin(10)
+
+        assertEquals(false, slot.isWatched)
+        assertNull(slot.current())
+    }
+
+    @Test
+    fun `the gateway's counter is readable while the upload runs`() {
+        val reporter = RecordingProgressReporter()
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(64))
+
+        SendMediaService(FakeMediaGateway()).sendFile("@ada", file, "", asPhoto = false, null, false, reporter)
+
+        assertEquals(64L, reporter.slot.reading()?.bytesSent)
+        assertEquals(64L, reporter.slot.reading()?.totalBytes)
+    }
+}
+
+/** A slot that records when it was closed, which is how cleanup is asserted. */
+private class RecordingProgressSlot(
+    private val reporter: RecordingProgressReporter,
+) : UploadProgressSlot {
+    override val isWatched: Boolean = true
+
+    var closed = 0
+
+    private var counter: (() -> UploadProgress?)? = null
+
+    override fun follow(counter: () -> UploadProgress?) {
+        this.counter = counter
+    }
+
+    override fun current(): UploadProgress? = counter?.invoke()
+
+    override fun close() {
+        closed++
+    }
+
+    fun reading(): UploadProgress? = current()
+
+    init {
+        reporter.attach(this)
+    }
+}
+
+/** A reporter that hands out [RecordingProgressSlot]s and remembers the totals they were opened with. */
+private class RecordingProgressReporter : UploadProgressReporter {
+    val totals = mutableListOf<Long>()
+
+    lateinit var slot: RecordingProgressSlot
+        private set
+
+    override fun begin(totalBytes: Long): UploadProgressSlot {
+        totals += totalBytes
+        slot = RecordingProgressSlot(this)
+        return slot
+    }
+
+    fun attach(slot: RecordingProgressSlot) {
+        this.slot = slot
     }
 }
 
@@ -296,7 +447,24 @@ private data class SendStreamCall(
     val asPhoto: Boolean,
     val replyToMessageId: Int?,
     val silent: Boolean,
-)
+    val size: Long = content.toByteArray().size.toLong(),
+    /** The exact bytes the stream carried, for the round trip a decoded [content] cannot show. */
+    val bytes: ByteArray = content.toByteArray(),
+) {
+    override fun equals(other: Any?): Boolean =
+        other is SendStreamCall &&
+            reference == other.reference &&
+            name == other.name &&
+            content == other.content &&
+            caption == other.caption &&
+            asPhoto == other.asPhoto &&
+            replyToMessageId == other.replyToMessageId &&
+            silent == other.silent &&
+            size == other.size
+
+    override fun hashCode(): Int =
+        listOf(reference, name, content, caption, asPhoto, replyToMessageId, silent, size).hashCode()
+}
 
 private data class SendUrlCall(
     val reference: String,
@@ -315,7 +483,10 @@ private data class CopyMediaCall(
     val silent: Boolean,
 )
 
-private class FakeMediaGateway : MediaGateway {
+private class FakeMediaGateway(
+    /** Simulates the upload itself failing after the slot was opened. */
+    private val uploadFailure: RuntimeException? = null,
+) : MediaGateway {
     val fileSends = mutableListOf<SendFileCall>()
     val videoSends = mutableListOf<SendVideoCall>()
     val urlSends = mutableListOf<SendUrlCall>()
@@ -332,8 +503,11 @@ private class FakeMediaGateway : MediaGateway {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message {
         fileSends += SendFileCall(reference, path, caption, asPhoto, replyToMessageId, silent)
+        progress.follow { UploadProgress(bytesSent = Files.size(path), totalBytes = Files.size(path), elapsedMillis = 500) }
+        uploadFailure?.let { throw it }
         return sent
     }
 
@@ -346,6 +520,7 @@ private class FakeMediaGateway : MediaGateway {
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message {
         videoSends += SendVideoCall(
             reference,
@@ -357,6 +532,7 @@ private class FakeMediaGateway : MediaGateway {
             replyToMessageId,
             silent,
         )
+        progress.follow { UploadProgress(bytesSent = Files.size(path), totalBytes = Files.size(path), elapsedMillis = 500) }
         return sent
     }
 
@@ -368,16 +544,22 @@ private class FakeMediaGateway : MediaGateway {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        size: Long,
+        progress: UploadProgressSlot,
     ): Message {
+        val bytes = data.readBytes()
         streamSends += SendStreamCall(
             reference,
             name,
-            data.readBytes().decodeToString(),
+            bytes.decodeToString(),
             caption,
             asPhoto,
             replyToMessageId,
             silent,
+            size,
+            bytes,
         )
+        progress.follow { UploadProgress(bytesSent = size, totalBytes = size, elapsedMillis = 500) }
         return sent
     }
 

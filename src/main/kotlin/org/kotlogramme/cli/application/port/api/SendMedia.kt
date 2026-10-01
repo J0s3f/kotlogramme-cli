@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.application.port.api
 
+import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
@@ -9,6 +10,9 @@ import java.nio.file.Path
  *
  * Every send can quote a message with [replyToMessageId] and go out without a notification when
  * [silent] is set.
+ *
+ * Every send that puts bytes on the wire takes a [progress] reporter, which is how a caller watches
+ * an upload that blocks: [UploadProgressReporter.SILENT] is the reporter for a run that shows no bar.
  */
 interface SendMedia {
     fun sendFile(
@@ -18,6 +22,7 @@ interface SendMedia {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressReporter,
     ): Message
 
     /** Sends a local file as a streamable video, with the metadata Telegram plays it with. */
@@ -30,8 +35,13 @@ interface SendMedia {
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressReporter,
     ): Message
 
+    /**
+     * Sends a stream of exactly [size] bytes, which Telegram must be told before the first part goes
+     * out, so a caller that does not know the length has to measure it first.
+     */
     fun sendStream(
         reference: String,
         name: String,
@@ -40,6 +50,8 @@ interface SendMedia {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        size: Long,
+        progress: UploadProgressReporter,
     ): Message
 
     fun sendUrl(

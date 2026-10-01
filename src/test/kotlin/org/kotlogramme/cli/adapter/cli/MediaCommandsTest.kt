@@ -1,10 +1,17 @@
 package org.kotlogramme.cli.adapter.cli
 
 import org.junit.jupiter.api.io.TempDir
+import org.kotlogramme.cli.adapter.format.UploadProgressBar
+import org.kotlogramme.cli.adapter.media.SpoolFile
 import org.kotlogramme.cli.adapter.media.isoVideoBytes
+import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -81,9 +88,9 @@ class MediaCommandsTest {
     @Test
     fun `send-file streams stdin even with the video flag`() {
         val media = FakeSendMedia()
-        val fixture = cliFixture(sendMedia = media)
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("raw bytes"))
 
-        val result = fixture.run("send-file", "@ada", "-", "--video", stdin = "raw bytes")
+        val result = fixture.run("send-file", "@ada", "-", "--video")
 
         assertEquals(0, result.statusCode)
         assertEquals(listOf(SendStreamCall("@ada", "stdin", "raw bytes", "", false, null, false)), media.streamSends)
@@ -93,9 +100,9 @@ class MediaCommandsTest {
     @Test
     fun `send-file reads stdin into a stream named stdin`() {
         val media = FakeSendMedia()
-        val fixture = cliFixture(sendMedia = media)
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("raw bytes"))
 
-        val result = fixture.run("send-file", "@ada", "-", stdin = "raw bytes")
+        val result = fixture.run("send-file", "@ada", "-")
 
         assertEquals(0, result.statusCode)
         assertEquals(listOf(SendStreamCall("@ada", "stdin", "raw bytes", "", false, null, false)), media.streamSends)
@@ -104,9 +111,9 @@ class MediaCommandsTest {
     @Test
     fun `send-file names a stdin upload with the name option`() {
         val media = FakeSendMedia()
-        val fixture = cliFixture(sendMedia = media)
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("bytes"))
 
-        val result = fixture.run("send-file", "@ada", "-", "--name", "cat.png", stdin = "bytes")
+        val result = fixture.run("send-file", "@ada", "-", "--name", "cat.png")
 
         assertEquals(0, result.statusCode)
         assertEquals(listOf(SendStreamCall("@ada", "cat.png", "bytes", "", false, null, false)), media.streamSends)
@@ -248,10 +255,12 @@ class MediaCommandsTest {
     @Test
     fun `send-file uses the name extension for the kind when detecting on stdin`() {
         val media = FakeSendMedia()
-        val fixture = cliFixture(sendMedia = media)
-
-        val photo = fixture.run("send-file", "@ada", "-", "--detect", "--name", "cat.png", stdin = "bytes")
-        val video = fixture.run("send-file", "@ada", "-", "--detect", "--name", "clip.mp4", stdin = "bytes")
+        // One fixture per run, because a pipe is drained by the first read: a second run on the same
+        // stream would see nothing, which is what really happens to a process's stdin as well.
+        val photo = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("bytes"))
+            .run("send-file", "@ada", "-", "--detect", "--name", "cat.png")
+        val video = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("bytes"))
+            .run("send-file", "@ada", "-", "--detect", "--name", "clip.mp4")
 
         assertEquals(0, photo.statusCode)
         assertEquals(0, video.statusCode)
@@ -383,6 +392,127 @@ class MediaCommandsTest {
     }
 
     @Test
+    fun `send-file shows no bar by default when the output is not a terminal`() {
+        val media = FakeSendMedia()
+        val watcher = SilentWatcher()
+        val fixture = cliFixture(sendMedia = media, interactiveTerminal = false, progressFactory = { watcher })
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(64))
+
+        fixture.run("send-file", "@ada", file.toString())
+
+        assertEquals(listOf(UploadProgressReporter.SILENT), media.progressReports)
+        assertEquals(emptyList(), watcher.totals)
+    }
+
+    @Test
+    fun `send-file shows a bar by default when the output is a terminal`() {
+        val media = FakeSendMedia()
+        val watcher = SilentWatcher()
+        val fixture = cliFixture(sendMedia = media, interactiveTerminal = true, progressFactory = { watcher })
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(4_096))
+
+        fixture.run("send-file", "@ada", file.toString())
+
+        // The file's own length is the total, known before the first byte moves, so a bar has a real
+        // percentage to draw rather than a made-up one.
+        assertEquals(listOf(4_096L), watcher.totals)
+    }
+
+    @Test
+    fun `--progress forces a bar where the output is not a terminal`() {
+        val media = FakeSendMedia()
+        val watcher = SilentWatcher()
+        val fixture = cliFixture(sendMedia = media, interactiveTerminal = false, progressFactory = { watcher })
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(4_096))
+
+        fixture.run("send-file", "@ada", file.toString(), "--progress")
+
+        assertEquals(listOf(4_096L), watcher.totals)
+    }
+
+    @Test
+    fun `--no-progress turns the bar off on a terminal`() {
+        val media = FakeSendMedia()
+        val watcher = SilentWatcher()
+        val fixture = cliFixture(sendMedia = media, interactiveTerminal = true, progressFactory = { watcher })
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(64))
+
+        fixture.run("send-file", "@ada", file.toString(), "--no-progress")
+
+        assertEquals(listOf(UploadProgressReporter.SILENT), media.progressReports)
+        assertEquals(emptyList(), watcher.totals)
+    }
+
+    @Test
+    fun `--no-progress wins when both progress flags are given`() {
+        val media = FakeSendMedia()
+        val watcher = SilentWatcher()
+        val fixture = cliFixture(sendMedia = media, interactiveTerminal = true, progressFactory = { watcher })
+        val file = Files.write(tempDir.resolve("cat.png"), ByteArray(64))
+
+        val result = fixture.run("send-file", "@ada", file.toString(), "--progress", "--no-progress")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(UploadProgressReporter.SILENT), media.progressReports)
+    }
+
+    @Test
+    fun `send-file declares the spooled length as the bar's total for a pipe`() {
+        val piped = ByteArray(2_048) { index -> (index % 251).toByte() }
+        val media = FakeSendMedia()
+        val watcher = SilentWatcher()
+        val fixture = cliFixture(
+            sendMedia = media,
+            sendFileCommand = sendFileWithBytes(piped),
+            interactiveTerminal = true,
+            progressFactory = { watcher },
+        )
+
+        fixture.run("send-file", "@ada", "-")
+
+        // Spooling is what gives a pipe a real total, so a piped upload gets a percentage too.
+        assertEquals(listOf(2_048L), watcher.totals)
+    }
+    @Test
+    fun `a failed upload leaves nothing painted behind`() {
+        val out = ByteArrayOutputStream()
+        val media = FakeSendMedia(rejection = IllegalArgumentException("telegram refused the upload"))
+        val fixture = cliFixture(
+            sendMedia = media,
+            sendFileCommand = sendFileWithText("payload"),
+            interactiveTerminal = true,
+            progressFactory = { UploadProgressBar(PrintStream(out, true, Charsets.UTF_8)) },
+        )
+
+        fixture.run("send-file", "@ada", "-")
+
+        // A failure must leave the terminal as clean as a success: no half-drawn line, no stray CR.
+        val painted = out.toString(Charsets.UTF_8)
+        assertTrue(painted.substringAfterLast("\r").isBlank(), "expected a clean line, got '$painted'")
+    }
+
+    @Test
+    fun `the progress flags do not disturb the kind flags`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media, interactiveTerminal = false)
+        val file = Files.write(tempDir.resolve("clip.mp4"), isoVideoBytes())
+
+        val photo = fixture.run("send-file", "@ada", file.toString(), "--photo", "--progress")
+        val detect = fixture.run("send-file", "@ada", file.toString(), "--detect", "--progress")
+        val noDetect = fixture.run("send-file", "@ada", file.toString(), "--no-detect", "--progress")
+        val video = fixture.run("send-file", "@ada", file.toString(), "--video", "--progress", "--duration", "4")
+
+        assertEquals(0, photo.statusCode)
+        assertEquals(0, detect.statusCode)
+        assertEquals(0, noDetect.statusCode)
+        assertEquals(0, video.statusCode)
+        // --photo forces a photo, --no-detect forces a plain document, and --detect on the .mp4 and --video
+        // each go out as a video: adding --progress to any of them changes none of that.
+        assertEquals(listOf(true, false), media.fileSends.map { it.asPhoto })
+        assertEquals(2, media.videoSends.size)
+    }
+
+    @Test
     fun `send-file rejects --no-detect together with an explicit kind`() {
         val media = FakeSendMedia()
         val fixture = cliFixture(sendMedia = media)
@@ -438,9 +568,9 @@ class MediaCommandsTest {
     @Test
     fun `send-file streams stdin with the reply-to and silent flags`() {
         val media = FakeSendMedia()
-        val fixture = cliFixture(sendMedia = media)
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("bytes"))
 
-        val result = fixture.run("send-file", "@ada", "-", "--reply-to", "5", "--silent", stdin = "bytes")
+        val result = fixture.run("send-file", "@ada", "-", "--reply-to", "5", "--silent")
 
         assertEquals(0, result.statusCode)
         assertEquals(listOf(SendStreamCall("@ada", "stdin", "bytes", "", false, 5, true)), media.streamSends)
@@ -486,4 +616,98 @@ class MediaCommandsTest {
         assertEquals(0, result.statusCode)
         assertEquals(listOf(CopyMediaCall("@ada", 12, "a cat", 5, true)), media.copies)
     }
+
+    @Test
+    fun `send-file uploads the piped bytes byte for byte`() {
+        // The bytes a pipe can carry that no text decoder survives: a NUL, a bare CR, an LF, two
+        // bytes that are not valid UTF-8 and a lone 0x1A. Reading stdin as text would turn these
+        // into replacement characters and a different length, which is a corrupted upload.
+        val piped = byteArrayOf(
+            0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0xFF.toByte(), 0xFE.toByte(),
+            0x00, 0x42,
+        )
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithBytes(piped))
+
+        val result = fixture.run("send-file", "@ada", "-", "--name", "photo.png")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(1, media.streamSends.size)
+        assertContentEquals(piped, media.streamSends.single().bytes)
+        assertEquals(piped.size.toLong(), media.streamSends.single().size)
+    }
+
+    @Test
+    fun `send-file uploads a payload larger than one chunk intact`() {
+        // Larger than the facade's 512 KiB chunk, so a reader that truncated or stopped at a chunk
+        // boundary would show it: the whole payload has to arrive.
+        val piped = ByteArray(1_500_000) { index -> (index % 251).toByte() }
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithBytes(piped))
+
+        val result = fixture.run("send-file", "@ada", "-")
+
+        assertEquals(0, result.statusCode)
+        assertContentEquals(piped, media.streamSends.single().bytes)
+    }
+
+    @Test
+    fun `send-file deletes the spool file after a successful upload`() {
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("payload"))
+
+        fixture.run("send-file", "@ada", "-")
+
+        assertEquals(emptyList(), spoolFiles())
+    }
+
+    @Test
+    fun `send-file deletes the spool file after a failed upload`() {
+        val media = FakeSendMedia(rejection = IllegalArgumentException("telegram refused the upload"))
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = sendFileWithText("payload"))
+
+        fixture.run("send-file", "@ada", "-")
+
+        assertEquals(emptyList(), spoolFiles())
+    }
+
+    @Test
+    fun `send-file measures a stdin upload itself rather than asking the pipe`() {
+        // An InputStream that refuses to say how long it is: the command has to spool the bytes and
+        // measure the copy, because the upload needs a total and the pipe does not carry one.
+        val bytes = ByteArray(4_096) { index -> (index % 97).toByte() }
+        val media = FakeSendMedia()
+        val fixture = cliFixture(sendMedia = media, sendFileCommand = SendFileCommand(LenLessStream(bytes)))
+
+        val result = fixture.run("send-file", "@ada", "-")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(bytes.size.toLong(), media.streamSends.single().size)
+        assertContentEquals(bytes, media.streamSends.single().bytes)
+    }
+
+    private fun spoolFiles(): List<Path> {
+        val temp = Path.of(System.getProperty("java.io.tmpdir"))
+        return Files.list(temp).use { files ->
+            files.filter { it.fileName.toString().startsWith(SpoolFile.PREFIX) }.toList()
+        }
+    }
+}
+
+/** A stream that will not report its length, the way a pipe genuinely cannot. */
+private class LenLessStream(private val bytes: ByteArray) : InputStream() {
+    private var position = 0
+
+    override fun read(): Int =
+        if (position >= bytes.size) -1 else bytes[position++].toInt() and 0xFF
+
+    override fun read(target: ByteArray, offset: Int, length: Int): Int {
+        val count = minOf(length, bytes.size - position)
+        if (count == 0) return -1
+        bytes.copyInto(target, offset, position, position + count)
+        position += count
+        return count
+    }
+
+    override fun available(): Int = throw UnsupportedOperationException("a pipe has no length")
 }

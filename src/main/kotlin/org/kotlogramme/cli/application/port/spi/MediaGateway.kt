@@ -1,10 +1,16 @@
 package org.kotlogramme.cli.application.port.spi
 
+import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
 
-/** The media operations the facade exposes, in domain terms. */
+/**
+ * The media operations the facade exposes, in domain terms.
+ *
+ * An upload takes the [progress] slot the caller opened for it, and reports into it: the gateway
+ * attaches a counter and closes nothing, because the slot's lifetime belongs to the caller.
+ */
 interface MediaGateway {
     /** Uploads a local file and sends it, as a photo when [asPhoto] is set. */
     fun sendFile(
@@ -14,6 +20,7 @@ interface MediaGateway {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message
 
     /**
@@ -31,9 +38,10 @@ interface MediaGateway {
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message
 
-    /** Uploads [data] under [name] and sends it, as a photo when [asPhoto] is set. */
+    /** Uploads [size] bytes of [data] under [name] and sends it, as a photo when [asPhoto] is set. */
     fun sendStream(
         reference: String,
         name: String,
@@ -42,6 +50,8 @@ interface MediaGateway {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        size: Long,
+        progress: UploadProgressSlot,
     ): Message
 
     /** Lets Telegram fetch a URL and send it as media. */

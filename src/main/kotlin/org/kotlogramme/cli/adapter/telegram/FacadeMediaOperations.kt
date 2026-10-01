@@ -4,6 +4,7 @@ import com.github.badoualy.telegram.api.DownloadedMedia
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.UploadedFile
+import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import java.io.InputStream
 import java.nio.file.Path
 
@@ -12,6 +13,9 @@ import java.nio.file.Path
  *
  * This exists so [KotlogramMediaGateway] can be exercised without a live client. Each method
  * mirrors one facade operation; the facade models are mapped to the domain at the gateway boundary.
+ *
+ * An upload takes the [progress] slot its caller opened and reports into it, so the facade's counter
+ * is the only thing that ever touches the library's progress handle.
  */
 internal interface FacadeMediaOperations {
     /** Uploads [path] to [peer] as a photo or a document, which is `mediaSend`. */
@@ -22,6 +26,7 @@ internal interface FacadeMediaOperations {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message
 
     /** Uploads [path] to [peer] as a streamable video, which is `mediaSend` with `MediaKind.VIDEO`. */
@@ -34,10 +39,11 @@ internal interface FacadeMediaOperations {
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message
 
-    /** Uploads [data] under [name] and returns the handle a later send references. */
-    fun uploadStream(data: InputStream, name: String): UploadedFile
+    /** Uploads [size] bytes of [data] under [name] and returns the handle a later send references. */
+    fun uploadStream(data: InputStream, name: String, size: Long, progress: UploadProgressSlot): UploadedFile
 
     /** Sends the already-uploaded [file] to [peer], which is the `UploadedFile` overload of `mediaSend`. */
     fun sendUploaded(

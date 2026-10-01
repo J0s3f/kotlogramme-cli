@@ -4,7 +4,7 @@ All notable changes to `kotlogramme-cli` are recorded here.
 
 ## Unreleased
 
-Built on `kotlogramme` 0.7.0.
+Built on `kotlogramme` 0.8.0.
 
 ### Features
 
@@ -26,10 +26,28 @@ Built on `kotlogramme` 0.7.0.
   `--video` force the kind and win over detection; each is mutually exclusive with the other and
   with `--detect`/`--no-detect`, and explicit `--duration`/`--width`/`--height` still require
   `--video` or `--detect`.
+- `send-file` shows an upload progress bar: one rewritten line with the percentage, the bytes sent,
+  the total and the rate, erased when the upload finishes, fails or is interrupted. The bar is on by
+  default where the output is a terminal and off where it is piped or redirected, so a script gets no
+  carriage returns; the new `--progress` forces it on and `--no-progress` turns it off, with
+  `--no-progress` winning as `--no-color` does over `--color`. Only `send-file` uploads bytes, so
+  only `send-file` has the flags, and with `--no-color` the bar is plain ASCII. An upload too quick to
+  reach the first tick draws nothing at all.
+
+### Fixed
+
+- `send-file @chat -` no longer corrupts a piped binary file. Piped bytes were decoded as UTF-8 text
+  and rejoined line by line, so a `0xFF` byte arrived as a replacement character and a `0x0D` was
+  dropped — twelve bytes in became seventeen bytes out. Piped input is now read as raw bytes from
+  standard input, spooled to a temporary file and uploaded from there, so the bytes Telegram sees are
+  the bytes that were piped. Spooling is what lets Telegram be told the total, since a pipe carries no
+  length; it costs one pass through the temporary directory and keeps the upload streaming in chunks
+  rather than holding the whole payload in memory. The spool file is deleted once the upload ends,
+  whether it succeeded or failed.
 
 ### Project
 
-- The facade dependency moves to `kotlogramme` 0.7.0.
+- The facade dependency moves to `kotlogramme` 0.8.0, whose upload counter the progress bar reads.
 
 ## 0.1.0 — 2026-09-30
 

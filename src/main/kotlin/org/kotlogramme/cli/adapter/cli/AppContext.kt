@@ -5,6 +5,7 @@ import org.kotlogramme.cli.adapter.config.ConfigPaths
 import org.kotlogramme.cli.adapter.config.JsonConfigStore
 import org.kotlogramme.cli.adapter.format.ConsoleOutput
 import org.kotlogramme.cli.adapter.format.MessageStyler
+import org.kotlogramme.cli.adapter.format.UploadProgressBar
 import org.kotlogramme.cli.adapter.format.colorEnabled
 import org.kotlogramme.cli.adapter.format.messageStylerFor
 import org.kotlogramme.cli.adapter.media.FileMediaProbe
@@ -56,6 +57,7 @@ import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.MediaProbe
 import org.kotlogramme.cli.application.port.spi.Output
+import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.service.AdminRightsService
 import org.kotlogramme.cli.application.service.AuthenticateService
 import org.kotlogramme.cli.application.service.ChatMembersService
@@ -100,6 +102,12 @@ class AppContext(
     private val inlineFactory: (AppConfig) -> InlineBots = ::defaultInline,
     private val sendMediaFactory: (AppConfig) -> SendMedia = ::defaultSendMedia,
     private val mediaProbeFactory: () -> MediaProbe = ::FileMediaProbe,
+    /**
+     * Whether the output is a terminal a person is watching, which is what puts an upload's progress
+     * bar on by default.
+     */
+    val isInteractiveTerminal: Boolean = false,
+    private val progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -163,6 +171,15 @@ class AppContext(
     /** The media probe: what a local file should be sent as, and the video metadata it carries. */
     fun mediaProbe(): MediaProbe = mediaProbeFactory()
 
+    /**
+     * Where an upload reports itself, or [UploadProgressReporter.SILENT] when [enabled] is false.
+     *
+     * Each upload gets its own reporter, because a bar belongs to one transfer: the command that
+     * resolved the flags decides whether it is enabled at all.
+     */
+    fun uploadProgress(enabled: Boolean): UploadProgressReporter =
+        if (enabled) progressFactory() else UploadProgressReporter.SILENT
+
     private fun configured(): AppConfig {
         val config = config()
         val credentials = credentials(config) ?: throw MissingCredentialsError()
@@ -190,7 +207,9 @@ class AppContext(
          * the platform default. [noColor] is the `--no-color` flag and [color] is the `--color` one,
          * which forces styling for a caller that is not a terminal; `--no-color` wins if both are
          * given. Otherwise colour is emitted only for the table format, on a terminal, with
-         * `NO_COLOR` unset; the JSON and plain formats never carry escapes.
+         * `NO_COLOR` unset; the JSON and plain formats never carry escapes. The same terminal test
+         * decides whether an upload shows a progress bar, which colour then shapes: a bar drawn with
+         * `--no-color` is ASCII.
          */
         fun create(
             configDir: Path? = null,
@@ -201,13 +220,16 @@ class AppContext(
             val dir = ConfigPaths(configDirOverride = configDir?.toString()).baseDir()
             val configStore = JsonConfigStore(dir)
             val format = configStore.load().outputFormat
-            val styled = colorEnabled(noColor, color, environment, terminal = System.console() != null)
+            val terminal = System.console() != null
+            val styled = colorEnabled(noColor, color, environment, terminal = terminal)
             return AppContext(
                 configDir = dir,
                 configStore = configStore,
                 output = ConsoleOutput(format),
                 environment = environment,
                 messageStyler = messageStylerFor(format, styled),
+                isInteractiveTerminal = terminal,
+                progressFactory = { UploadProgressBar(out = System.out, color = styled) },
             )
         }
     }
