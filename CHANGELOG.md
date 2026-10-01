@@ -2,6 +2,16 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## Unreleased
+
+### Fixed
+
+- `listen` stops promptly on Ctrl-C. The command used to poll the update stream with the facade's
+  30 s timeout on a worker thread, so a Ctrl-C could take up to half a minute to return. It now
+  drives the facade's own background update loop, which polls in short waits and joins its thread on
+  stop, so a stop costs at most one short poll. `--once`, `--json` and the human rendering are
+  unchanged, and the command no longer starts a worker thread of its own.
+
 ## 0.3.0 - 2026-10-01
 
 Built on `kotlogramme` 0.9.0.

@@ -36,6 +36,11 @@ kotlogramme listen                                         # follow new messages
 kotlogramme shell                                          # interactive REPL
 ```
 
+`listen [--once] [--json]` follows the live update stream. `--once` stops after the first update,
+`--json` prints one object per line, and Ctrl-C ends the command cleanly. The stream is followed on
+the library's own background update loop, which polls in short waits and joins its thread on stop, so
+a stop costs at most one of those short polls rather than the library's 30 s one.
+
 `list-files <peer>` lists a chat's files, filtered by media kind on Telegram's side rather than by
 scanning history, so it reaches the whole chat and not just the part a history read has covered.
 `--kind` names the filter (`photo`, `video`, `photo-video`, `document`, `audio`, `voice`, `gif`,

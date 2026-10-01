@@ -8,15 +8,16 @@ import org.kotlogramme.cli.adapter.format.renderUpdate
 import org.kotlogramme.cli.adapter.format.renderUpdateJson
 import org.kotlogramme.cli.domain.IncomingUpdate
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Follows the live update stream until interrupted.
  *
- * The blocking listen loop runs on a worker thread while a Ctrl-C shutdown hook flips the stop flag,
- * so the loop ends at its next check and the command returns normally instead of the process dying
- * mid-print. `--once` stops after the first update, which is what makes the command scriptable;
- * `--json` prints one JSON object per line instead of the human rendering.
+ * The stream is followed on the facade's own background update loop, which polls in short waits and
+ * joins its thread on stop, so a Ctrl-C shutdown hook only has to flip the stop flag: the loop
+ * notices at its next short poll and the command returns normally instead of the process dying
+ * mid-print. No worker thread of its own is started - the facade loop is the only reader. `--once`
+ * stops after the first update, which is what makes the command scriptable; `--json` prints one JSON
+ * object per line instead of the human rendering.
  */
 class ListenCommand : CliktCommand(name = "listen") {
     private val appContext by requireObject<AppContext>()
@@ -37,21 +38,11 @@ class ListenCommand : CliktCommand(name = "listen") {
 
     private fun drive(stop: AtomicBoolean) {
         val listen = appContext.listen()
-        val failure = AtomicReference<Throwable?>()
         val onUpdate: (IncomingUpdate) -> Unit = { update ->
             printUpdate(update)
             if (once) stop.set(true)
         }
-        val worker = Thread {
-            try {
-                listen.run(stop = { stop.get() }, onUpdate = onUpdate)
-            } catch (error: Throwable) {
-                failure.set(error)
-            }
-        }
-        worker.start()
-        worker.join()
-        failure.get()?.let { throw it }
+        listen.run(stop = { stop.get() }, onUpdate = onUpdate)
     }
 
     private fun printUpdate(update: IncomingUpdate) {

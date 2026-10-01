@@ -149,7 +149,9 @@ trace.
 - `kick <peer> <user>` - removes a member from a chat.
 - `listen [--once] [--json]` — follows the live update stream, printing each update as it arrives.
   `--once` stops after the first update, which is what makes it scriptable; `--json` prints one JSON
-  object per line; Ctrl-C ends the stream cleanly instead of killing the process mid-print.
+  object per line; Ctrl-C ends the stream cleanly instead of killing the process mid-print. The
+  stream is followed on the facade's own background update loop, which polls in short waits and joins
+  its thread on stop, so a stop costs at most that one short poll rather than the facade's 30 s one.
 - `stickers` — lists the installed sticker sets with their short name, title, count and flags.
 - `sticker-set <set>` — shows one set with its stickers numbered, which is the index `send-sticker`
   takes. The set is named by short name, or `id:accessHash` for one that is not installed.
