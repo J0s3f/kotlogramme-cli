@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.application.service
 
 import org.kotlogramme.cli.application.port.spi.MessageSearchGateway
+import org.kotlogramme.cli.domain.MediaFileKind
 import org.kotlogramme.cli.domain.Message
 import java.time.Instant
 import kotlin.test.Test
@@ -60,11 +61,44 @@ class SearchMessagesServiceTest {
         assertEquals(emptyList(), gateway.searches)
     }
 
+    @Test
+    fun `files passes the reference, kind and limit through`() {
+        val gateway = FakeMessageSearchGateway().apply { fileResults = listOf(message) }
+
+        val result = SearchMessagesService(gateway).files("@ada", MediaFileKind.VIDEO, limit = 15)
+
+        assertEquals(listOf(FileSearchCall("@ada", MediaFileKind.VIDEO, 15)), gateway.fileSearches)
+        assertEquals(listOf(message), result)
+    }
+
+    @Test
+    fun `fileTotal passes the reference and kind through`() {
+        val gateway = FakeMessageSearchGateway().apply { fileTotalCount = 9 }
+
+        val total = SearchMessagesService(gateway).fileTotal("@ada", MediaFileKind.DOCUMENT)
+
+        assertEquals(listOf(FileTotalCall("@ada", MediaFileKind.DOCUMENT)), gateway.fileTotals)
+        assertEquals(9, total)
+    }
+
+    @Test
+    fun `files rejects a non-positive limit before the gateway`() {
+        val gateway = FakeMessageSearchGateway()
+        val service = SearchMessagesService(gateway)
+
+        assertFailsWith<IllegalArgumentException> { service.files("@ada", MediaFileKind.GIF, 0) }
+        assertEquals(emptyList(), gateway.fileSearches)
+    }
+
     private class FakeMessageSearchGateway : MessageSearchGateway {
         var results: List<Message> = emptyList()
         var totalCount: Int = 0
+        var fileResults: List<Message> = emptyList()
+        var fileTotalCount: Int = 0
         val searches = mutableListOf<SearchCall>()
         val totals = mutableListOf<TotalCall>()
+        val fileSearches = mutableListOf<FileSearchCall>()
+        val fileTotals = mutableListOf<FileTotalCall>()
 
         override fun search(reference: String?, query: String, limit: Int): List<Message> {
             searches += SearchCall(reference, query, limit)
@@ -75,11 +109,25 @@ class SearchMessagesServiceTest {
             totals += TotalCall(reference, query)
             return totalCount
         }
+
+        override fun files(reference: String, kind: MediaFileKind, limit: Int): List<Message> {
+            fileSearches += FileSearchCall(reference, kind, limit)
+            return fileResults
+        }
+
+        override fun fileTotal(reference: String, kind: MediaFileKind): Int {
+            fileTotals += FileTotalCall(reference, kind)
+            return fileTotalCount
+        }
     }
 
     private data class SearchCall(val reference: String?, val query: String, val limit: Int)
 
     private data class TotalCall(val reference: String?, val query: String)
+
+    private data class FileSearchCall(val reference: String, val kind: MediaFileKind, val limit: Int)
+
+    private data class FileTotalCall(val reference: String, val kind: MediaFileKind)
 
     private companion object {
         val message = Message(

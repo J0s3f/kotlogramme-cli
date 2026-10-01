@@ -59,4 +59,7 @@ interface MediaGateway {
 
     /** Downloads the media of a message to [target] and returns the path actually written. */
     fun download(reference: String, messageId: Int, target: Path): Path
+
+    /** The file name a message's media carries, or `null` when it has none or does not resolve. */
+    fun fileName(reference: String, messageId: Int): String?
 }

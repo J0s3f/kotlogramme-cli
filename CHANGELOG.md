@@ -26,6 +26,17 @@ Built on `kotlogramme` 0.7.0.
   `--video` force the kind and win over detection; each is mutually exclusive with the other and
   with `--detect`/`--no-detect`, and explicit `--duration`/`--width`/`--height` still require
   `--video` or `--detect`.
+- `download-media <peer> <message-id> [<target>]` writes a message's media to a local file. Without
+  a target the file is named after the media's own name, falling back to the message id, and lands
+  in the working directory; missing parent directories are created and an existing file is
+  overwritten. It prints the path and the byte count. A message that has no media, a peer that does
+  not resolve and a message id Telegram cannot find are all reported as a one-line error with a
+  non-zero exit code.
+- `list-files <peer>` lists a chat's files, filtered by media kind on Telegram's side rather than by
+  scanning history, so it reaches the whole chat and not just the part a history read has covered.
+  `--kind` names the filter (`photo`, `video`, `photo-video`, `document`, `audio`, `voice`, `gif`,
+  `animation`), `--limit` caps the page, and `--total` prints just the count. The listing renders as
+  the same table every other command uses, and as JSON through the configured output format.
 
 ### Project
 

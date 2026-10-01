@@ -2,6 +2,7 @@ package org.kotlogramme.cli.adapter.cli
 
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
+import org.kotlogramme.TelegramException
 import org.kotlogramme.cli.KotlogrammeCommand
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryCheck
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryProbe
@@ -10,6 +11,7 @@ import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.DownloadMedia
 import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
 import org.kotlogramme.cli.application.port.api.ListFolders
@@ -33,11 +35,13 @@ import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.IncomingUpdate
 import org.kotlogramme.cli.domain.InlineQuery
 import org.kotlogramme.cli.domain.InlineResult
+import org.kotlogramme.cli.domain.MediaFileKind
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
 import org.kotlogramme.cli.domain.StickerPack
 import org.kotlogramme.cli.domain.StickerSet
 import java.io.InputStream
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -136,13 +140,20 @@ internal class FakeReadHistory(private val messages: List<Message> = emptyList()
 /** A search request: the optional chat reference, the query and the requested limit. */
 internal data class SearchCall(val reference: String?, val query: String, val limit: Int)
 
+/** A file listing request: the chat reference, the media kind and the requested limit. */
+internal data class FileSearchCall(val reference: String, val kind: MediaFileKind, val limit: Int)
+
 /** A [SearchMessages] returning canned matches and recording every query. */
 internal class FakeSearchMessages(
     private val results: List<Message> = emptyList(),
     private val totalResults: Int = 0,
+    private val fileResults: List<Message> = emptyList(),
+    private val fileTotalResults: Int = 0,
 ) : SearchMessages {
     val searches = mutableListOf<SearchCall>()
     val totals = mutableListOf<SearchCall>()
+    val fileSearches = mutableListOf<FileSearchCall>()
+    val fileTotals = mutableListOf<Pair<String, MediaFileKind>>()
 
     override fun search(reference: String?, query: String, limit: Int): List<Message> {
         searches += SearchCall(reference, query, limit)
@@ -152,6 +163,16 @@ internal class FakeSearchMessages(
     override fun total(reference: String?, query: String): Int {
         totals += SearchCall(reference, query, 0)
         return totalResults
+    }
+
+    override fun files(reference: String, kind: MediaFileKind, limit: Int): List<Message> {
+        fileSearches += FileSearchCall(reference, kind, limit)
+        return fileResults
+    }
+
+    override fun fileTotal(reference: String, kind: MediaFileKind): Int {
+        fileTotals += reference to kind
+        return fileTotalResults
     }
 }
 
@@ -592,6 +613,43 @@ internal class FakeSendMedia(
     }
 }
 
+/** A download request: the peer, the message id and the target written. */
+internal data class DownloadMediaCall(val reference: String, val messageId: Int, val target: Path)
+
+/** A [DownloadMedia] that writes canned bytes to the target and records every call. */
+internal class FakeDownloadMedia(
+    private val mediaName: String? = "cat.png",
+    private val rejection: IllegalArgumentException? = null,
+    private val telegramRejection: TelegramException? = null,
+) : DownloadMedia {
+    val downloads = mutableListOf<DownloadMediaCall>()
+    val fileNameCalls = mutableListOf<Pair<String, Int>>()
+
+    /** Simulates the use case rejecting the input before it reaches the gateway. */
+    private fun reject() {
+        rejection?.let { throw it }
+        telegramRejection?.let { throw it }
+    }
+
+    override fun download(reference: String, messageId: Int, target: Path): Path {
+        reject()
+        downloads += DownloadMediaCall(reference, messageId, target)
+        Files.write(target, DOWNLOAD_BYTES)
+        return target
+    }
+
+    override fun fileName(reference: String, messageId: Int): String? {
+        reject()
+        fileNameCalls += reference to messageId
+        return mediaName
+    }
+
+    private companion object {
+        /** The bytes a download writes, so the command can report the size the file holds. */
+        val DOWNLOAD_BYTES = ByteArray(64) { it.toByte() }
+    }
+}
+
 /** Drives the whole command tree the way `main` does, against injected fakes. */
 internal class CliFixture(
     val output: RecordingOutput,
@@ -620,6 +678,7 @@ internal fun cliFixture(
     listen: Listen = FakeListen(),
     inline: InlineBots = FakeInlineBots(),
     sendMedia: SendMedia = FakeSendMedia(),
+    downloadMedia: DownloadMedia = FakeDownloadMedia(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
     nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
@@ -641,6 +700,7 @@ internal fun cliFixture(
         listenFactory = { listen },
         inlineFactory = { inline },
         sendMediaFactory = { sendMedia },
+        downloadMediaFactory = { downloadMedia },
     )
     val root = KotlogrammeCommand { _, _, _ -> context }
         .subcommands(
@@ -655,6 +715,8 @@ internal fun cliFixture(
             SendFileCommand(),
             SendMediaUrlCommand(),
             CopyMediaCommand(),
+            DownloadMediaCommand(),
+            ListFilesCommand(),
             EditCommand(),
             DeleteCommand(),
             ForwardCommand(),

@@ -57,6 +57,24 @@ class DownloadMediaServiceTest {
         assertTrue(error.message.orEmpty().contains("directory does not exist"))
         assertEquals(emptyList(), gateway.downloads)
     }
+
+    @Test
+    fun `fileName passes the reference and message id through`() {
+        val gateway = FakeDownloadGateway()
+
+        val name = DownloadMediaService(gateway).fileName("@ada", messageId = 12)
+
+        assertEquals("cat.png", name)
+    }
+
+    @Test
+    fun `fileName rejects a non-positive message id before the gateway`() {
+        val gateway = FakeDownloadGateway()
+
+        assertFailsWith<IllegalArgumentException> {
+            DownloadMediaService(gateway).fileName("@ada", messageId = 0)
+        }
+    }
 }
 
 private data class DownloadCall(val reference: String, val messageId: Int, val target: Path)
@@ -115,4 +133,8 @@ private class FakeDownloadGateway : MediaGateway {
         downloads += DownloadCall(reference, messageId, target)
         return target
     }
+
+    override fun fileName(reference: String, messageId: Int): String? = mediaName
+
+    var mediaName: String? = "cat.png"
 }

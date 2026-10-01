@@ -11,7 +11,9 @@ import java.nio.file.Path
  * References are resolved through the same [ChatReferenceResolver] the rest of the stack uses, so a
  * `@username`, an invite link and a numeric id all mean the same chat here as they do elsewhere. A
  * copy re-sends the source message's media back to the same conversation, a stream is uploaded
- * first and then sent by handle, and the download reports the path the facade actually wrote.
+ * first and then sent by handle, and the download reports the path the facade actually wrote. A
+ * file name is read off the message itself, so it costs one message lookup and only when a caller
+ * asks for it.
  */
 internal class KotlogramMediaGateway(
     private val operations: FacadeMediaOperations,
@@ -84,4 +86,7 @@ internal class KotlogramMediaGateway(
 
     override fun download(reference: String, messageId: Int, target: Path): Path =
         Path.of(operations.download(resolver.resolve(reference), messageId, target).path)
+
+    override fun fileName(reference: String, messageId: Int): String? =
+        operations.message(resolver.resolve(reference), messageId)?.toMessage()?.media?.name
 }

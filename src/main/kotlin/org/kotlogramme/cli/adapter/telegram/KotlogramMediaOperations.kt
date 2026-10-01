@@ -105,4 +105,7 @@ internal class KotlogramMediaOperations(private val client: TelegramClient) : Fa
 
     override fun download(peer: TelegramPeer, messageId: Int, target: Path): DownloadedMedia =
         client.downloadMedia(peer, messageId, target)
+
+    override fun message(peer: TelegramPeer, messageId: Int): Message? =
+        client.messagesGetMessages(peer, listOf(messageId)).firstOrNull()
 }

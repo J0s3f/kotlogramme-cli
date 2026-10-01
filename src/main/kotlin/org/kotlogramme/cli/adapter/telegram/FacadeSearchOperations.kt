@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.Message
+import com.github.badoualy.telegram.api.MessageSearchFilter
 import com.github.badoualy.telegram.api.TelegramPeer
 
 /**
@@ -8,7 +9,9 @@ import com.github.badoualy.telegram.api.TelegramPeer
  * implement.
  *
  * This exists so [KotlogramMessageSearchGateway] can be exercised without a live client. The
- * per-chat and global calls are separate methods, so the gateway chooses one without a flag.
+ * per-chat and global calls are separate methods, so the gateway chooses one without a flag. The
+ * media-kind listing is a search with no query text and a filter, which is why it is its own call
+ * here rather than a flag on [search].
  */
 internal interface FacadeSearchOperations {
     /** Searches the text of messages in [peer], which is `messagesSearch`. */
@@ -22,4 +25,10 @@ internal interface FacadeSearchOperations {
 
     /** Counts the messages a global search matches, which is `messagesSearchGlobalTotal`. */
     fun totalGlobal(query: String): Int
+
+    /** Lists the messages of [peer] carrying media of [filter], which is `messagesSearch` filtered. */
+    fun searchFiles(peer: TelegramPeer, filter: MessageSearchFilter, limit: Int): List<Message>
+
+    /** Counts the messages of [peer] carrying media of [filter], which is `messagesSearchTotal`. */
+    fun totalFiles(peer: TelegramPeer, filter: MessageSearchFilter): Int
 }

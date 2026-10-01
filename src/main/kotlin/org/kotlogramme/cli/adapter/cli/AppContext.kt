@@ -42,6 +42,7 @@ import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
 import org.kotlogramme.cli.application.port.api.Contacts
+import org.kotlogramme.cli.application.port.api.DownloadMedia
 import org.kotlogramme.cli.application.port.api.InlineBots
 import org.kotlogramme.cli.application.port.api.ListDialogs
 import org.kotlogramme.cli.application.port.api.ListFolders
@@ -54,12 +55,14 @@ import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
+import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.application.port.spi.MediaProbe
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.application.service.AdminRightsService
 import org.kotlogramme.cli.application.service.AuthenticateService
 import org.kotlogramme.cli.application.service.ChatMembersService
 import org.kotlogramme.cli.application.service.ContactsService
+import org.kotlogramme.cli.application.service.DownloadMediaService
 import org.kotlogramme.cli.application.service.InlineService
 import org.kotlogramme.cli.application.service.ListDialogsService
 import org.kotlogramme.cli.application.service.ListFoldersService
@@ -99,6 +102,7 @@ class AppContext(
     private val stickersFactory: (AppConfig) -> Stickers = ::defaultStickers,
     private val inlineFactory: (AppConfig) -> InlineBots = ::defaultInline,
     private val sendMediaFactory: (AppConfig) -> SendMedia = ::defaultSendMedia,
+    private val downloadMediaFactory: (AppConfig) -> DownloadMedia = ::defaultDownloadMedia,
     private val mediaProbeFactory: () -> MediaProbe = ::FileMediaProbe,
 ) {
     /** The configuration as it is on disk right now. */
@@ -159,6 +163,9 @@ class AppContext(
 
     /** The media-sending use case, with the same missing-credentials error as [authenticate]. */
     fun sendMedia(): SendMedia = sendMediaFactory(configured())
+
+    /** The media-downloading use case, with the same missing-credentials error as [authenticate]. */
+    fun downloadMedia(): DownloadMedia = downloadMediaFactory(configured())
 
     /** The media probe: what a local file should be sent as, and the video metadata it carries. */
     fun mediaProbe(): MediaProbe = mediaProbeFactory()
@@ -303,13 +310,16 @@ private fun defaultInline(config: AppConfig): InlineBots {
     )
 }
 
-private fun defaultSendMedia(config: AppConfig): SendMedia {
+private fun defaultSendMedia(config: AppConfig): SendMedia = SendMediaService(mediaGateway(config))
+
+private fun defaultDownloadMedia(config: AppConfig): DownloadMedia = DownloadMediaService(mediaGateway(config))
+
+/** The gateway both media commands share, so a send and a download resolve a peer the same way. */
+private fun mediaGateway(config: AppConfig): MediaGateway {
     val client = clientFor(config)
-    return SendMediaService(
-        KotlogramMediaGateway(
-            KotlogramMediaOperations(client),
-            ChatReferenceResolver(KotlogramChatOperations(client)),
-        ),
+    return KotlogramMediaGateway(
+        KotlogramMediaOperations(client),
+        ChatReferenceResolver(KotlogramChatOperations(client)),
     )
 }
 

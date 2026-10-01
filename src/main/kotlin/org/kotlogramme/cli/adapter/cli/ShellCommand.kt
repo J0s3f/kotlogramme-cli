@@ -34,6 +34,7 @@ class ShellCommand : CliktCommand(name = "shell") {
             listFolders = appContext::listFolders,
             stickers = appContext::stickers,
             inline = appContext::inline,
+            downloadMedia = appContext::downloadMedia,
         )
         val reader = LineReaderBuilder.builder()
             .terminal(terminal)
