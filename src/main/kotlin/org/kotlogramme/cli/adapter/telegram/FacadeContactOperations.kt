@@ -1,7 +1,10 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.BlockedContacts
+import com.github.badoualy.telegram.api.ContactImport
 import com.github.badoualy.telegram.api.ContactsPage
 import com.github.badoualy.telegram.api.FoundContacts
+import com.github.badoualy.telegram.api.ImportedContacts
 import com.github.badoualy.telegram.api.TelegramPeer
 
 /**
@@ -27,4 +30,14 @@ internal interface FacadeContactOperations {
 
     /** Unblocks [peer], which is `contactsUnblock`. */
     fun unblock(peer: TelegramPeer)
+
+    /** Lists the account's blocked peers, which is `contactsGetBlocked`. */
+    fun blocked(offset: Int, limit: Int): BlockedContacts
+
+    /** Imports saved contacts, which is `contactsImportContacts`. */
+    fun importContacts(contacts: List<ContactImport>): ImportedContacts
+
+    /** Deletes saved contacts, which is `contactsDeleteContacts`. */
+    fun deleteContacts(peers: List<TelegramPeer>)
 }
+

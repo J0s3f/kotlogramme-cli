@@ -10,10 +10,13 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.path
 import org.kotlogramme.cli.adapter.cli.AppContext
+import org.kotlogramme.cli.adapter.cli.BlockCommand
+import org.kotlogramme.cli.adapter.cli.BlockedCommand
 import org.kotlogramme.cli.adapter.cli.ConfigCommand
 import org.kotlogramme.cli.adapter.cli.ContactsCommand
 import org.kotlogramme.cli.adapter.cli.CopyMediaCommand
 import org.kotlogramme.cli.adapter.cli.DeleteCommand
+import org.kotlogramme.cli.adapter.cli.DeleteContactCommand
 import org.kotlogramme.cli.adapter.cli.DialogsCommand
 import org.kotlogramme.cli.adapter.cli.DoctorCommand
 import org.kotlogramme.cli.adapter.cli.DownloadMediaCommand
@@ -21,6 +24,7 @@ import org.kotlogramme.cli.adapter.cli.EditCommand
 import org.kotlogramme.cli.adapter.cli.FoldersCommand
 import org.kotlogramme.cli.adapter.cli.ForwardCommand
 import org.kotlogramme.cli.adapter.cli.HistoryCommand
+import org.kotlogramme.cli.adapter.cli.ImportContactsCommand
 import org.kotlogramme.cli.adapter.cli.InlineCommand
 import org.kotlogramme.cli.adapter.cli.InviteCommand
 import org.kotlogramme.cli.adapter.cli.KickCommand
@@ -36,6 +40,7 @@ import org.kotlogramme.cli.adapter.cli.PromoteCommand
 import org.kotlogramme.cli.adapter.cli.ReactCommand
 import org.kotlogramme.cli.adapter.cli.RestrictCommand
 import org.kotlogramme.cli.adapter.cli.SearchCommand
+import org.kotlogramme.cli.adapter.cli.SearchContactsCommand
 import org.kotlogramme.cli.adapter.cli.SendCommand
 import org.kotlogramme.cli.adapter.cli.SendFileCommand
 import org.kotlogramme.cli.adapter.cli.SendMediaUrlCommand
@@ -43,6 +48,7 @@ import org.kotlogramme.cli.adapter.cli.SendStickerCommand
 import org.kotlogramme.cli.adapter.cli.ShellCommand
 import org.kotlogramme.cli.adapter.cli.StickerSetCommand
 import org.kotlogramme.cli.adapter.cli.StickersCommand
+import org.kotlogramme.cli.adapter.cli.UnblockCommand
 import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
@@ -110,6 +116,12 @@ fun main(args: Array<String>) {
                 UnreactCommand(),
                 MarkReadCommand(),
                 ContactsCommand(),
+                SearchContactsCommand(),
+                BlockCommand(),
+                UnblockCommand(),
+                BlockedCommand(),
+                ImportContactsCommand(),
+                DeleteContactCommand(),
                 SearchCommand(),
                 MembersCommand(),
                 InviteCommand(),

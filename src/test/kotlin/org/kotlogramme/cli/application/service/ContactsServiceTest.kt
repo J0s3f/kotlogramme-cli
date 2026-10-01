@@ -1,7 +1,10 @@
 package org.kotlogramme.cli.application.service
 
 import org.kotlogramme.cli.application.port.spi.ContactGateway
+import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Contact
+import org.kotlogramme.cli.domain.ContactImportSummary
+import org.kotlogramme.cli.domain.ContactToImport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -40,6 +43,63 @@ class ContactsServiceTest {
     }
 
     @Test
+    fun `blocked reads through the gateway with the limit`() {
+        val gateway = FakeContactGateway()
+        val service = ContactsService(gateway)
+
+        service.blocked(limit = 20)
+
+        assertEquals(listOf(20), gateway.blockedLimits)
+    }
+
+    @Test
+    fun `import passes the contacts through and answers the summary`() {
+        val gateway = FakeContactGateway().apply {
+            importSummary = ContactImportSummary(imported = listOf(ada), retryCount = 1)
+        }
+        val toImport = ContactToImport(phone = "+15550100", firstName = "Ada", lastName = "Lovelace")
+
+        val summary = ContactsService(gateway).import(listOf(toImport))
+
+        assertEquals(listOf(listOf(toImport)), gateway.imports)
+        assertEquals(listOf(ada), summary.imported)
+        assertEquals(1, summary.retryCount)
+    }
+
+    @Test
+    fun `delete removes the reference through the gateway`() {
+        val gateway = FakeContactGateway()
+        val service = ContactsService(gateway)
+
+        service.delete("@ada")
+
+        assertEquals(listOf("@ada"), gateway.deleted)
+    }
+
+    @Test
+    fun `rejects an empty or nameless import before the gateway`() {
+        val gateway = FakeContactGateway()
+        val service = ContactsService(gateway)
+
+        assertFailsWith<IllegalArgumentException> { service.import(emptyList()) }
+        assertFailsWith<IllegalArgumentException> {
+            service.import(listOf(ContactToImport(phone = "", firstName = "Ada", lastName = "")))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            service.import(listOf(ContactToImport(phone = "+1", firstName = "", lastName = " ")))
+        }
+        assertEquals(emptyList(), gateway.imports)
+    }
+
+    @Test
+    fun `rejects a blank delete reference before the gateway`() {
+        val gateway = FakeContactGateway()
+
+        assertFailsWith<IllegalArgumentException> { ContactsService(gateway).delete("  ") }
+        assertEquals(emptyList(), gateway.deleted)
+    }
+
+    @Test
     fun `rejects a non-positive limit before the gateway`() {
         val gateway = FakeContactGateway()
         val service = ContactsService(gateway)
@@ -65,10 +125,15 @@ class ContactsServiceTest {
     private class FakeContactGateway : ContactGateway {
         var contacts: List<Contact> = emptyList()
         var searchResults: List<Contact> = emptyList()
+        var blockedContacts: List<BlockedContact> = emptyList()
+        var importSummary: ContactImportSummary = ContactImportSummary(emptyList(), 0)
         val listCalls = mutableListOf<Int>()
         val searchCalls = mutableListOf<ContactSearchCall>()
         val blocked = mutableListOf<String>()
         val unblocked = mutableListOf<String>()
+        val blockedLimits = mutableListOf<Int>()
+        val imports = mutableListOf<List<ContactToImport>>()
+        val deleted = mutableListOf<String>()
 
         override fun contacts(limit: Int): List<Contact> {
             listCalls += limit
@@ -86,6 +151,20 @@ class ContactsServiceTest {
 
         override fun unblock(reference: String) {
             unblocked += reference
+        }
+
+        override fun blocked(limit: Int): List<BlockedContact> {
+            blockedLimits += limit
+            return blockedContacts
+        }
+
+        override fun import(contacts: List<ContactToImport>): ContactImportSummary {
+            imports += contacts
+            return importSummary
+        }
+
+        override fun delete(reference: String) {
+            deleted += reference
         }
     }
 

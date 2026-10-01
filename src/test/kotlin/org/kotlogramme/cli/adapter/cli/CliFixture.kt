@@ -31,10 +31,13 @@ import org.kotlogramme.cli.application.port.spi.UploadProgress
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Account
+import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatRestrictions
 import org.kotlogramme.cli.domain.ChatRights
 import org.kotlogramme.cli.domain.Contact
+import org.kotlogramme.cli.domain.ContactImportSummary
+import org.kotlogramme.cli.domain.ContactToImport
 import org.kotlogramme.cli.domain.Folder
 import org.kotlogramme.cli.domain.IncomingUpdate
 import org.kotlogramme.cli.domain.InlineQuery
@@ -231,11 +234,17 @@ internal class FakeSearchMessages(
 internal class FakeContacts(
     private val contacts: List<Contact> = emptyList(),
     private val searchResults: List<Contact> = emptyList(),
+    private val blockedContacts: List<BlockedContact> = emptyList(),
+    private val importedContacts: List<Contact> = emptyList(),
+    private val retryCount: Int = 0,
 ) : Contacts {
     val limits = mutableListOf<Int>()
+    val blockedLimits = mutableListOf<Int>()
     val searches = mutableListOf<Pair<String, Int>>()
     val blocked = mutableListOf<String>()
     val unblocked = mutableListOf<String>()
+    val imports = mutableListOf<List<ContactToImport>>()
+    val deleted = mutableListOf<String>()
 
     override fun list(limit: Int): List<Contact> {
         limits += limit
@@ -253,6 +262,20 @@ internal class FakeContacts(
 
     override fun unblock(reference: String) {
         unblocked += reference
+    }
+
+    override fun blocked(limit: Int): List<BlockedContact> {
+        blockedLimits += limit
+        return blockedContacts
+    }
+
+    override fun import(contacts: List<ContactToImport>): ContactImportSummary {
+        imports += contacts
+        return ContactImportSummary(imported = importedContacts, retryCount = retryCount)
+    }
+
+    override fun delete(reference: String) {
+        deleted += reference
     }
 }
 
@@ -856,6 +879,12 @@ internal fun cliFixture(
             UnreactCommand(),
             MarkReadCommand(),
             ContactsCommand(),
+            SearchContactsCommand(),
+            BlockCommand(),
+            UnblockCommand(),
+            BlockedCommand(),
+            ImportContactsCommand(),
+            DeleteContactCommand(),
             SearchCommand(),
             MembersCommand(),
             KickCommand(),

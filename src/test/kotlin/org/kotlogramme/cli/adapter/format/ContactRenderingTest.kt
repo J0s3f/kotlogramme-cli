@@ -1,9 +1,11 @@
 package org.kotlogramme.cli.adapter.format
 
 import org.kotlogramme.cli.application.port.spi.OutputFormat
+import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Contact
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -56,6 +58,28 @@ class ContactRenderingTest {
             """[{"id":"1","name":"Ada","username":"ada","phone":"+15550100"},""" +
                 """{"id":"2","name":"Bob","username":"","phone":"+15550101"}]""",
             rendered,
+        )
+    }
+
+    @Test
+    fun `plain blocked contacts carry the block date`() {
+        val blocked = listOf(
+            BlockedContact(
+                id = 1,
+                displayName = "Ada",
+                username = "ada",
+                blockedAt = Instant.parse("2026-01-01T12:30:00Z"),
+            ),
+        )
+
+        val rendered = render(OutputFormat.PLAIN) { renderBlockedContacts(blocked) }
+
+        assertEquals(
+            listOf(
+                "id\tname\tusername\tblocked",
+                "1\tAda\tada\t2026-01-01T12:30:00Z",
+            ),
+            rendered.lines(),
         )
     }
 }

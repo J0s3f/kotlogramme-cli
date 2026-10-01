@@ -1,7 +1,10 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.BlockedContacts
+import com.github.badoualy.telegram.api.ContactImport
 import com.github.badoualy.telegram.api.ContactsPage
 import com.github.badoualy.telegram.api.FoundContacts
+import com.github.badoualy.telegram.api.ImportedContacts
 import com.github.badoualy.telegram.api.TelegramClient
 import com.github.badoualy.telegram.api.TelegramPeer
 
@@ -18,4 +21,12 @@ internal class KotlogramContactOperations(private val client: TelegramClient) : 
     override fun block(peer: TelegramPeer) = client.contactsBlock(peer)
 
     override fun unblock(peer: TelegramPeer) = client.contactsUnblock(peer)
+
+    override fun blocked(offset: Int, limit: Int): BlockedContacts =
+        client.contactsGetBlocked(offset = offset, limit = limit)
+
+    override fun importContacts(contacts: List<ContactImport>): ImportedContacts =
+        client.contactsImportContacts(contacts)
+
+    override fun deleteContacts(peers: List<TelegramPeer>) = client.contactsDeleteContacts(peers)
 }

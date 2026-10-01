@@ -1,6 +1,9 @@
 package org.kotlogramme.cli.application.port.spi
 
+import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Contact
+import org.kotlogramme.cli.domain.ContactImportSummary
+import org.kotlogramme.cli.domain.ContactToImport
 
 /** The contact operations the facade exposes, in domain terms. */
 interface ContactGateway {
@@ -11,4 +14,13 @@ interface ContactGateway {
     fun block(reference: String)
 
     fun unblock(reference: String)
+
+    /** Lists the account's blocked peers, newest block first. */
+    fun blocked(limit: Int): List<BlockedContact>
+
+    /** Imports [contacts], answering what Telegram saved and what it asked to retry. */
+    fun import(contacts: List<ContactToImport>): ContactImportSummary
+
+    /** Removes [reference] from the account's saved contacts; the peer is not blocked. */
+    fun delete(reference: String)
 }

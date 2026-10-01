@@ -1,10 +1,16 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.BlockedContacts
+import com.github.badoualy.telegram.api.BlockedPeer
 import com.github.badoualy.telegram.api.ContactEntry
+import com.github.badoualy.telegram.api.ContactImport
 import com.github.badoualy.telegram.api.ContactPeer
 import com.github.badoualy.telegram.api.ContactsPage
 import com.github.badoualy.telegram.api.FoundContacts
+import com.github.badoualy.telegram.api.ImportedContact
+import com.github.badoualy.telegram.api.ImportedContacts
 import com.github.badoualy.telegram.api.TelegramPeer
+import org.kotlogramme.cli.domain.ContactToImport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -75,6 +81,74 @@ class KotlogramContactGatewayTest {
         assertEquals(listOf("@ada"), operations.resolvedReferences)
         assertEquals(listOf(facadePeer), operations.unblocked)
     }
+
+    @Test
+    fun `blocked maps the block date and the peer's user`() {
+        val blockedPeer = peer(id = 7, kind = "user", username = "ada", name = "Ada")
+        val operations = FakeContactOperations().apply {
+            blockedPage = BlockedContacts(
+                count = 1,
+                blocked = listOf(
+                    BlockedPeer(
+                        date = 1_700_000_000_000,
+                        user = user(id = 7, username = "ada", firstName = "Ada"),
+                        peer = blockedPeer,
+                    ),
+                ),
+                users = emptyList(),
+            )
+        }
+
+        val blocked = KotlogramContactGateway(operations).blocked(limit = 10)
+
+        assertEquals(listOf(0 to 10), operations.blockedCalls)
+        assertEquals(7L, blocked.single().id)
+        assertEquals("Ada", blocked.single().displayName)
+        assertEquals("ada", blocked.single().username)
+        assertEquals(1_700_000_000_000, blocked.single().blockedAt.toEpochMilli())
+    }
+
+    @Test
+    fun `import assigns client ids and maps the saved users`() {
+        val operations = FakeContactOperations().apply {
+            imported = ImportedContacts(
+                imported = listOf(
+                    ImportedContact(
+                        userId = 7,
+                        clientId = 1,
+                        user = user(id = 7, username = "ada", firstName = "Ada"),
+                        peer = null,
+                    ),
+                ),
+                retryContacts = listOf(2),
+                popularInvites = emptyList(),
+                users = emptyList(),
+            )
+        }
+        val toImport = listOf(
+            ContactToImport("+15550100", "Ada", "Lovelace"),
+            ContactToImport("+15550101", "Grace", "Hopper"),
+        )
+
+        val summary = KotlogramContactGateway(operations).import(toImport)
+
+        assertEquals(2, operations.importedInputs.single().size)
+        assertEquals(listOf(1L, 2L), operations.importedInputs.single().map { it.clientId })
+        assertEquals("+15550100", operations.importedInputs.single().first().phone)
+        assertEquals(listOf("Ada"), summary.imported.map { it.displayName })
+        assertEquals(1, summary.retryCount)
+    }
+
+    @Test
+    fun `delete resolves the reference and deletes the resolved peer`() {
+        val facadePeer = peer(id = 7, kind = "user", username = "ada", name = "Ada")
+        val operations = FakeContactOperations().apply { resolvedPeer = facadePeer }
+
+        KotlogramContactGateway(operations).delete("@ada")
+
+        assertEquals(listOf("@ada"), operations.resolvedReferences)
+        assertEquals(listOf(facadePeer), operations.deletedContacts)
+    }
 }
 
 internal data class ContactSearchCall(val query: String, val limit: Int)
@@ -83,11 +157,17 @@ internal class FakeContactOperations : FacadeContactOperations {
     var page: ContactsPage = ContactsPage(emptyList(), 0, notModified = false, users = emptyList())
     var found: FoundContacts = FoundContacts(emptyList(), emptyList(), emptyList())
     var resolvedPeer: TelegramPeer? = null
+    var blockedPage: BlockedContacts = BlockedContacts(count = null, blocked = emptyList(), users = emptyList())
+    var imported: ImportedContacts =
+        ImportedContacts(emptyList(), emptyList(), emptyList(), emptyList())
     val hashes = mutableListOf<Long>()
     val searches = mutableListOf<ContactSearchCall>()
     val resolvedReferences = mutableListOf<String>()
     val blocked = mutableListOf<TelegramPeer>()
     val unblocked = mutableListOf<TelegramPeer>()
+    val blockedCalls = mutableListOf<Pair<Int, Int>>()
+    val importedInputs = mutableListOf<List<ContactImport>>()
+    val deletedContacts = mutableListOf<TelegramPeer>()
 
     override fun contacts(hash: Long): ContactsPage {
         hashes += hash
@@ -110,5 +190,19 @@ internal class FakeContactOperations : FacadeContactOperations {
 
     override fun unblock(peer: TelegramPeer) {
         unblocked += peer
+    }
+
+    override fun blocked(offset: Int, limit: Int): BlockedContacts {
+        blockedCalls += offset to limit
+        return blockedPage
+    }
+
+    override fun importContacts(contacts: List<ContactImport>): ImportedContacts {
+        importedInputs += contacts
+        return imported
+    }
+
+    override fun deleteContacts(peers: List<TelegramPeer>) {
+        deletedContacts += peers
     }
 }
