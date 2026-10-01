@@ -34,22 +34,45 @@ class ConfigCommand : CliktCommand(name = "config") {
         if (credentials == null) "not set" else "set (API id ${credentials.apiId})"
 }
 
-/** Persists the API credentials, and optionally the default output format. */
+/** Persists the API credentials and/or the default output format, keeping whatever is not given. */
 class ConfigSetCommand : CliktCommand(name = "set") {
     private val appContext by requireObject<AppContext>()
 
-    private val apiId by option("--api-id", help = "The API id from my.telegram.org").int().required()
-    private val apiHash by option("--api-hash", help = "The API hash from my.telegram.org").required()
+    private val apiId by option("--api-id", help = "The API id from my.telegram.org").int()
+    private val apiHash by option("--api-hash", help = "The API hash from my.telegram.org")
     private val format by option("--format", help = "Default output format: table, plain or json")
 
     override fun run() {
+        if (apiId == null && apiHash == null && format == null) {
+            throw UsageError(
+                "Nothing to update; give at least one of --api-id, --api-hash or --format.",
+            )
+        }
         val current = appContext.config()
+        val credentials = when {
+            apiId != null && apiHash != null -> ApiCredentials(apiId!!, apiHash!!)
+            apiId != null || apiHash != null -> {
+                val existing = current.credentials
+                    ?: throw UsageError(
+                        "No credentials stored yet; pass both --api-id and --api-hash together.",
+                    )
+                ApiCredentials(
+                    apiId ?: existing.apiId,
+                    apiHash ?: existing.apiHash,
+                )
+            }
+            else -> current.credentials
+        }
         val updated = current.copy(
-            credentials = ApiCredentials(apiId, apiHash),
+            credentials = credentials,
             outputFormat = format?.let(::parseFormat) ?: current.outputFormat,
         )
         appContext.save(updated)
-        appContext.output.line("Configuration saved in ${appContext.configDir}")
+        val touched = buildList {
+            if (apiId != null || apiHash != null) add("credentials")
+            if (format != null) add("output format")
+        }
+        appContext.output.line("Updated ${touched.joinToString()} in ${appContext.configDir}")
     }
 
     private fun parseFormat(value: String): OutputFormat =

@@ -27,6 +27,14 @@ Built on the `kotlogram` `v0.9.8` tag, resolved from JitPack.
 
 ### Fixed
 
+- **`config set --format=json` no longer demands `--api-id` and `--api-hash`.** The three options were
+  declared `required` together, so changing a display setting forced re-typing (and shell-histories
+  leaking) credentials. Each option is now individually optional: what is given is updated and what
+  is not is preserved, so `--format` alone keeps the stored credentials, `--api-id` alone keeps the
+  stored hash, and with nothing stored one half is refused until the other arrives. Bare `config set`
+  is a usage error naming what can be updated and writes nothing, `config` and `config set --help`
+  never require credentials, and an invalid `--format` value fails before anything is saved.
+
 - **Message text piped to `send -` is decoded as UTF-8.** The dash form read through Clikt's
   terminal, whose reader follows the JVM's platform charset - Cp1252 here - so a pipe or redirect
   carrying UTF-8 was read as mojibake, and Telegram stored the mojibake. It now reads the bytes and

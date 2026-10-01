@@ -81,4 +81,107 @@ class ConfigCommandTest {
 
         assertEquals(OutputFormat.PLAIN, store.load().outputFormat)
     }
+
+    @Test
+    fun `config set with only a format preserves the stored credentials`() {
+        val store = JsonConfigStore(tempDir)
+        store.save(
+            AppConfig(
+                credentials = ApiCredentials(33582468, "stored-hash"),
+                sessionPath = tempDir.resolve("session.sqlite"),
+                outputFormat = OutputFormat.PLAIN,
+            ),
+        )
+        val fixture = cliFixture(configStore = store, configDir = tempDir)
+
+        val result = fixture.run("config", "set", "--format=json")
+
+        assertEquals(0, result.statusCode)
+        val saved = store.load()
+        assertEquals(ApiCredentials(33582468, "stored-hash"), saved.credentials)
+        assertEquals(OutputFormat.JSON, saved.outputFormat)
+    }
+
+    @Test
+    fun `config set with only an api id preserves the stored hash and format`() {
+        val store = JsonConfigStore(tempDir)
+        store.save(
+            AppConfig(
+                credentials = ApiCredentials(1, "stored-hash"),
+                sessionPath = tempDir.resolve("session.sqlite"),
+                outputFormat = OutputFormat.JSON,
+            ),
+        )
+        val fixture = cliFixture(configStore = store, configDir = tempDir)
+
+        val result = fixture.run("config", "set", "--api-id", "42")
+
+        assertEquals(0, result.statusCode)
+        val saved = store.load()
+        assertEquals(ApiCredentials(42, "stored-hash"), saved.credentials)
+        assertEquals(OutputFormat.JSON, saved.outputFormat)
+    }
+
+    @Test
+    fun `config set cannot change half the credentials before anything is stored`() {
+        val store = JsonConfigStore(tempDir)
+        val fixture = cliFixture(configStore = store, configDir = tempDir)
+
+        val result = fixture.run("config", "set", "--api-id", "42")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("pass both --api-id and --api-hash together"))
+        assertEquals(null, store.load().credentials)
+    }
+
+    @Test
+    fun `config set rejects an unknown format`() {
+        val store = JsonConfigStore(tempDir)
+        store.save(
+            AppConfig(
+                credentials = ApiCredentials(1, "stored-hash"),
+                sessionPath = tempDir.resolve("session.sqlite"),
+            ),
+        )
+        val fixture = cliFixture(configStore = store, configDir = tempDir)
+
+        val result = fixture.run("config", "set", "--format", "yaml")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("Unknown output format 'yaml'; choose table, plain or json"))
+        assertEquals(OutputFormat.entries.first(), store.load().outputFormat)
+    }
+
+    @Test
+    fun `config set without options is a usage error and writes nothing`() {
+        val store = JsonConfigStore(tempDir)
+        store.save(
+            AppConfig(
+                credentials = ApiCredentials(1, "stored-hash"),
+                sessionPath = tempDir.resolve("session.sqlite"),
+                outputFormat = OutputFormat.PLAIN,
+            ),
+        )
+        val fixture = cliFixture(configStore = store, configDir = tempDir)
+
+        val result = fixture.run("config", "set")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("give at least one of --api-id, --api-hash or --format"))
+        val saved = store.load()
+        assertEquals(ApiCredentials(1, "stored-hash"), saved.credentials)
+        assertEquals(OutputFormat.PLAIN, saved.outputFormat)
+    }
+
+    @Test
+    fun `config set help does not demand the credential options`() {
+        val store = JsonConfigStore(tempDir)
+        val fixture = cliFixture(configStore = store, configDir = tempDir)
+
+        val result = fixture.run("config", "set", "--help")
+
+        assertEquals(0, result.statusCode)
+        assertTrue(result.output.contains("--api-id"))
+        assertTrue(result.output.contains("--format"))
+    }
 }
