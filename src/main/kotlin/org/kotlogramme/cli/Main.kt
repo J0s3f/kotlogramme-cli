@@ -12,6 +12,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import org.kotlogramme.cli.adapter.cli.AppContext
 import org.kotlogramme.cli.adapter.cli.BlockCommand
 import org.kotlogramme.cli.adapter.cli.BlockedCommand
+import org.kotlogramme.cli.adapter.cli.ChatActionCommand
 import org.kotlogramme.cli.adapter.cli.ConfigCommand
 import org.kotlogramme.cli.adapter.cli.ContactsCommand
 import org.kotlogramme.cli.adapter.cli.CopyMediaCommand
@@ -116,6 +117,7 @@ fun main(args: Array<String>) {
                 ReactCommand(),
                 UnreactCommand(),
                 MarkReadCommand(),
+                ChatActionCommand(),
                 ContactsCommand(),
                 SearchContactsCommand(),
                 BlockCommand(),

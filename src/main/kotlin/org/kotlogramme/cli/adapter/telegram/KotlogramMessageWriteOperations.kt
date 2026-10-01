@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.ChatAction
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramClient
 import com.github.badoualy.telegram.api.TelegramPeer
@@ -29,4 +30,7 @@ internal class KotlogramMessageWriteOperations(private val client: TelegramClien
     override fun removeReaction(peer: TelegramPeer, id: Int) = client.messagesRemoveReaction(peer, id)
 
     override fun markRead(peer: TelegramPeer) = client.messagesReadHistory(peer)
+
+    override fun sendChatAction(peer: TelegramPeer, action: ChatAction) =
+        client.actionsSendChatAction(peer, action)
 }

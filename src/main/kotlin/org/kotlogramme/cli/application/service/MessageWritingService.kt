@@ -2,6 +2,7 @@ package org.kotlogramme.cli.application.service
 
 import org.kotlogramme.cli.application.port.api.MessageWriter
 import org.kotlogramme.cli.application.port.spi.MessageWriteGateway
+import org.kotlogramme.cli.domain.ChatActivity
 import org.kotlogramme.cli.domain.Message
 
 /**
@@ -55,6 +56,9 @@ class MessageWritingService(private val gateway: MessageWriteGateway) : MessageW
     }
 
     override fun markRead(reference: String) = gateway.markRead(reference)
+
+    override fun sendChatAction(reference: String, activity: ChatActivity) =
+        gateway.sendChatAction(reference, activity)
 
     private fun requireNotBlank(text: String) {
         require(text.isNotBlank()) { "message text must not be blank" }

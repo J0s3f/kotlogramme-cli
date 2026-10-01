@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.application.port.spi
 
+import org.kotlogramme.cli.domain.ChatActivity
 import org.kotlogramme.cli.domain.Message
 
 /** The message-writing operations the facade exposes, in domain terms. */
@@ -22,4 +23,6 @@ interface MessageWriteGateway {
     fun removeReaction(reference: String, messageId: Int)
 
     fun markRead(reference: String)
+
+    fun sendChatAction(reference: String, activity: ChatActivity)
 }

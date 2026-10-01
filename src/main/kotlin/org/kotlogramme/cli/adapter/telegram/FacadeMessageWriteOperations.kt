@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.ChatAction
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramPeer
 
@@ -41,4 +42,7 @@ internal interface FacadeMessageWriteOperations {
 
     /** Marks every message in [peer] as read, which is `messagesReadHistory`. */
     fun markRead(peer: TelegramPeer)
+
+    /** Reports [action] in [peer], which is `actionsSendChatAction`. */
+    fun sendChatAction(peer: TelegramPeer, action: ChatAction)
 }

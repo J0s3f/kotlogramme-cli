@@ -1,6 +1,8 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.ChatAction
 import org.kotlogramme.cli.application.port.spi.MessageWriteGateway
+import org.kotlogramme.cli.domain.ChatActivity
 import org.kotlogramme.cli.domain.Message
 
 /**
@@ -41,4 +43,25 @@ internal class KotlogramMessageWriteGateway(
         operations.removeReaction(resolver.resolve(reference), messageId)
 
     override fun markRead(reference: String) = operations.markRead(resolver.resolve(reference))
+
+    override fun sendChatAction(reference: String, activity: ChatActivity) =
+        operations.sendChatAction(resolver.resolve(reference), activity.toFacade())
+}
+
+/** The facade action a domain activity names; the mapping lives here so nothing above knows it. */
+private fun ChatActivity.toFacade(): ChatAction = when (this) {
+    ChatActivity.TYPING -> ChatAction.TYPING
+    ChatActivity.UPLOAD_PHOTO -> ChatAction.UPLOAD_PHOTO
+    ChatActivity.UPLOAD_DOCUMENT -> ChatAction.UPLOAD_DOCUMENT
+    ChatActivity.RECORD_VIDEO -> ChatAction.RECORD_VIDEO
+    ChatActivity.UPLOAD_VIDEO -> ChatAction.UPLOAD_VIDEO
+    ChatActivity.RECORD_VOICE -> ChatAction.RECORD_VOICE
+    ChatActivity.UPLOAD_VOICE -> ChatAction.UPLOAD_VOICE
+    ChatActivity.RECORD_VIDEO_NOTE -> ChatAction.RECORD_VIDEO_NOTE
+    ChatActivity.UPLOAD_VIDEO_NOTE -> ChatAction.UPLOAD_VIDEO_NOTE
+    ChatActivity.CHOOSE_STICKER -> ChatAction.CHOOSE_STICKER
+    ChatActivity.CHOOSE_CONTACT -> ChatAction.CHOOSE_CONTACT
+    ChatActivity.GEO_LOCATION -> ChatAction.GEO_LOCATION
+    ChatActivity.GAME_PLAY -> ChatAction.GAME_PLAY
+    ChatActivity.SPEAKING_IN_GROUP_CALL -> ChatAction.SPEAKING_IN_GROUP_CALL
 }

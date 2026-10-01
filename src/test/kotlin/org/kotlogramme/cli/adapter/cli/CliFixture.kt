@@ -34,6 +34,7 @@ import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Account
 import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Chat
+import org.kotlogramme.cli.domain.ChatActivity
 import org.kotlogramme.cli.domain.ChatRestrictions
 import org.kotlogramme.cli.domain.ChatRights
 import org.kotlogramme.cli.domain.Contact
@@ -497,6 +498,9 @@ internal data class MessageIdCall(val reference: String, val messageId: Int)
 /** A reaction request. */
 internal data class ReactCall(val reference: String, val messageId: Int, val emoji: String)
 
+/** A chat-action request. */
+internal data class ChatActionCall(val reference: String, val activity: ChatActivity)
+
 /** A [MessageWriter] that records every mutation and returns canned results. */
 internal class FakeMessageWriter(
     private val sent: Message = testMessage,
@@ -514,6 +518,7 @@ internal class FakeMessageWriter(
     val reactions = mutableListOf<ReactCall>()
     val removals = mutableListOf<MessageIdCall>()
     val markedRead = mutableListOf<String>()
+    val chatActions = mutableListOf<ChatActionCall>()
 
     /** Simulates the use case rejecting the input before it reaches the gateway. */
     private fun reject() {
@@ -567,6 +572,11 @@ internal class FakeMessageWriter(
     override fun markRead(reference: String) {
         reject()
         markedRead += reference
+    }
+
+    override fun sendChatAction(reference: String, activity: ChatActivity) {
+        reject()
+        chatActions += ChatActionCall(reference, activity)
     }
 }
 
@@ -898,6 +908,7 @@ internal fun cliFixture(
             ReactCommand(),
             UnreactCommand(),
             MarkReadCommand(),
+            ChatActionCommand(),
             ContactsCommand(),
             SearchContactsCommand(),
             BlockCommand(),

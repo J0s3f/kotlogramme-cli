@@ -1,7 +1,9 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.ChatAction
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramPeer
+import org.kotlogramme.cli.domain.ChatActivity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -112,6 +114,28 @@ class KotlogramMessageWriteGatewayTest {
         assertEquals(listOf(ada), operations.markReads)
     }
 
+    @Test
+    fun `sendChatAction resolves the reference and maps the activity`() {
+        val operations = FakeMessageWriteOperations()
+
+        gatewayWith(operations, ada).sendChatAction("@ada", ChatActivity.UPLOAD_PHOTO)
+
+        assertEquals(
+            listOf(FacadeChatActionCall(ada, ChatAction.UPLOAD_PHOTO)),
+            operations.chatActions,
+        )
+    }
+
+    @Test
+    fun `every domain activity maps to a facade action`() {
+        val operations = FakeMessageWriteOperations()
+        val gateway = gatewayWith(operations, ada)
+
+        ChatActivity.entries.forEach { gateway.sendChatAction("@ada", it) }
+
+        assertEquals(ChatActivity.entries.size, operations.chatActions.size)
+    }
+
     private fun gatewayWith(
         operations: FakeMessageWriteOperations,
         facadePeer: TelegramPeer,
@@ -139,6 +163,8 @@ internal data class MessageCall(val peer: TelegramPeer, val id: Int)
 
 internal data class ReactionCall(val peer: TelegramPeer, val id: Int, val emoji: String)
 
+internal data class FacadeChatActionCall(val peer: TelegramPeer, val action: ChatAction)
+
 internal class FakeMessageWriteOperations : FacadeMessageWriteOperations {
     var sentMessage: Message = message(id = 1)
     var editedMessage: Message = message(id = 1)
@@ -154,6 +180,7 @@ internal class FakeMessageWriteOperations : FacadeMessageWriteOperations {
     val reactions = mutableListOf<ReactionCall>()
     val removedReactions = mutableListOf<MessageCall>()
     val markReads = mutableListOf<TelegramPeer>()
+    val chatActions = mutableListOf<FacadeChatActionCall>()
 
     override fun send(peer: TelegramPeer, text: String, replyToMessageId: Int?, silent: Boolean): Message {
         sends += SendCall(peer, text, replyToMessageId, silent)
@@ -193,5 +220,9 @@ internal class FakeMessageWriteOperations : FacadeMessageWriteOperations {
 
     override fun markRead(peer: TelegramPeer) {
         markReads += peer
+    }
+
+    override fun sendChatAction(peer: TelegramPeer, action: ChatAction) {
+        chatActions += FacadeChatActionCall(peer, action)
     }
 }

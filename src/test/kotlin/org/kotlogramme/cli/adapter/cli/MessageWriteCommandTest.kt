@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.cli
 
+import org.kotlogramme.cli.domain.ChatActivity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -69,6 +70,40 @@ class MessageWriteCommandTest {
         fixture.run("mark-read", "@ada")
 
         assertEquals(listOf("@ada"), writer.markedRead)
+    }
+
+    @Test
+    fun `chat-action defaults to typing`() {
+        val writer = FakeMessageWriter()
+        val fixture = cliFixture(messageWriter = writer)
+
+        val result = fixture.run("chat-action", "@ada")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf(ChatActionCall("@ada", ChatActivity.TYPING)), writer.chatActions)
+        assertEquals(listOf("Sent the 'typing' action to @ada."), fixture.output.lines)
+    }
+
+    @Test
+    fun `chat-action maps a named status`() {
+        val writer = FakeMessageWriter()
+        val fixture = cliFixture(messageWriter = writer)
+
+        fixture.run("chat-action", "@ada", "--action", "upload-photo")
+
+        assertEquals(listOf(ChatActionCall("@ada", ChatActivity.UPLOAD_PHOTO)), writer.chatActions)
+    }
+
+    @Test
+    fun `chat-action rejects an unknown status`() {
+        val writer = FakeMessageWriter()
+        val fixture = cliFixture(messageWriter = writer)
+
+        val result = fixture.run("chat-action", "@ada", "--action", "moonwalk")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("unknown chat action"), "stderr was: ${result.stderr}")
+        assertEquals(emptyList(), writer.chatActions)
     }
 
     @Test

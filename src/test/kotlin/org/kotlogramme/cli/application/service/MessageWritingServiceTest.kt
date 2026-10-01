@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.application.service
 
 import org.kotlogramme.cli.application.port.spi.MessageWriteGateway
+import org.kotlogramme.cli.domain.ChatActivity
 import org.kotlogramme.cli.domain.Message
 import java.time.Instant
 import kotlin.test.Test
@@ -59,6 +60,7 @@ class MessageWritingServiceTest {
             react("@ada", 9, "\uD83D\uDC4D")
             removeReaction("@ada", 10)
             markRead("@ada")
+            sendChatAction("@ada", ChatActivity.TYPING)
         }
 
         assertEquals(IdCall("@ada", 7), gateway.pins.single())
@@ -66,6 +68,7 @@ class MessageWritingServiceTest {
         assertEquals(ReactCall("@ada", 9, "\uD83D\uDC4D"), gateway.reactions.single())
         assertEquals(IdCall("@ada", 10), gateway.removedReactions.single())
         assertEquals(listOf("@ada"), gateway.markReads)
+        assertEquals(listOf(ChatActionCall("@ada", ChatActivity.TYPING)), gateway.chatActions)
     }
 
     @Test
@@ -156,6 +159,8 @@ private data class IdCall(val reference: String, val messageId: Int)
 
 private data class ReactCall(val reference: String, val messageId: Int, val emoji: String)
 
+private data class ChatActionCall(val reference: String, val activity: ChatActivity)
+
 private class FakeMessageWriteGateway : MessageWriteGateway {
     val sends = mutableListOf<SendCall>()
     val edits = mutableListOf<EditCall>()
@@ -166,6 +171,7 @@ private class FakeMessageWriteGateway : MessageWriteGateway {
     val reactions = mutableListOf<ReactCall>()
     val removedReactions = mutableListOf<IdCall>()
     val markReads = mutableListOf<String>()
+    val chatActions = mutableListOf<ChatActionCall>()
 
     var sent: Message = message
     var edited: Message = message
@@ -210,6 +216,10 @@ private class FakeMessageWriteGateway : MessageWriteGateway {
 
     override fun markRead(reference: String) {
         markReads += reference
+    }
+
+    override fun sendChatAction(reference: String, activity: ChatActivity) {
+        chatActions += ChatActionCall(reference, activity)
     }
 }
 
