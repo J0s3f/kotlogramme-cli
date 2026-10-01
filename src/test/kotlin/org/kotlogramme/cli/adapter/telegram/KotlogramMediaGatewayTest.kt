@@ -5,11 +5,32 @@ import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.UploadedFile
+import org.kotlogramme.cli.application.port.spi.UploadProgress
+import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
+import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+
+/**
+ * The slot a test passes when nobody is watching, which is what the bar being off looks like to the
+ * gateway: [FacadeMediaOperations] must then leave the library's progress handle alone.
+ */
+private val UNWATCHED: UploadProgressSlot = UploadProgressReporter.SILENT.begin(0)
+
+/** A slot that says it is watched, which is what makes the gateway track an upload at all. */
+private class WatchedSlot : UploadProgressSlot {
+    override val isWatched: Boolean = true
+
+    override fun follow(counter: () -> UploadProgress?) = Unit
+
+    override fun current(): UploadProgress? = null
+
+    override fun close() = Unit
+}
 
 class KotlogramMediaGatewayTest {
     private val ada = peer(id = 7, kind = "user", username = "ada", name = "Ada")
@@ -28,6 +49,7 @@ class KotlogramMediaGatewayTest {
             asPhoto = true,
             replyToMessageId = 5,
             silent = true,
+            progress = UNWATCHED,
         )
 
         assertEquals(SendFileCall(ada, file, "a cat", true, 5, true), operations.fileSends.single())
@@ -51,6 +73,7 @@ class KotlogramMediaGatewayTest {
             height = 1080,
             replyToMessageId = 5,
             silent = true,
+            progress = UNWATCHED,
         )
 
         assertEquals(SendVideoCall(ada, file, "a clip", 12.5, 1920, 1080, 5, true), operations.videoSends.single())
@@ -74,17 +97,61 @@ class KotlogramMediaGatewayTest {
             asPhoto = true,
             replyToMessageId = 5,
             silent = true,
+            size = 3,
+            progress = UNWATCHED,
         )
 
         assertEquals(
             listOf(
-                UploadStreamCall("cat.png", "cat"),
+                UploadStreamCall("cat.png", "cat", 3),
                 SendUploadedCall(ada, operations.uploaded, "a cat", true, 5, true),
             ),
             operations.calls,
         )
         assertEquals(45, sent.id)
         assertEquals("photo", sent.media?.kind)
+    }
+
+    @Test
+    fun `sendStream forwards the declared size and the exact bytes`() {
+        val operations = FakeMediaOperations()
+        // Bytes that no text decoder survives: the gateway has to pass the stream through untouched
+        // and hand the facade the length it declared.
+        val bytes = byteArrayOf(0x00, 0x0D, 0x0A, 0x1A, 0xFF.toByte(), 0x42)
+
+        gatewayWith(operations).sendStream(
+            "@ada",
+            "photo.png",
+            ByteArrayInputStream(bytes),
+            "",
+            false,
+            null,
+            false,
+            size = bytes.size.toLong(),
+            progress = UNWATCHED,
+        )
+
+        assertContentEquals(bytes, operations.streamPayloads.single())
+        assertEquals(bytes.size.toLong(), operations.calls.filterIsInstance<UploadStreamCall>().single().size)
+    }
+
+    @Test
+    fun `every upload hands the gateway the slot its caller opened`() {
+        val operations = FakeMediaOperations()
+        val watched = WatchedSlot()
+        val file = Path.of("media", "cat.png")
+
+        gatewayWith(operations).sendFile(
+            "@ada",
+            file,
+            "",
+            asPhoto = true,
+            replyToMessageId = null,
+            silent = false,
+            progress = watched,
+        )
+
+        assertEquals(listOf<UploadProgressSlot>(watched), operations.watched)
     }
 
     @Test
@@ -159,7 +226,7 @@ internal data class SendVideoCall(
     val silent: Boolean,
 )
 
-internal data class UploadStreamCall(val name: String, val content: String)
+internal data class UploadStreamCall(val name: String, val content: String, val size: Long)
 
 internal data class SendUploadedCall(
     val peer: TelegramPeer,
@@ -205,6 +272,12 @@ internal class FakeMediaOperations : FacadeMediaOperations {
     val downloads = mutableListOf<DownloadCall>()
     val calls = mutableListOf<Any>()
 
+    /** Every slot an upload was handed, so a test can tell a watched upload from an untracked one. */
+    val watched = mutableListOf<UploadProgressSlot>()
+
+    /** The exact bytes of each stream upload, which a decoded [UploadStreamCall] cannot show. */
+    val streamPayloads = mutableListOf<ByteArray>()
+
     override fun sendFile(
         peer: TelegramPeer,
         path: Path,
@@ -212,8 +285,10 @@ internal class FakeMediaOperations : FacadeMediaOperations {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message {
         fileSends += SendFileCall(peer, path, caption, asPhoto, replyToMessageId, silent)
+        watched += progress
         return sentFile
     }
 
@@ -226,13 +301,23 @@ internal class FakeMediaOperations : FacadeMediaOperations {
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message {
         videoSends += SendVideoCall(peer, path, caption, durationSeconds, width, height, replyToMessageId, silent)
+        watched += progress
         return sentVideo
     }
 
-    override fun uploadStream(data: InputStream, name: String): UploadedFile {
-        calls += UploadStreamCall(name, data.readBytes().decodeToString())
+    override fun uploadStream(
+        data: InputStream,
+        name: String,
+        size: Long,
+        progress: UploadProgressSlot,
+    ): UploadedFile {
+        val bytes = data.readBytes()
+        calls += UploadStreamCall(name, bytes.decodeToString(), size)
+        streamPayloads += bytes
+        watched += progress
         return uploaded
     }
 

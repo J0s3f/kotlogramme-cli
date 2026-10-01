@@ -2,6 +2,7 @@ package org.kotlogramme.cli.application.service
 
 import org.junit.jupiter.api.io.TempDir
 import org.kotlogramme.cli.application.port.spi.MediaGateway
+import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
@@ -71,6 +72,7 @@ private class FakeDownloadGateway : MediaGateway {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message = error("not used")
 
     override fun sendVideo(
@@ -82,6 +84,7 @@ private class FakeDownloadGateway : MediaGateway {
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message = error("not used")
 
     override fun sendStream(
@@ -92,6 +95,8 @@ private class FakeDownloadGateway : MediaGateway {
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        size: Long,
+        progress: UploadProgressSlot,
     ): Message = error("not used")
 
     override fun sendUrl(

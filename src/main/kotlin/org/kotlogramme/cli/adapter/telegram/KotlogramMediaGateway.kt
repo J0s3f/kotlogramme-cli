@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import org.kotlogramme.cli.application.port.spi.MediaGateway
+import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
@@ -24,8 +25,11 @@ internal class KotlogramMediaGateway(
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message =
-        operations.sendFile(resolver.resolve(reference), path, caption, asPhoto, replyToMessageId, silent).toMessage()
+        operations
+            .sendFile(resolver.resolve(reference), path, caption, asPhoto, replyToMessageId, silent, progress)
+            .toMessage()
 
     override fun sendVideo(
         reference: String,
@@ -36,6 +40,7 @@ internal class KotlogramMediaGateway(
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressSlot,
     ): Message =
         operations.sendVideo(
             resolver.resolve(reference),
@@ -46,8 +51,8 @@ internal class KotlogramMediaGateway(
             height,
             replyToMessageId,
             silent,
+            progress,
         ).toMessage()
-
 
     override fun sendStream(
         reference: String,
@@ -57,9 +62,11 @@ internal class KotlogramMediaGateway(
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        size: Long,
+        progress: UploadProgressSlot,
     ): Message {
         val peer = resolver.resolve(reference)
-        val uploaded = operations.uploadStream(data, name)
+        val uploaded = operations.uploadStream(data, name, size, progress)
         return operations.sendUploaded(peer, uploaded, caption, asPhoto, replyToMessageId, silent).toMessage()
     }
 

@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.cli
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import org.kotlogramme.cli.KotlogrammeCommand
+import org.kotlogramme.cli.adapter.format.UploadProgressBar
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryCheck
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryProbe
 import org.kotlogramme.cli.application.port.api.AccountStatus
@@ -24,6 +25,9 @@ import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.Output
+import org.kotlogramme.cli.application.port.spi.UploadProgress
+import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
+import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Account
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatRestrictions
@@ -37,7 +41,9 @@ import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Participant
 import org.kotlogramme.cli.domain.StickerPack
 import org.kotlogramme.cli.domain.StickerSet
+import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -60,6 +66,52 @@ internal class RecordingOutput : Output {
         rows.forEach { recorded += it.joinToString("\t") }
     }
 }
+
+/**
+ * A reporter that watches an upload and remembers its total, but paints nothing.
+ *
+ * A test that is about which total the command declares, rather than about how a bar draws it, needs
+ * a watcher without the drawing: this is the reporter to pass, and [totals] says what it was told.
+ */
+internal class SilentWatcher : UploadProgressReporter {
+    val totals = mutableListOf<Long>()
+
+    private var slot: UploadProgressSlot? = null
+
+    override fun begin(totalBytes: Long): UploadProgressSlot {
+        totals += totalBytes
+        return TestProgressSlot().also { slot = it }
+    }
+
+    /** The slot the last upload was given, for a test that needs the reading the bar would have seen. */
+    fun current(): UploadProgress? = slot?.current()
+}
+
+/** A slot with nothing behind it, which is all a total-declaring test needs. */
+private class TestProgressSlot : UploadProgressSlot {
+    override val isWatched: Boolean = true
+
+    private var counter: (() -> UploadProgress?)? = null
+
+    override fun follow(counter: () -> UploadProgress?) {
+        this.counter = counter
+    }
+
+    override fun current(): UploadProgress? = counter?.invoke()
+
+    override fun close() = Unit
+}
+
+/**
+ * Runs [body] against the slot and closes it afterwards, which is the lifetime a real upload has:
+ * opened before the bytes move, closed once the send ends.
+ */
+internal inline fun <T> UploadProgressSlot.closing(body: UploadProgressSlot.() -> T): T =
+    try {
+        body()
+    } finally {
+        close()
+    }
 
 /** An in-memory [ConfigStore] that records the last value saved. */
 internal class FakeConfigStore(private var config: AppConfig) : ConfigStore {
@@ -470,7 +522,7 @@ internal data class SendVideoCall(
     val silent: Boolean,
 )
 
-/** A stream send request, carrying the bytes the stream held. */
+/** A stream send request, carrying the bytes the stream held and the length it declared. */
 internal data class SendStreamCall(
     val reference: String,
     val name: String,
@@ -479,7 +531,27 @@ internal data class SendStreamCall(
     val asPhoto: Boolean,
     val replyToMessageId: Int?,
     val silent: Boolean,
-)
+    val size: Long = content.toByteArray().size.toLong(),
+    /**
+     * The exact bytes the stream carried, which a [content] comparison cannot show: the point of
+     * reading a pipe as bytes is that a byte no decoder likes survives it.
+     */
+    val bytes: ByteArray = content.toByteArray(),
+) {
+    override fun equals(other: Any?): Boolean =
+        other is SendStreamCall &&
+            reference == other.reference &&
+            name == other.name &&
+            content == other.content &&
+            caption == other.caption &&
+            asPhoto == other.asPhoto &&
+            replyToMessageId == other.replyToMessageId &&
+            silent == other.silent &&
+            size == other.size
+
+    override fun hashCode(): Int =
+        listOf(reference, name, caption, asPhoto, replyToMessageId, silent, size).hashCode()
+}
 
 /** A URL send request. */
 internal data class SendUrlCall(
@@ -511,6 +583,9 @@ internal class FakeSendMedia(
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
 
+    /** Every reporter a send was handed, so a test can tell a silent run from a watched one. */
+    val progressReports = mutableListOf<UploadProgressReporter>()
+
     /** Simulates the use case rejecting the input before it reaches the gateway. */
     private fun reject() {
         rejection?.let { throw it }
@@ -523,9 +598,18 @@ internal class FakeSendMedia(
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressReporter,
     ): Message {
         reject()
         fileSends += SendFileCall(reference, path, caption, asPhoto, replyToMessageId, silent)
+        progressReports += progress
+        // The service owns the slot's lifetime and the gateway fills it; a fake standing in for both
+        // opens one with the file's own length and reports a complete transfer, which is what a real
+        // one does and what a bar in a test has to be able to read.
+        val size = Files.size(path)
+        progress.begin(size).closing {
+            follow { UploadProgress(bytesSent = size, totalBytes = size, elapsedMillis = 1_000) }
+        }
         return sent
     }
 
@@ -538,9 +622,15 @@ internal class FakeSendMedia(
         height: Int?,
         replyToMessageId: Int?,
         silent: Boolean,
+        progress: UploadProgressReporter,
     ): Message {
         reject()
         videoSends += SendVideoCall(reference, path, caption, durationSeconds, width, height, replyToMessageId, silent)
+        progressReports += progress
+        val size = Files.size(path)
+        progress.begin(size).closing {
+            follow { UploadProgress(bytesSent = size, totalBytes = size, elapsedMillis = 1_000) }
+        }
         return sent
     }
 
@@ -552,17 +642,26 @@ internal class FakeSendMedia(
         asPhoto: Boolean,
         replyToMessageId: Int?,
         silent: Boolean,
+        size: Long,
+        progress: UploadProgressReporter,
     ): Message {
+        val bytes = data.readBytes()
         reject()
         streamSends += SendStreamCall(
             reference,
             name,
-            data.readBytes().decodeToString(),
+            bytes.decodeToString(),
             caption,
             asPhoto,
             replyToMessageId,
             silent,
+            size,
+            bytes,
         )
+        progressReports += progress
+        progress.begin(size).closing {
+            follow { UploadProgress(bytesSent = size, totalBytes = size, elapsedMillis = 1_000) }
+        }
         return sent
     }
 
@@ -592,7 +691,13 @@ internal class FakeSendMedia(
     }
 }
 
-/** Drives the whole command tree the way `main` does, against injected fakes. */
+/**
+ * Drives the whole command tree the way `main` does, against injected fakes.
+ *
+ * [stdin] is the text a command that reads a message body from `-` sees. A command that reads raw
+ * bytes takes its own stream instead, through [sendFileCommand], because text is the wrong shape for
+ * bytes and pretending otherwise is the bug [CliFixture.sendFileWithBytes] exists to catch.
+ */
 internal class CliFixture(
     val output: RecordingOutput,
     val authenticate: FakeAuthenticate,
@@ -600,6 +705,18 @@ internal class CliFixture(
 ) {
     fun run(vararg args: String, stdin: String = "") = root.test(args.toList(), stdin)
 }
+
+/**
+ * A `send-file` command whose `-` path reads [bytes] rather than the process's own stdin.
+ *
+ * Production reads `System.in` and nothing else; this only lets a test pipe bytes that no decoder
+ * would survive, which is exactly what a real pipe can carry.
+ */
+internal fun sendFileWithBytes(bytes: ByteArray): SendFileCommand =
+    SendFileCommand(ByteArrayInputStream(bytes))
+
+/** [sendFileWithBytes] for a payload written as bytes in the test. */
+internal fun sendFileWithText(text: String): SendFileCommand = sendFileWithBytes(text.toByteArray())
 
 internal fun cliFixture(
     config: AppConfig = AppConfig(
@@ -623,6 +740,9 @@ internal fun cliFixture(
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
     nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
+    sendFileCommand: SendFileCommand = SendFileCommand(),
+    interactiveTerminal: Boolean = false,
+    progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
 ): CliFixture {
     val context = AppContext(
         configDir = configDir,
@@ -641,6 +761,8 @@ internal fun cliFixture(
         listenFactory = { listen },
         inlineFactory = { inline },
         sendMediaFactory = { sendMedia },
+        isInteractiveTerminal = interactiveTerminal,
+        progressFactory = progressFactory,
     )
     val root = KotlogrammeCommand { _, _, _ -> context }
         .subcommands(
@@ -652,7 +774,7 @@ internal fun cliFixture(
             DialogsCommand(),
             HistoryCommand(),
             SendCommand(),
-            SendFileCommand(),
+            sendFileCommand,
             SendMediaUrlCommand(),
             CopyMediaCommand(),
             EditCommand(),

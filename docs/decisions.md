@@ -186,3 +186,59 @@ a deliberately raw upload — without making that the common path. Reusing `File
 be read is still a video with null metadata, a file with no extension is a document, and nothing is
 deleted or rewritten, so the changed default changes the bubble, not the payload.
 
+## 0010 — Progress as a port with the service owning the slot, not a rendering callback
+
+**Decision.** Upload progress is an `UploadProgressReporter` in `application/port/spi` that hands out
+an `UploadProgressSlot`. `SendMediaService` opens the slot once the input is known good and before any
+bytes move, and closes it in a `finally`. The terminal bar is an `UploadProgressReporter` in
+`adapter/format`; `adapter/telegram` only attaches the facade's counter to the slot it was given.
+
+**Alternatives.** A `((sent: Long) -> Unit)` callback threaded through the gateway, which reads more
+directly. Having `adapter/telegram` draw the bar itself, which needs no new port at all. Buffering the
+upload and drawing from the same thread, which is what the facade's own blocking calls make look
+tempting.
+
+**Why.** An upload blocks the thread performing it, so the code that draws cannot also be the code
+that uploads. A counter plus a slot splits the two without either side knowing about the other, and
+`isWatched` lets a bar that nobody asked for cost nothing: the gateway skips the facade's progress
+handle entirely and the upload stays on its plain path. A callback cannot be cleaned up, because a
+partly drawn line has to be erased on the failure and the interrupt paths as well as the successful
+one, and only the code that opened the bar knows when it is over; closing in a `finally` in the
+service is that place, and it is also offline-testable, which a `TelegramClient`-shaped drawing loop
+would not be. Putting the bar in `adapter/format` rather than `adapter/telegram` keeps the render
+loop out of the Telegram adapter, so no presentation concern is coupled to the library.
+
+## 0011 — The progress bar follows the terminal, like colour
+
+**Decision.** The bar is on when `System.console() != null` and off otherwise. `--progress` forces it
+on, `--no-progress` forces it off and wins when both are given.
+
+**Alternatives.** On by default everywhere. On only with `--progress`, leaving the flag mandatory.
+
+**Why.** A carriage return is a control character: in a pipeline or a redirected file it becomes part
+of the data, and a consumer reading the command's output sees a line with embedded returns on it. The
+test that matters is therefore "does this terminal exist", not "is progress useful", and that is the
+same question `--color` already asks, so the two now resolve identically and `--no-progress` mirrors
+`--no-color`. On by default would break scripts silently; making the flag mandatory would put work on
+the common case, which is a person watching a terminal.
+
+## 0012 — Piped stdin is spooled to a temporary file rather than buffered
+
+**Decision.** A `-` path reads standard input as raw bytes into a `SpoolFile`, a temporary file that
+is measured for its length, uploaded from with a `FileInputStream` and deleted in a `finally`.
+
+**Alternatives.** Reading stdin as text through Clikt's terminal and buffering it into a
+`ByteArray`, which is what the code did. Buffering the bytes into a `ByteArray` but decoding nothing,
+which fixes the corruption but still holds the payload. Teaching the facade to accept a stream of
+unknown length.
+
+**Why.** Reading it as text was simply wrong: UTF-8 decoding turns an undecodable byte into a
+replacement character and drops a lone `0x0D`, so a piped photo arrived corrupted and longer than it
+went in. But buffering the raw bytes is the wrong fix too — it would satisfy the facade's `size`
+requirement at the cost of the heap the facade was made to avoid, since 0.8.0 uploads incrementally
+precisely so a large file is never fully resident. A spool file keeps the memory bounded, makes the
+size exact without the user having to know it, and turns out to fix a second thing: because the total
+is now real, a piped upload gets a progress percentage rather than only a byte count. It costs one
+pass through the temporary directory, which is cheap next to a network upload and is documented as
+such. Deleting in a `finally` is why a failed upload leaves no spool file, and swallowing a deletion
+failure is why a cleanup problem never masks the outcome of the upload.

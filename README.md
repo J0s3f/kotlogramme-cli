@@ -26,6 +26,7 @@ kotlogramme history @some_chat --limit 50
 kotlogramme send @some_chat "hello from the terminal"
 kotlogramme send-file @some_chat clip.mp4                  # detects the kind: a streamable video
 kotlogramme send-file @some_chat clip.mp4 --no-detect       # ...or send the raw bytes as a document
+cat photo.png | kotlogramme send-file @some_chat - --name photo.png   # ...or pipe the bytes on stdin
 kotlogramme stickers                                       # installed sticker sets
 kotlogramme listen                                         # follow new messages
 kotlogramme shell                                          # interactive REPL
@@ -34,6 +35,30 @@ kotlogramme shell                                          # interactive REPL
 Every command renders as a table by default and can be switched to `--format plain` or `--format
 json` (via `config set --format`) for scripting. `kotlogramme doctor` checks the installation,
 including that the bundled native library loads.
+
+## Upload progress
+
+`send-file` draws a one-line progress bar while the bytes go out, showing the percentage, the bytes
+sent so far, the total and the current rate:
+
+```bash
+kotlogramme send-file @some_chat clip.mp4
+```
+
+The bar is on by default when the output is a terminal, and off when it is piped or redirected, so a
+script gets no carriage returns in its output. `--progress` forces it on and `--no-progress` turns it
+off; `--no-progress` wins if both are given, exactly as `--no-color` wins over `--color`. Only
+`send-file` uploads bytes, so only `send-file` has these flags. With `--no-color` the bar is plain
+ASCII. An upload that finishes before the first tick draws nothing at all, and the line is erased
+whether the upload finished, failed or was interrupted with Ctrl-C.
+
+Piped input is spooled to a temporary file before the upload starts, because Telegram has to be told
+the total before the first part is sent and a pipe carries no length. The spool file is what makes a
+`cat photo.png | kotlogramme send-file @some_chat -` upload the exact bytes that were piped, and it
+also gives the bar a real total, so a piped upload gets a percentage too. The spool file is deleted
+once the upload ends, whichever way it ended. The one cost is that the bytes pass through the
+system's temporary directory once: that costs disk I/O rather than memory, and the upload itself
+still streams in chunks rather than holding the whole file in the heap.
 
 ## Getting the client
 
@@ -76,7 +101,7 @@ the 39.4 MB fat jar, the real win being startup and no JVM.
 The client depends on the current Maven Central release of the facade. To test a different one:
 
 ```bash
-./gradlew test -PkotlogrammeVersion=0.7.0
+./gradlew test -PkotlogrammeVersion=0.8.0
 ```
 
 ## Documentation

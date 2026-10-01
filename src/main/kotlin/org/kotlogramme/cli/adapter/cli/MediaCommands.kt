@@ -2,18 +2,20 @@ package org.kotlogramme.cli.adapter.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.requireObject
-import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.int
+import org.kotlogramme.cli.adapter.format.progressEnabled
 import org.kotlogramme.cli.adapter.format.renderMessages
+import org.kotlogramme.cli.adapter.media.SpoolFile
 import org.kotlogramme.cli.adapter.media.mediaKindOf
 import org.kotlogramme.cli.application.port.spi.MediaKindHint
+import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.domain.Message
-import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.nio.file.Path
 
 /**
@@ -30,14 +32,24 @@ import java.nio.file.Path
  * other and with `--detect`/`--no-detect`. Explicit `--duration`, `--width` and `--height` describe
  * a video; they are only accepted with `--video` or `--detect`, where they override the probe.
  *
- * A `-` path reads standard input and uploads it as a stream named by `--name`, defaulting to
- * `stdin`, because Telegram needs a file name for an upload that has no path. A piped file is never
- * streamable, so it is sent as a document, or as a photo with `--detect` when `--name` names one.
+ * A `-` path reads standard input and uploads it under the name `--name` gives, defaulting to
+ * `stdin`, because Telegram needs a file name for an upload that has no path. Piped input is read as
+ * raw bytes rather than as text, and spooled to a temporary file that is deleted once the upload
+ * ends: the bytes Telegram sees are the bytes that were piped, and a file larger than the heap still
+ * uploads. A piped file is never streamable, so it is sent as a document, or as a photo with
+ * `--detect` when `--name` names one.
  *
  * `--reply-to` quotes an existing message and `--silent` suppresses the notification; both reach the
  * service for every form of the send, including a stdin stream.
+ *
+ * `--progress` and `--no-progress` choose whether the upload shows a bar as it goes. The bar is on by
+ * default where the output is a terminal and off in a pipeline, so a script gets no carriage returns
+ * in its output; either flag overrides that, and `--no-progress` wins if both are given.
  */
-class SendFileCommand : CliktCommand(name = "send-file") {
+class SendFileCommand(
+    /** The pipe a `-` path reads: the process's own, or whatever a caller hands in. */
+    private val stdin: InputStream = System.`in`,
+) : CliktCommand(name = "send-file") {
     private val appContext by requireObject<AppContext>()
 
     private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")
@@ -54,6 +66,8 @@ class SendFileCommand : CliktCommand(name = "send-file") {
     private val name by option("--name", help = "The upload file name for a stdin stream; defaults to stdin")
     private val replyTo by option("--reply-to", help = "Reply to this message id").int()
     private val silent by option("--silent", help = "Send without a notification").flag()
+    private val progress by option("--progress", help = "Show an upload progress bar even where the output is not a terminal").flag()
+    private val noProgress by option("--no-progress", help = "Never show an upload progress bar, even on a terminal").flag()
 
     override fun run() {
         val message = rejectInvalidInput {
@@ -69,9 +83,10 @@ class SendFileCommand : CliktCommand(name = "send-file") {
         appContext.output.renderMessages(listOf(message), appContext.messageStyler)
     }
 
-    private fun send(): Message =
-        when {
-            path == STDIN -> sendStdin()
+    private fun send(): Message {
+        val reporter = uploadProgress()
+        return when {
+            path == STDIN -> sendStdin(reporter)
             photo -> appContext.sendMedia().sendFile(
                 peer,
                 Path.of(path),
@@ -79,6 +94,7 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 asPhoto = true,
                 replyToMessageId = replyTo,
                 silent = silent,
+                progress = reporter,
             )
             video -> appContext.sendMedia().sendVideo(
                 peer,
@@ -89,6 +105,7 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 height,
                 replyTo,
                 silent,
+                reporter,
             )
             noDetect -> appContext.sendMedia().sendFile(
                 peer,
@@ -97,18 +114,26 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 asPhoto = false,
                 replyToMessageId = replyTo,
                 silent = silent,
+                progress = reporter,
             )
-            else -> sendDetected(Path.of(path))
+            else -> sendDetected(Path.of(path), reporter)
         }
-
-    private fun sendStdin(): Message {
-        val uploadName = name ?: STDIN_NAME
-        val data = ByteArrayInputStream(readStdin().toByteArray())
-        val asPhoto = detect && mediaKindOf(uploadName) == MediaKindHint.PHOTO
-        return appContext.sendMedia().sendStream(peer, uploadName, data, caption, asPhoto, replyTo, silent)
     }
 
-    private fun sendDetected(file: Path): Message {
+    private fun sendStdin(reporter: UploadProgressReporter): Message {
+        val uploadName = name ?: STDIN_NAME
+        val asPhoto = detect && mediaKindOf(uploadName) == MediaKindHint.PHOTO
+        // The spool file is what makes a pipe uploadable: it carries the bytes Telegram has to be
+        // told about, and it goes as soon as the send ends, whichever way the send ended.
+        return SpoolFile.of(stdin).use { spool ->
+            spool.open().use { payload ->
+                appContext.sendMedia()
+                    .sendStream(peer, uploadName, payload, caption, asPhoto, replyTo, silent, spool.size, reporter)
+            }
+        }
+    }
+
+    private fun sendDetected(file: Path, reporter: UploadProgressReporter): Message {
         val probe = appContext.mediaProbe().probe(file)
         return when (probe.kind) {
             MediaKindHint.PHOTO -> appContext.sendMedia().sendFile(
@@ -118,6 +143,7 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 asPhoto = true,
                 replyToMessageId = replyTo,
                 silent = silent,
+                progress = reporter,
             )
             MediaKindHint.VIDEO -> appContext.sendMedia().sendVideo(
                 peer,
@@ -128,6 +154,7 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 height ?: probe.height,
                 replyTo,
                 silent,
+                reporter,
             )
             MediaKindHint.DOCUMENT -> appContext.sendMedia().sendFile(
                 peer,
@@ -136,13 +163,15 @@ class SendFileCommand : CliktCommand(name = "send-file") {
                 asPhoto = false,
                 replyToMessageId = replyTo,
                 silent = silent,
+                progress = reporter,
             )
         }
     }
 
-    private fun isMetadataAbsent() = duration == null && width == null && height == null
+    private fun uploadProgress(): UploadProgressReporter =
+        appContext.uploadProgress(progressEnabled(progress, noProgress, appContext.isInteractiveTerminal))
 
-    private fun readStdin(): String = generateSequence { terminal.readLineOrNull(false) }.joinToString("\n")
+    private fun isMetadataAbsent() = duration == null && width == null && height == null
 
     private companion object {
         const val STDIN = "-"

@@ -19,14 +19,22 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
   `--duration`, `--width` and `--height` describe it and override the probe; they are only accepted
   together with `--video` or `--detect`. An AVI video is still sent as a video, just without
   metadata, because this build does not parse that container, and a video whose container cannot be
-  read still goes as a video with what is known. A `-` path reads standard input and uploads it as a
-  plain stream named by `--name`, defaulting to `stdin`, so
-  `cat cat.png | kotlogramme send-file @chat -` works; a piped upload is never streamable, so it is
-  sent as a document, or as a photo with `--detect` when `--name` names one.
+  read still goes as a video with what is known. A `-` path reads standard input as raw bytes and
+  uploads it as a plain stream named by `--name`, defaulting to `stdin`, so
+  `cat cat.png | kotlogramme send-file @chat -` works and the bytes arrive exactly as they were
+  piped; a piped upload is never streamable, so it is sent as a document, or as a photo with
+  `--detect` when `--name` names one. `--progress` and `--no-progress` choose whether the upload shows
+  a bar: it is on by default where the output is a terminal and off where it is piped or redirected,
+  `--progress` forces it on, `--no-progress` turns it off and wins if both are given.
 - `send-media-url <peer> <url> [--caption <text>] [--photo] [--reply-to <id>] [--silent]` — lets
   Telegram fetch the URL and send it, so nothing is uploaded from this machine.
 - `copy-media <peer> <messageId> [--caption <text>] [--reply-to <id>] [--silent]` — re-sends the
   media of an existing message without uploading it again.
+
+A message's media upload shows progress as one rewritten line — the percentage, the bytes sent, the
+total and the rate — while it is on screen. The line is erased when the upload finishes, fails or is
+interrupted, and an upload too quick to reach the first tick draws nothing at all, so a fast upload
+leaves no trace and a pipeline that piped the output gets no carriage returns.
 
 `--reply-to <id>` quotes an existing message and `--silent` sends without a notification; all three
 media commands carry both, and so does a stdin stream.
