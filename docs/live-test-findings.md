@@ -108,3 +108,46 @@ The `--color` flag was added during this pass: piping to `less -R` otherwise los
 entirely, and a captured shell has no terminal, so it was also the only way to check the rendering
 above. `--no-color` still wins when both are given.
 
+
+## Fifth pass, the piped-input corruption and the new file commands
+
+Run against the fat jar from `main`, resolving `kotlogramme` 0.8.0, on 2026-10-01.
+
+### The piped-binary bug, found and fixed in this pass
+
+`send-file @chat -` read standard input as UTF-8 *text*: `readStdin()` was
+`terminal.readLineOrNull(false)` in a sequence joined with `\n`. That is wrong for bytes, and it failed
+in two different ways depending on the input.
+
+| Input | Before | After |
+| --- | --- | --- |
+| 36 bytes containing `0x00`, `0x0D`, `0xFF`, `0xFE` (a PNG) | **no upload at all** - `java.nio.charset.MalformedInputException: Input length = 1`, an uncaught stack trace and a non-zero exit | message 45, `[document 36 B]`, byte-identical round trip |
+| 19 bytes containing a lone `0x0D` and a `0x0D 0x0A` end | message 44, `[document 17 B]` - two bytes silently dropped, no warning | message 46, `[document 19 B]`, byte-identical round trip |
+
+Both halves matter. The invalid-UTF-8 case does not corrupt anything because it never gets as far as
+sending; the valid-UTF-8 case corrupts silently, which is the worse failure for a user because nothing
+signals it.
+
+The fix reads raw bytes from `System.in`, spools them to a temporary file and uploads from a
+`FileInputStream` over it, deleting the spool in a `finally`. Spooling is what lets Telegram be told
+the total - a pipe carries no length - and it keeps the upload streaming in bounded chunks instead of
+holding the payload in memory, so a large piped file is not a heap problem.
+
+**Evidence.** The round trip was checked by downloading each message back with the new `download-media`
+command and comparing SHA-256:
+
+```
+piped in        736C4656CCB13EAE4783692E7CEF99C6F4A64A1F19311DF7DC6FE5E4B5C3EBF0  36 B
+downloaded      736C4656CCB13EAE4783692E7CEF99C6F4A64A1F19311DF7DC6FE5E4B5C3EBF0  36 B
+```
+
+The corrupted message 44 is still in the channel at its original 17 bytes, which is a useful
+before/after pair to look at side by side with message 46.
+
+### `list-files`
+
+The server-side filter is real: `list-files @kotlogramme_test --kind document --limit 10` reached
+messages **46, 45, 44, 43, 39, 35, 34, 29, 28, 25** in one call - the whole channel, back past a
+twenty-message window, including a 1.6 GB video. A client-side scan of the last page would have
+stopped around message 30 and reported a false negative. `--kind video` and `--total` (4) both answer
+correctly, and an unknown kind is refused with the valid names rather than silently matching nothing.
