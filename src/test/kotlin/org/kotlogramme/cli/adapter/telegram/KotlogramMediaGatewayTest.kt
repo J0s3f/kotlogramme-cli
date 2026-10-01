@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.telegram
 import com.github.badoualy.telegram.api.DownloadedMedia
 import com.github.badoualy.telegram.api.Media
 import com.github.badoualy.telegram.api.Message
+import com.github.badoualy.telegram.api.OutgoingMedia
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.UploadedFile
 import org.kotlogramme.cli.application.port.spi.UploadProgress
@@ -287,6 +288,8 @@ internal data class CopyMediaCall(
 
 internal data class DownloadCall(val peer: TelegramPeer, val messageId: Int, val target: Path)
 
+internal data class AlbumCall(val peer: TelegramPeer, val items: List<OutgoingMedia>)
+
 internal class FakeMediaOperations : FacadeMediaOperations {
     var sentFile: Message = message(id = 1)
     var sentVideo: Message = message(id = 1)
@@ -301,6 +304,7 @@ internal class FakeMediaOperations : FacadeMediaOperations {
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
     val downloads = mutableListOf<DownloadCall>()
+    val albums = mutableListOf<AlbumCall>()
     val calls = mutableListOf<Any>()
 
     /** Every slot an upload was handed, so a test can tell a watched upload from an untracked one. */
@@ -385,6 +389,11 @@ internal class FakeMediaOperations : FacadeMediaOperations {
     ): Message {
         copies += CopyMediaCall(peer, fromMessageId, caption, replyToMessageId, silent)
         return copied
+    }
+
+    override fun sendAlbum(peer: TelegramPeer, items: List<OutgoingMedia>): List<Message?> {
+        albums += AlbumCall(peer, items)
+        return listOf(copied)
     }
 
     override fun download(peer: TelegramPeer, messageId: Int, target: Path): DownloadedMedia {

@@ -4,6 +4,7 @@ import org.kotlogramme.cli.application.port.api.SendMedia
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Files
@@ -113,6 +114,15 @@ class SendMediaService(private val gateway: MediaGateway) : SendMedia {
         return gateway.copyMedia(reference, fromMessageId, caption, replyToMessageId, silent)
     }
 
+    override fun sendAlbum(reference: String, items: List<AlbumItem>): List<Message> {
+        require(items.isNotEmpty()) { "an album needs at least one item" }
+        require(items.size <= MAX_ALBUM_ITEMS) {
+            "an album holds at most $MAX_ALBUM_ITEMS items but ${items.size} were given"
+        }
+        items.forEach { requireRegularFile(it.path) }
+        return gateway.sendAlbum(reference, items)
+    }
+
     private fun requireRegularFile(path: Path) {
         require(Files.exists(path)) { "file does not exist: $path" }
         require(Files.isRegularFile(path)) { "not a regular file: $path" }
@@ -138,5 +148,10 @@ class SendMediaService(private val gateway: MediaGateway) : SendMedia {
 
     private fun requirePositiveMessageId(messageId: Int) {
         require(messageId > 0) { "message id must be positive but was $messageId" }
+    }
+
+    private companion object {
+        /** Telegram's own limit for a grouped message. */
+        const val MAX_ALBUM_ITEMS = 10
     }
 }

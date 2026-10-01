@@ -2,7 +2,9 @@ package org.kotlogramme.cli.adapter.telegram
 
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.Message
+import com.github.badoualy.telegram.api.OutgoingMedia
 import java.io.InputStream
 import java.nio.file.Path
 
@@ -93,6 +95,12 @@ internal class KotlogramMediaGateway(
 
     override fun download(reference: String, messageId: Int, target: Path): Path =
         Path.of(operations.download(resolver.resolve(reference), messageId, target).path)
+
+    override fun sendAlbum(reference: String, items: List<AlbumItem>): List<Message> =
+        operations.sendAlbum(
+            resolver.resolve(reference),
+            items.map { OutgoingMedia(path = it.path, caption = it.caption, asPhoto = it.asPhoto) },
+        ).mapNotNull { it?.toMessage() }
 
     override fun fileName(reference: String, messageId: Int): String? =
         operations.message(resolver.resolve(reference), messageId)?.toMessage()?.media?.name

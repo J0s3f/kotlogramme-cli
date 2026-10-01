@@ -49,6 +49,7 @@ import org.kotlogramme.cli.adapter.cli.SendCommand
 import org.kotlogramme.cli.adapter.cli.SendFileCommand
 import org.kotlogramme.cli.adapter.cli.SendMediaUrlCommand
 import org.kotlogramme.cli.adapter.cli.SendStickerCommand
+import org.kotlogramme.cli.adapter.cli.SendAlbumCommand
 import org.kotlogramme.cli.adapter.cli.SessionsCommand
 import org.kotlogramme.cli.adapter.cli.ShellCommand
 import org.kotlogramme.cli.adapter.cli.StickerSetCommand
@@ -108,6 +109,7 @@ fun main(args: Array<String>) {
                 HistoryCommand(),
                 SendCommand(),
                 SendFileCommand(),
+                SendAlbumCommand(),
                 SendMediaUrlCommand(),
                 CopyMediaCommand(),
                 DownloadMediaCommand(),

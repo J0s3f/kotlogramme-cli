@@ -3,6 +3,7 @@ package org.kotlogramme.cli.application.service
 import org.junit.jupiter.api.io.TempDir
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
@@ -133,6 +134,8 @@ private class FakeDownloadGateway : MediaGateway {
         replyToMessageId: Int?,
         silent: Boolean,
     ): Message = error("not used")
+
+    override fun sendAlbum(reference: String, items: List<AlbumItem>): List<Message> = error("not used")
 
     override fun download(reference: String, messageId: Int, target: Path): Path {
         downloads += DownloadCall(reference, messageId, target)

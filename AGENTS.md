@@ -273,6 +273,51 @@ from the outset. Keep changes small, logical and committed frequently.
 - Prefer searching and reading files over guessing. Do not infer tool or API names.
 - If genuinely blocked, stop and report the exact error rather than guessing.
 
+#### Recognising a stuck or looping agent
+
+Several agents have burned large amounts of time in the same failure mode, so treat it as expected
+rather than unusual. The symptom is **text with no tool calls**: the agent emits "Let me run.",
+"Running.", "Emit." or "Let me apply." over and over, often with an explicit promise to act next,
+and sometimes acknowledging the loop without escaping it. A plain repetition of the *same* tool call
+with the same arguments is the same problem.
+
+Loops are almost never a reasoning failure. They are a **failing or slow command the agent keeps
+retrying without reading its output**. In every case seen here the cause was concrete:
+
+- a one-character typo in a version string (`0.9.8-loc` vs `0.9.8-local`) making a dependency
+  unresolvable, retried about twenty times;
+- a mid-refactor compile error (an interface method declared, implementations not yet written) with
+  the build re-run unchanged;
+- a Gradle daemon contention failure between concurrent agents, re-run without reading the error.
+
+How to handle one:
+
+1. **Check the repository before assuming the work is lost.** In every case the agent had already
+   committed most of the work and often finished the feature; only the final build or commit was
+   missing. Read `git log`, `git status` and the file timestamps first.
+2. **Read the failing command's actual output yourself.** That output is the whole diagnosis, and it
+   also tells you whether the agent's work is correct. Fix the cause directly if it is small.
+3. **Stop the agent with a short, explicit instruction** naming what not to do — no tool calls, no
+   edits, reply in one sentence. This has worked immediately every time.
+4. **Do not kill processes to stop an agent.** The OpenCode host, its renderer, GPU and network
+   children are shared with the user's own session; killing the wrong one closes their window.
+5. **Do not restart an agent for work that is already committed.** Finish it directly, or brief a new
+   agent on exactly what exists and what remains.
+
+Prevention worth more than cure: give every agent its **own worktree**, so a half-finished refactor
+in the main checkout cannot break another agent's build, and concurrent Gradle builds cannot fight
+over `build/` and `.gradle/`. State the exact version strings and full paths in the brief — most of
+these loops started as a guess about a value that could simply have been supplied.
+
+### Gradle daemon contention
+
+When more than one build runs against the same checkout, Kotlin compilation can fail with
+`Compilation in Kotlin daemon has failed` / `Incremental compilation failed: null`. This is
+contention, not a code defect — the compiler retries in-process and tests still run, but the build
+reports failure. Fix it with `.\gradlew.bat --stop`, delete `build\kotlin` and `.gradle`, and re-run;
+`GRADLE_OPTS=-Dkotlin.compiler.execution.strategy=in-process` also avoids it. Run `--stop` in its own
+invocation: combined with a build in one command it kills the daemon that build just started.
+
 ## Documentation workflow
 
 Keep the documentation current:

@@ -2,6 +2,7 @@ package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.DownloadedMedia
 import com.github.badoualy.telegram.api.Message
+import com.github.badoualy.telegram.api.OutgoingMedia
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.UploadedFile
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
@@ -73,6 +74,9 @@ internal interface FacadeMediaOperations {
         replyToMessageId: Int?,
         silent: Boolean,
     ): Message
+
+    /** Sends [items] as one grouped message, which is `messagesSendAlbum`. */
+    fun sendAlbum(peer: TelegramPeer, items: List<OutgoingMedia>): List<Message?>
 
     /** Downloads the media of message [messageId] in [peer] into [target], which is `downloadMedia`. */
     fun download(peer: TelegramPeer, messageId: Int, target: Path): DownloadedMedia

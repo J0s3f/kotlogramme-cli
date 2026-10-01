@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.telegram
 import com.github.badoualy.telegram.api.DownloadedMedia
 import com.github.badoualy.telegram.api.MediaKind
 import com.github.badoualy.telegram.api.Message
+import com.github.badoualy.telegram.api.OutgoingMedia
 import com.github.badoualy.telegram.api.TelegramClient
 import com.github.badoualy.telegram.api.TelegramPeer
 import com.github.badoualy.telegram.api.UploadedFile
@@ -130,6 +131,9 @@ internal class KotlogramMediaOperations(private val client: TelegramClient) : Fa
 
     override fun download(peer: TelegramPeer, messageId: Int, target: Path): DownloadedMedia =
         client.downloadMedia(peer, messageId, target)
+
+    override fun sendAlbum(peer: TelegramPeer, items: List<OutgoingMedia>): List<Message?> =
+        client.messagesSendAlbum(peer, items)
 
     override fun message(peer: TelegramPeer, messageId: Int): Message? =
         client.messagesGetMessages(peer, listOf(messageId)).firstOrNull()

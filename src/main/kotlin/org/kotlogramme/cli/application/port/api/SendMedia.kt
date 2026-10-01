@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.application.port.api
 
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
@@ -64,4 +65,12 @@ interface SendMedia {
     ): Message
 
     fun copyMedia(reference: String, fromMessageId: Int, caption: String, replyToMessageId: Int?, silent: Boolean): Message
+
+    /**
+     * Sends one to ten files as a single grouped message.
+     *
+     * The facade's album carries no reply-to or silent flag, so neither is offered here; the
+     * returned list is the messages Telegram created, in order.
+     */
+    fun sendAlbum(reference: String, items: List<AlbumItem>): List<Message>
 }

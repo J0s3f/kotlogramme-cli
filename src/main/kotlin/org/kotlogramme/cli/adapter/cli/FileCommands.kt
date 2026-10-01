@@ -41,8 +41,8 @@ class DownloadMediaCommand : CliktCommand(name = "download-media") {
         val (path, size) = try {
             rejectInvalidInput { download() }
         } catch (error: TelegramException) {
-            // TDLib rejects the download itself - a message that has no media or does not resolve -
-            // and the facade reports that as this; the command names what it was trying to do.
+            // The facade rejects the download itself - a message that has no media or does not resolve -
+            // and it reports that as this; the command names what it was trying to do.
             throw UsageError("Could not download the media of message $messageId in $peer: ${error.message}")
         }
         appContext.output.line("$path\t$size")

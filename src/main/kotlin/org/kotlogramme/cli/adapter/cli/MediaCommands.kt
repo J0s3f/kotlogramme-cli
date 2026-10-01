@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -14,6 +15,7 @@ import org.kotlogramme.cli.adapter.media.SpoolFile
 import org.kotlogramme.cli.adapter.media.mediaKindOf
 import org.kotlogramme.cli.application.port.spi.MediaKindHint
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
@@ -214,5 +216,37 @@ class CopyMediaCommand : CliktCommand(name = "copy-media") {
             appContext.sendMedia().copyMedia(peer, messageId, caption, replyTo, silent)
         }
         appContext.output.renderMessages(listOf(message), appContext.messageStyler)
+    }
+}
+
+/**
+ * Sends several files as one grouped message.
+ *
+ * Each path is probed by default so a photo goes out as a photo and anything else as a document;
+ * `--photo` forces every item as a photo. `--caption` captions the first item, which is where
+ * Telegram shows a group's caption. An album holds one to ten items, and the facade's album carries
+ * no reply-to or silent flag, so neither is offered.
+ */
+class SendAlbumCommand : CliktCommand(name = "send-album") {
+    private val appContext by requireObject<AppContext>()
+
+    private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")
+    private val paths by argument("path", help = "One or more files to send together").multiple(required = true)
+    private val caption by option("--caption", help = "The caption, shown on the first item").default("")
+    private val photo by option("--photo", help = "Send every item as a photo").flag()
+
+    override fun run() {
+        val items = rejectInvalidInput { albumItems() }
+        val sent = rejectInvalidInput { appContext.sendMedia().sendAlbum(peer, items) }
+        appContext.output.renderMessages(sent, appContext.messageStyler)
+    }
+
+    private fun albumItems(): List<AlbumItem> = paths.mapIndexed { index, path ->
+        val file = Path.of(path)
+        AlbumItem(
+            path = file,
+            caption = if (index == 0) caption else "",
+            asPhoto = photo || appContext.mediaProbe().probe(file).kind == MediaKindHint.PHOTO,
+        )
     }
 }

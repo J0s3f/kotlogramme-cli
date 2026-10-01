@@ -5,6 +5,7 @@ import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.application.port.spi.UploadProgress
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.Message
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -483,6 +484,11 @@ private data class CopyMediaCall(
     val silent: Boolean,
 )
 
+private data class SendAlbumCall(
+    val reference: String,
+    val items: List<AlbumItem>,
+)
+
 private class FakeMediaGateway(
     /** Simulates the upload itself failing after the slot was opened. */
     private val uploadFailure: RuntimeException? = null,
@@ -492,6 +498,7 @@ private class FakeMediaGateway(
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
     val streamSends = mutableListOf<SendStreamCall>()
+    val albums = mutableListOf<SendAlbumCall>()
 
     var sent: Message = message
     var downloaded: Path = Path.of("download.bin")
@@ -584,6 +591,11 @@ private class FakeMediaGateway(
     ): Message {
         copies += CopyMediaCall(reference, fromMessageId, caption, replyToMessageId, silent)
         return sent
+    }
+
+    override fun sendAlbum(reference: String, items: List<AlbumItem>): List<Message> {
+        albums += SendAlbumCall(reference, items)
+        return listOf(sent)
     }
 
     override fun download(reference: String, messageId: Int, target: Path): Path {

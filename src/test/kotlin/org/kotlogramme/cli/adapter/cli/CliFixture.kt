@@ -33,6 +33,7 @@ import org.kotlogramme.cli.application.port.spi.UploadProgress
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import org.kotlogramme.cli.domain.Account
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatActivity
@@ -678,6 +679,9 @@ internal data class SendUrlCall(
     val silent: Boolean,
 )
 
+/** An album send request. */
+internal data class SendAlbumCall(val reference: String, val items: List<AlbumItem>)
+
 /** A copy request naming the source message. */
 internal data class CopyMediaCall(
     val reference: String,
@@ -697,6 +701,7 @@ internal class FakeSendMedia(
     val streamSends = mutableListOf<SendStreamCall>()
     val urlSends = mutableListOf<SendUrlCall>()
     val copies = mutableListOf<CopyMediaCall>()
+    val albums = mutableListOf<SendAlbumCall>()
 
     /** Every reporter a send was handed, so a test can tell a silent run from a watched one. */
     val progressReports = mutableListOf<UploadProgressReporter>()
@@ -803,6 +808,12 @@ internal class FakeSendMedia(
         reject()
         copies += CopyMediaCall(reference, fromMessageId, caption, replyToMessageId, silent)
         return sent
+    }
+
+    override fun sendAlbum(reference: String, items: List<AlbumItem>): List<Message> {
+        reject()
+        albums += SendAlbumCall(reference, items)
+        return listOf(sent)
     }
 }
 
@@ -933,6 +944,7 @@ internal fun cliFixture(
             HistoryCommand(),
             SendCommand(),
             sendFileCommand,
+            SendAlbumCommand(),
             SendMediaUrlCommand(),
             CopyMediaCommand(),
             DownloadMediaCommand(),

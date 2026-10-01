@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.application.port.spi
 
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
+import org.kotlogramme.cli.domain.AlbumItem
 import org.kotlogramme.cli.domain.Message
 import java.io.InputStream
 import java.nio.file.Path
@@ -66,6 +67,9 @@ interface MediaGateway {
 
     /** Re-sends the media of an existing message without a re-upload. */
     fun copyMedia(reference: String, fromMessageId: Int, caption: String, replyToMessageId: Int?, silent: Boolean): Message
+
+    /** Sends one to ten files as one grouped message. */
+    fun sendAlbum(reference: String, items: List<AlbumItem>): List<Message>
 
     /** Downloads the media of a message to [target] and returns the path actually written. */
     fun download(reference: String, messageId: Int, target: Path): Path
