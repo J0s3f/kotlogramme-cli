@@ -35,6 +35,18 @@ internal fun TelegramPeer.toChat(): Chat = Chat(
     lastMessageAt = null,
 )
 
+/** The label the dialog list always shows for the private chat with yourself. */
+internal const val SAVED_MESSAGES_TITLE = "Saved Messages"
+
+/**
+ * Maps the self peer to the fixed Saved Messages row.
+ *
+ * The self peer's own name is the account holder's first and last name, which changes with the
+ * profile and reads like a contact rather than the special conversation it is. The label is fixed
+ * to [SAVED_MESSAGES_TITLE] so the row is recognisable whatever the account is called.
+ */
+internal fun TelegramPeer.toSavedMessagesChat(): Chat = toChat().copy(title = SAVED_MESSAGES_TITLE)
+
 private fun TelegramPeer.title(): String =
     name?.takeIf(String::isNotBlank) ?: username ?: id.toString()
 

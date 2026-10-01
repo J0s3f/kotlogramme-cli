@@ -49,4 +49,46 @@ class ChatReferenceResolverTest {
         assertEquals(listOf("ada"), operations.resolvedUsernames)
         assertEquals(emptyList(), operations.resolvedIds)
     }
+
+    @Test
+    fun `me resolves to the self peer`() {
+        val self = peer(id = 99, kind = "user", name = "Sam Self")
+        val operations = FakeChatOperations().apply { selfPeer = self }
+
+        assertSame(self, ChatReferenceResolver(operations).resolve("me"))
+        assertEquals(1, operations.selfResolutions)
+        // The self alias is not a username and must never reach the username path.
+        assertEquals(emptyList(), operations.resolvedUsernames)
+    }
+
+    @Test
+    fun `the at-prefixed me resolves to the self peer without touching the username path`() {
+        val self = peer(id = 99, kind = "user", name = "Sam Self")
+        val operations = FakeChatOperations().apply { selfPeer = self }
+
+        assertSame(self, ChatReferenceResolver(operations).resolve("@me"))
+        assertEquals(1, operations.selfResolutions)
+        assertEquals(emptyList(), operations.resolvedUsernames)
+    }
+
+    @Test
+    fun `the self alias is case-insensitive`() {
+        for (reference in listOf("me", "Me", "ME", "@me", "@Me", "@ME")) {
+            val self = peer(id = 99, kind = "user", name = "Sam Self")
+            val operations = FakeChatOperations().apply { selfPeer = self }
+
+            assertSame(self, ChatReferenceResolver(operations).resolve(reference), reference)
+            assertEquals(1, operations.selfResolutions, reference)
+        }
+    }
+
+    @Test
+    fun `a username that merely starts with me is still a username`() {
+        val mel = peer(id = 5, kind = "user", username = "mel", name = "Mel")
+        val operations = FakeChatOperations().apply { resolvedPeer = mel }
+
+        assertSame(mel, ChatReferenceResolver(operations).resolve("@mel"))
+        assertEquals(listOf("mel"), operations.resolvedUsernames)
+        assertEquals(0, operations.selfResolutions)
+    }
 }

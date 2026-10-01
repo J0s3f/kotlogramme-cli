@@ -5,14 +5,18 @@ import com.github.badoualy.telegram.api.TelegramPeer
 /**
  * Turns a user-supplied reference into a facade peer.
  *
- * Three shapes are understood: a `@username`, a Telegram invite or public link, and a numeric
- * dialog id. Anything else is rejected with a message that says what was expected rather than
- * guessed at.
+ * Four shapes are understood: the self alias (`me` or `@me`, which is the private chat with
+ * yourself that Telegram addresses as `inputPeerSelf`), a `@username`, a Telegram invite or public
+ * link, and a numeric dialog id. Anything else is rejected with a message that says what was
+ * expected rather than guessed at.
  */
 internal class ChatReferenceResolver(private val operations: FacadeChatOperations) {
     fun resolve(reference: String): TelegramPeer {
         val trimmed = reference.trim()
         return when {
+            // The self alias has to precede the `@username` branch: `@me` is not a username, and
+            // `contactsResolveUsername` would look for a user actually named "me".
+            trimmed.isSelfAlias() -> operations.resolveSelf()
             trimmed.startsWith("@") -> operations.resolveUsername(trimmed.removePrefix("@"))
             trimmed.isTelegramLink() -> resolveLink(trimmed)
             trimmed.toLongOrNull() != null -> resolveId(trimmed.toLong())
@@ -55,7 +59,11 @@ internal class ChatReferenceResolver(private val operations: FacadeChatOperation
             ?.peer
 
     private fun unknownReference(reference: String): String =
-        "Cannot resolve '$reference': expected @username, a numeric id, or a Telegram invite link"
+        "Cannot resolve '$reference': expected me, @username, a numeric id, or a Telegram invite link"
+
+    /** `me` or `@me`, case-insensitively, is the private chat with yourself. */
+    private fun String.isSelfAlias(): Boolean =
+        removePrefix("@").equals("me", ignoreCase = true)
 
     private fun String.isTelegramLink(): Boolean = startsWith("http://") || startsWith("https://")
 

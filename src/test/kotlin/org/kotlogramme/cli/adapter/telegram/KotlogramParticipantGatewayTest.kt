@@ -99,6 +99,8 @@ internal class FakeParticipantChatOperations : FacadeChatOperations {
         return peers[username] ?: error("no peer for $username")
     }
 
+    override fun resolveSelf(): TelegramPeer = error("this fake never resolves the self peer")
+
     override fun parseInviteLink(link: String): String? = null
 
     override fun importChatInvite(link: String): TelegramPeer? = null

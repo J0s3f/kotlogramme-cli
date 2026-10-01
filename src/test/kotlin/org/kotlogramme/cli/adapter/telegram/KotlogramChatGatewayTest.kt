@@ -13,18 +13,65 @@ class KotlogramChatGatewayTest {
     private val now = Instant.parse("2026-09-30T12:00:00Z")
 
     @Test
-    fun `dialogs maps each row and skips folder rows`() {
+    fun `dialogs prepends Saved Messages and skips folder rows`() {
         val operations = FakeChatOperations().apply {
+            selfPeer = peer(id = 1, kind = "user", name = "Sam Self")
             dialogs = listOf(
                 dialog(peer(id = 7, kind = "user", name = "Ada")),
-                dialog(peer(id = 1, name = "News"), isFolder = true),
+                dialog(peer(id = 8, name = "News"), isFolder = true),
             )
         }
 
         val chats = KotlogramChatGateway(operations) { now }.dialogs(25)
 
         assertEquals(25, operations.lastDialogsLimit)
-        assertEquals(listOf(7L), chats.map { it.id })
+        assertEquals(listOf(1L, 7L), chats.map { it.id })
+        assertEquals(1, operations.selfResolutions)
+    }
+
+    @Test
+    fun `Saved Messages is the first row and is labelled stably`() {
+        val operations = FakeChatOperations().apply {
+            // The self peer's own name must not leak into the row.
+            selfPeer = peer(id = 42, kind = "user", username = "sam", name = "Sam Self")
+            dialogs = listOf(dialog(peer(id = 7, kind = "user", name = "Ada")))
+        }
+
+        val chats = KotlogramChatGateway(operations) { now }.dialogs(20)
+
+        assertEquals("Saved Messages", chats.first().title)
+        assertEquals(42L, chats.first().id)
+        assertEquals(ChatKind.PRIVATE, chats.first().kind)
+    }
+
+    @Test
+    fun `Saved Messages is an extra row beyond the requested dialogs`() {
+        val operations = FakeChatOperations().apply {
+            selfPeer = peer(id = 1)
+            dialogs = (1..20).map { dialog(peer(id = it + 100L, name = "Chat $it")) }
+        }
+
+        val chats = KotlogramChatGateway(operations) { now }.dialogs(20)
+
+        // `limit` still buys 20 real dialogs; Saved Messages does not consume one of the slots.
+        assertEquals(21, chats.size)
+        assertEquals(1L, chats.first().id)
+    }
+
+    @Test
+    fun `Saved Messages is not duplicated when the listing also returns it`() {
+        val operations = FakeChatOperations().apply {
+            selfPeer = peer(id = 1, name = "Sam Self")
+            dialogs = listOf(
+                dialog(peer(id = 1, name = "Sam Self")),
+                dialog(peer(id = 7, kind = "user", name = "Ada")),
+            )
+        }
+
+        val chats = KotlogramChatGateway(operations) { now }.dialogs(20)
+
+        assertEquals(listOf(1L, 7L), chats.map { it.id })
+        assertEquals(1, chats.count { it.title == "Saved Messages" })
     }
 
     @Test
@@ -113,10 +160,13 @@ internal class FakeChatOperations : FacadeChatOperations {
     var inviteHash: String? = null
     var importedPeer: TelegramPeer? = null
     var peerById: TelegramPeer? = null
+    /** The self peer `resolveSelf` answers; a plausible account so a test can prove the label. */
+    var selfPeer: TelegramPeer = peer(id = 1, kind = "user", name = "Sam Self")
     val resolvedUsernames = mutableListOf<String>()
     val parsedLinks = mutableListOf<String>()
     val importedLinks = mutableListOf<String>()
     val resolvedIds = mutableListOf<Long>()
+    var selfResolutions = 0
 
     override fun dialogs(limit: Int): List<Dialog> {
         lastDialogsLimit = limit
@@ -126,6 +176,11 @@ internal class FakeChatOperations : FacadeChatOperations {
     override fun resolveUsername(username: String): TelegramPeer {
         resolvedUsernames += username
         return resolvedPeer ?: error("no resolved peer configured")
+    }
+
+    override fun resolveSelf(): TelegramPeer {
+        selfResolutions += 1
+        return selfPeer
     }
 
     override fun parseInviteLink(link: String): String? {

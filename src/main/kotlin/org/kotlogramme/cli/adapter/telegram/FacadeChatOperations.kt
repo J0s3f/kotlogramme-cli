@@ -20,6 +20,15 @@ internal interface FacadeChatOperations {
     /** Resolves a bare username, which is `contactsResolveUsername`. */
     fun resolveUsername(username: String): TelegramPeer
 
+    /**
+     * Resolves the peer the session's account is itself, which is `getSelfPeer`: the private chat
+     * with yourself, addressed as `inputPeerSelf` rather than as a chat id.
+     *
+     * It never appears in `messages.getDialogs`, so no dialog row can reach it and
+     * `contactsResolveUsername` would look for a user *named* "me" instead.
+     */
+    fun resolveSelf(): TelegramPeer
+
     /** The hash of a private invite link, or null for a public link, which is `messagesParseInviteLink`. */
     fun parseInviteLink(link: String): String?
 
