@@ -1,3 +1,5 @@
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
 rootProject.name = "kotlogramme-cli"
 
 plugins {
@@ -6,10 +8,14 @@ plugins {
 }
 
 dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
+        // A facade tag reaches JitPack before Maven Central catches up, so the current facade is
+        // resolved from here; Maven Central stays first for everything already published.
+        maven { url = uri("https://jitpack.io") }
         // -PuseMavenLocal resolves a locally published kotlogramme while the facade and the client
-        // are developed together; CI and ordinary builds stay on Maven Central.
+        // are developed together; CI and ordinary builds stay on JitPack.
         if (gradle.startParameter.projectProperties.containsKey("useMavenLocal")) {
             mavenLocal()
         }

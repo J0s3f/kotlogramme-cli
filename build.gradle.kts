@@ -10,9 +10,9 @@ plugins {
 group = "io.github.j0s3f"
 version = providers.gradleProperty("version").orElse("0.1.0-SNAPSHOT").get()
 
-// The facade this client exercises. Override with -PkotlogrammeVersion=... while a release is
-// still being validated on Maven Central.
-val kotlogrammeVersion = providers.gradleProperty("kotlogrammeVersion").orElse("0.9.0").get()
+// The facade this client exercises. It is published to JitPack, where a tag is available before
+// Maven Central catches up; override with -PkotlogrammeVersion=... to test a different tag.
+val kotlogrammeVersion = providers.gradleProperty("kotlogrammeVersion").orElse("v0.9.7").get()
 
 // This application is not a library anyone links against, so it targets the newest LTS JVM and the
 // newest stable Kotlin rather than the conservative versions the facade is bound to.
@@ -21,7 +21,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("io.github.j0s3f:kotlogramme:$kotlogrammeVersion")
+    implementation("com.github.J0s3f:kotlogram:$kotlogrammeVersion")
     implementation("com.github.ajalt.clikt:clikt:5.1.0")
     implementation("org.jline:jline:4.4.6")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")

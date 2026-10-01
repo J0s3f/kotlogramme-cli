@@ -10,8 +10,9 @@ application.
 > **Status: usable.** Phases 1-9 are implemented: authentication, configuration, dialogs, history,
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline. The current release is
-> [`v0.3.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.0), carrying the fat jar and
-> the distribution; it builds on `kotlogramme` 0.9.0. Later additions beyond the original phases:
+> [`v0.3.1`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.1), carrying the fat jar and
+> the distribution; it builds on the `kotlogram` `v0.9.7` tag from JitPack. Later additions beyond
+> the original phases:
 > `download-media`, `list-files` with a server-side media-kind filter, and an upload progress bar for
 > `send-file`. Received messages render their formatting, and a message's inline bot is
 > resolved to `@username`; see [`docs/features.md`](docs/features.md) for what ships and
@@ -81,7 +82,7 @@ still streams in chunks rather than holding the whole file in the heap.
 
 ## Getting the client
 
-The current release is [`v0.3.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.0). Its
+The current release is [`v0.3.1`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.1). Its
 GitHub Release carries two assets, both with every dependency and all six native libraries bundled,
 so nothing else has to be downloaded:
 
@@ -89,14 +90,14 @@ so nothing else has to be downloaded:
   ```bash
   java -jar kotlogramme-all.jar --help
   ```
-- **`kotlogramme-0.3.0.zip`** - the `distZip` distribution. Unpack it and run
-  `kotlogramme-0.3.0/bin/kotlogramme` (or `kotlogramme-0.3.0\bin\kotlogramme.bat` on Windows); the
+- **`kotlogramme-0.3.1.zip`** - the `distZip` distribution. Unpack it and run
+  `kotlogramme-0.3.1/bin/kotlogramme` (or `kotlogramme-0.3.1\bin\kotlogramme.bat` on Windows); the
   jar and its dependencies live in `lib/`.
 
 ## Requirements
 
 - **JDK 25** (the newest LTS). Gradle can fetch it automatically via the toolchain resolver.
-- Nothing else: the native Telegram libraries are bundled inside the `kotlogramme` jar and the right
+- Nothing else: the native Telegram libraries are bundled inside the facade jar and the right
   one is loaded for the host at startup.
 
 ## Build and run
@@ -117,10 +118,10 @@ the 39.4 MB fat jar, the real win being startup and no JVM.
 
 ## Picking the facade version
 
-The client depends on the current Maven Central release of the facade. To test a different one:
+The client depends on the facade's `v0.9.7` tag, resolved from JitPack. To test a different tag:
 
 ```bash
-./gradlew test -PkotlogrammeVersion=0.9.0
+./gradlew test -PkotlogrammeVersion=v0.9.6
 ```
 
 ## Documentation

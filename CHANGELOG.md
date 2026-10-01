@@ -4,6 +4,10 @@ All notable changes to `kotlogramme-cli` are recorded here.
 
 ## Unreleased
 
+## 0.3.1 - 2026-10-01
+
+Built on the `kotlogram` `v0.9.7` tag, resolved from JitPack.
+
 ### Features
 
 - A reply's quoted text is now shown. Received messages carry the text a reply quotes into the
@@ -24,6 +28,12 @@ All notable changes to `kotlogramme-cli` are recorded here.
   drives the facade's own background update loop, which polls in short waits and joins its thread on
   stop, so a stop costs at most one short poll. `--once`, `--json` and the human rendering are
   unchanged, and the command no longer starts a worker thread of its own.
+
+### Project
+
+- The facade dependency moves from Maven Central's `io.github.j0s3f:kotlogramme` to JitPack's
+  `com.github.J0s3f:kotlogram:v0.9.7`. A facade tag reaches JitPack before Maven Central catches up,
+  so the client pins the tag it was tested against; `-PkotlogrammeVersion=...` still selects another.
 
 ## 0.3.0 - 2026-10-01
 
