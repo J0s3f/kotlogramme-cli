@@ -4,6 +4,8 @@ import org.kotlogramme.cli.application.port.spi.UploadProgress
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
 import java.io.PrintStream
+import java.io.PrintWriter
+import java.io.Writer
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -21,13 +23,34 @@ import kotlin.concurrent.withLock
  *
  * The cursor is never hidden, so there is no cursor state to restore; the line is erased in place and
  * the cursor is left where the next output begins.
+ *
+ * The bar writes to a [PrintWriter] so it can go to the process's own stdout, the fallback, or to a
+ * JLine terminal's writer. JLine uses `WriteConsoleW`, so the block characters and the padding a bar
+ * emits stay correct at any console code page; the bytes are otherwise the same, including the
+ * carriage returns that rewrite one line.
  */
 class UploadProgressBar(
-    private val out: PrintStream = System.out,
+    private val out: PrintWriter,
     private val color: Boolean = false,
     private val intervalMillis: Long = DEFAULT_INTERVAL_MILLIS,
     private val width: Int = DEFAULT_WIDTH,
 ) : UploadProgressReporter {
+    /** Writes to [out], preserving the stream's own charset. */
+    constructor(
+        out: PrintStream = System.out,
+        color: Boolean = false,
+        intervalMillis: Long = DEFAULT_INTERVAL_MILLIS,
+        width: Int = DEFAULT_WIDTH,
+    ) : this(PrintWriter(out, true, out.charset()), color, intervalMillis, width)
+
+    /** Writes to a [writer], such as a JLine terminal's, using the writer's own encoding. */
+    constructor(
+        writer: Writer,
+        color: Boolean = false,
+        intervalMillis: Long = DEFAULT_INTERVAL_MILLIS,
+        width: Int = DEFAULT_WIDTH,
+    ) : this(PrintWriter(writer, true), color, intervalMillis, width)
+
     override fun begin(totalBytes: Long): UploadProgressSlot =
         TerminalProgressSlot(out, color, intervalMillis, width, totalBytes)
 
@@ -42,7 +65,7 @@ class UploadProgressBar(
 
 /** One open bar: the render thread, the counter and the line currently on the terminal. */
 private class TerminalProgressSlot(
-    private val out: PrintStream,
+    private val out: PrintWriter,
     private val color: Boolean,
     private val intervalMillis: Long,
     private val width: Int,

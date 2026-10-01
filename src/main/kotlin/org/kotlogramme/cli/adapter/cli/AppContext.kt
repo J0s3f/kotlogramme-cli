@@ -64,6 +64,7 @@ import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.application.port.spi.MediaProbe
 import org.kotlogramme.cli.application.port.spi.Output
+import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.service.AdminRightsService
 import org.kotlogramme.cli.application.service.AuthenticateService
@@ -81,6 +82,7 @@ import org.kotlogramme.cli.application.service.SearchMessagesService
 import org.kotlogramme.cli.application.service.SendMediaService
 import org.kotlogramme.cli.application.service.SessionsService
 import org.kotlogramme.cli.application.service.StickerService
+import java.io.Writer
 import java.nio.file.Path
 
 /**
@@ -98,6 +100,11 @@ class AppContext(
     private val environment: Map<String, String>,
     /** The entity renderer History and the shell use; plain everywhere else by default. */
     val messageStyler: MessageStyler = MessageStyler.PLAIN,
+    /**
+     * The format [output] renders in. Kept here so a terminal-backed output can be built later, once
+     * the shell has a JLine terminal to write through; see [outputOn].
+     */
+    private val outputFormat: OutputFormat = OutputFormat.TABLE,
     private val authenticateFactory: (AppConfig) -> Authenticate = ::defaultAuthenticate,
     private val listDialogsFactory: (AppConfig) -> ListDialogs = ::defaultListDialogs,
     private val readHistoryFactory: (AppConfig) -> ReadHistory = ::defaultReadHistory,
@@ -129,6 +136,17 @@ class AppContext(
     fun save(config: AppConfig) {
         configStore.save(config)
     }
+
+    /**
+     * An [Output] that renders in the same format but writes through [writer] instead of the process's
+     * own stdout.
+     *
+     * The interactive shell has a JLine terminal, whose writer reaches the console through
+     * `WriteConsoleW`; writing message bodies through it keeps non-ASCII and emoji intact at any
+     * console code page, where [output]'s `System.out` would have turned them into `?` first. The
+     * fallback [output] stays the seam for every run without a terminal.
+     */
+    fun outputOn(writer: Writer): Output = ConsoleOutput(outputFormat, writer)
 
     /**
      * The credentials for this run: the ones in the config, falling back to the `TG_API_ID` and
@@ -244,12 +262,19 @@ class AppContext(
             val format = configStore.load().outputFormat
             val terminal = System.console() != null
             val styled = colorEnabled(noColor, color, environment, terminal = terminal)
+            // Output and the progress bar keep `System.out` here: a one-shot command has no JLine
+            // terminal, and building one would start a background console reader that would steal
+            // stdin from `send-file -`. The interactive shell, which already owns a terminal, swaps
+            // in its writer through [outputOn]; JLine then renders through `WriteConsoleW` and keeps
+            // non-ASCII intact. Redirected runs are unaffected either way, because the fallback is
+            // exactly the `System.out` encoder the JVM chose.
             return AppContext(
                 configDir = dir,
                 configStore = configStore,
                 output = ConsoleOutput(format),
                 environment = environment,
                 messageStyler = messageStylerFor(format, styled),
+                outputFormat = format,
                 isInteractiveTerminal = terminal,
                 progressFactory = { UploadProgressBar(out = System.out, color = styled) },
             )

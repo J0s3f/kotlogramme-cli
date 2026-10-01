@@ -6,6 +6,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.application.port.spi.OutputFormat
 import java.io.PrintStream
+import java.io.PrintWriter
+import java.io.Writer
 
 /**
  * Renders command output to a stream in the configured format.
@@ -14,11 +16,25 @@ import java.io.PrintStream
  * across terminals and easy to assert in tests. A cell may already carry ANSI styling from the
  * renderer above; the escapes are ignored when a column is measured and padded so the border cannot
  * drift, and nothing here adds styling of its own.
+ *
+ * Two sinks are accepted, and the rendering is the same for both. A [PrintStream] is the process's
+ * own stdout and the fallback wherever there is no terminal. A [Writer] is how the output reaches a
+ * JLine terminal without passing through `System.out`: JLine writes with `WriteConsoleW`, which
+ * renders non-ASCII correctly at any console code page, where a `System.out` encoder would have
+ * turned those characters into `?` before the terminal ever saw them.
  */
 class ConsoleOutput(
     private val format: OutputFormat,
-    private val out: PrintStream = System.out,
+    private val out: PrintWriter,
 ) : Output {
+    /**
+     * Renders to [out], preserving the stream's own charset so a redirected run stays byte-identical
+     * to what `System.out` would have written.
+     */
+    constructor(format: OutputFormat, out: PrintStream = System.out) : this(format, PrintWriter(out, true, out.charset()))
+
+    /** Renders to a [writer], such as a JLine terminal's, using the writer's own encoding. */
+    constructor(format: OutputFormat, writer: Writer) : this(format, PrintWriter(writer, true))
     override fun line(text: String) {
         out.println(text)
     }

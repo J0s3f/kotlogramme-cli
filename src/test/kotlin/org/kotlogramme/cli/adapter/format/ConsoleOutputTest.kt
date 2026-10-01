@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.format
 import org.kotlogramme.cli.application.port.spi.OutputFormat
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import java.io.StringWriter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -83,5 +84,37 @@ class ConsoleOutputTest {
         }
 
         assertEquals(listOf("Chats", "id"), rendered.lines())
+    }
+
+    @Test
+    fun `non-ascii text survives a terminal writer unchanged`() {
+        // The terminal path takes a Writer rather than a stream. A StringWriter stands in for
+        // JLine's: what matters here is that no encoder in between replaces the characters, which is
+        // exactly what the process's own stdout does at a legacy console code page.
+        val text = "Привет, мир! 你好 مرحبا 😀🎉"
+
+        val writer = StringWriter()
+        ConsoleOutput(OutputFormat.PLAIN, writer).line(text)
+
+        assertEquals(text, writer.toString().trimEnd('\n', '\r'))
+    }
+
+    @Test
+    fun `a table with non-ascii cells reaches a writer unchanged`() {
+        val rendered = renderWriter(OutputFormat.TABLE) {
+            table(listOf("name"), listOf(listOf("😀 emoji"), listOf("x")))
+        }
+        val lines = rendered.lines()
+
+        assertTrue(rendered.contains("😀 emoji"), "expected the emoji in $rendered")
+        // Padding is measured the same way for every line, so a multi-unit emoji cannot drift the
+        // border here; it is the writer that must not mangle the characters.
+        assertEquals(1, lines.map(::visibleLength).distinct().size)
+    }
+
+    private fun renderWriter(format: OutputFormat, block: ConsoleOutput.() -> Unit): String {
+        val buffer = StringWriter()
+        ConsoleOutput(format, buffer).block()
+        return buffer.toString().replace("\r\n", "\n").trimEnd()
     }
 }

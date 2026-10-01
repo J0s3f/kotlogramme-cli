@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.format
 import org.kotlogramme.cli.application.port.spi.UploadProgress
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import java.io.StringWriter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -114,8 +115,42 @@ class UploadProgressBarTest {
         assertEquals("", out.text())
     }
 
+    @Test
+    fun `a writer-backed bar emits the same carriage-returned bytes as a stream one`() {
+        // The terminal path takes a Writer rather than a stream. What the bar itself emits is
+        // unchanged: it rewrites one line with a carriage return and erases it on close. It is the
+        // characters in that line that the writer path must now preserve.
+        val writer = StringWriter()
+        val bar = UploadProgressBar(writer, color = false, intervalMillis = 1)
+
+        val slot = bar.begin(1_024)
+        slot.follow { UPLOADED }
+        Thread.sleep(WAIT_MILLIS)
+        slot.close()
+
+        val painted = writer.toString()
+        assertTrue(painted.contains("50%"), "expected a painted line in '$painted'")
+        assertTrue(painted.startsWith("\r"), "expected the line to be rewritten in place in '$painted'")
+        assertTrue(painted.endsWith("\r"), "expected the line to be erased in place in '$painted'")
+    }
+
+    @Test
+    fun `a writer-backed coloured bar keeps its block characters intact`() {
+        val colored = StringWriter()
+        val coloredBar = UploadProgressBar(colored, color = true, intervalMillis = 1)
+        val coloredSlot = coloredBar.begin(1_024)
+        coloredSlot.follow { UPLOADED }
+        Thread.sleep(WAIT_MILLIS)
+        coloredSlot.close()
+
+        // The bar's own text is ASCII; the thing to prove is that nothing in the writer path
+        // introduces an encoder that would corrupt a block character when colour is on.
+        assertTrue(colored.toString().contains("\u2588"), "expected the block character in '${colored}'")
+    }
+
     private companion object {
         const val WAIT_MILLIS = 60L
+        val UPLOADED = UploadProgress(bytesSent = 512, totalBytes = 1_024, elapsedMillis = 1_000)
     }
 }
 
