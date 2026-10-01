@@ -2,9 +2,9 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
-## Unreleased
+## 0.3.0 - 2026-10-01
 
-Built on `kotlogramme` 0.8.0.
+Built on `kotlogramme` 0.9.0.
 
 ### Features
 
@@ -58,7 +58,8 @@ Built on `kotlogramme` 0.8.0.
 
 ### Project
 
-- The facade dependency moves to `kotlogramme` 0.8.0, whose upload counter the progress bar reads.
+- The facade dependency moves to `kotlogramme` 0.9.0 for this release; the upload counter the progress
+  bar reads arrived in 0.8.0 and is unchanged.
 
 ## 0.1.0 — 2026-09-30
 

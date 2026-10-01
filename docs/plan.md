@@ -117,11 +117,17 @@ snapshot-tested.
 Acceptance: each use case has a fake-gateway test asserting the exact gateway call; CLI commands are
 covered end-to-end against the fake.
 
-### Phase 4 — Media and files
+### Phase 4 - Media and files
 
 - **T4.1 Send file / photo / media by URL.** Caption, spoiler, TTL, parse mode, as-album.
 - **T4.2 Download.** `DownloadMedia` with chunk paging and a progress view; safe file naming.
-- **T4.3 Albums.** `send-album` for multiple files.
+  **Partly done**: the `download-media` command writes a message's media to disk, names the file after
+  the media, and creates missing parent directories. **Still open**: the CLI reads the whole file in
+  one call, so it offers neither the facade's `downloadMediaChunk` paging nor a download progress
+  view.
+- **T4.3 Albums.** `send-album` for multiple files. Still open.
+- **T4.4 List a chat's files.** `list-files` with a server-side media-kind filter. **Done**, added
+  after Phase 8; it is listed here because it belongs to this phase.
 
 Acceptance: media sends are asserted against the fake; downloads are exercised with a fake that
 supplies chunk bytes.
@@ -145,9 +151,9 @@ Acceptance: the update loop is driven by a fake stream; JSON Lines output is sna
 
 Acceptance: the shell is unit-tested through its command dispatcher with a fake terminal.
 
-### Phase 7 — Beyond the facade's first release
+### Phase 7 - Beyond the facade's first release
 
-Uses `kotlogramme` 0.2.0 features added with the gap-closure work.
+Began against `kotlogramme` 0.2.0 and its gap-closure work; the client now builds on 0.9.0.
 
 - **T7.1 Folders.** List and filter by dialog folder; `folders` command.
 - **T7.2 Admin and rights.** Show and edit participant rights.

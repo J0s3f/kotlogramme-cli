@@ -28,8 +28,20 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
   `--progress` forces it on, `--no-progress` turns it off and wins if both are given.
 - `send-media-url <peer> <url> [--caption <text>] [--photo] [--reply-to <id>] [--silent]` — lets
   Telegram fetch the URL and send it, so nothing is uploaded from this machine.
-- `copy-media <peer> <messageId> [--caption <text>] [--reply-to <id>] [--silent]` — re-sends the
+- `copy-media <peer> <messageId> [--caption <text>] [--reply-to <id>] [--silent]` - re-sends the
   media of an existing message without uploading it again.
+- `download-media <peer> <messageId> [<target>]` - writes a message's media to a local file. Without a
+  target the file is named after the media's own name and falls back to the message id, landing in the
+  working directory; missing parent directories are created and an existing file is overwritten. It
+  prints the path and the byte count. A message with no media, a peer that does not resolve and a
+  message id Telegram cannot find are each a one-line error with a non-zero exit code.
+- `list-files <peer> [--kind <kind>] [--limit <n>] [--total]` - lists a chat's files, filtered by media
+  kind **on Telegram's side** rather than by scanning history, so it reaches the whole chat and not
+  just the part a history read has covered. `--kind` names the filter (`photo`, `video`, `photo-video`,
+  `document`, `audio`, `voice`, `gif`, `animation`); an unknown kind is refused with the valid names
+  rather than silently matching nothing. `--limit` caps the page and `--total` prints just the count.
+  The listing renders as the same table every other command uses, and as JSON through the configured
+  output format.
 
 A message's media upload shows progress as one rewritten line — the percentage, the bytes sent, the
 total and the rate — while it is on screen. The line is erased when the upload finishes, fails or is
