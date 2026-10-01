@@ -36,6 +36,11 @@ internal class KotlogramMessageWriteGateway(
 
     override fun unpin(reference: String, messageId: Int) = operations.unpin(resolver.resolve(reference), messageId)
 
+    override fun unpinAll(reference: String) = operations.unpinAll(resolver.resolve(reference))
+
+    override fun pinnedMessage(reference: String): Message? =
+        operations.pinned(resolver.resolve(reference))?.toMessage()
+
     override fun react(reference: String, messageId: Int, emoji: String) =
         operations.react(resolver.resolve(reference), messageId, emoji)
 

@@ -25,6 +25,10 @@ internal class KotlogramMessageWriteOperations(private val client: TelegramClien
 
     override fun unpin(peer: TelegramPeer, id: Int) = client.messagesUnpinMessage(peer, id)
 
+    override fun unpinAll(peer: TelegramPeer) = client.messagesUnpinAllMessages(peer)
+
+    override fun pinned(peer: TelegramPeer): Message? = client.messagesGetPinnedMessage(peer)
+
     override fun react(peer: TelegramPeer, id: Int, emoji: String) = client.messagesSendReaction(peer, id, emoji)
 
     override fun removeReaction(peer: TelegramPeer, id: Int) = client.messagesRemoveReaction(peer, id)

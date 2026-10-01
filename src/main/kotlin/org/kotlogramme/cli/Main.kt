@@ -37,6 +37,7 @@ import org.kotlogramme.cli.adapter.cli.MarkReadCommand
 import org.kotlogramme.cli.adapter.cli.MembersCommand
 import org.kotlogramme.cli.adapter.cli.PermissionsCommand
 import org.kotlogramme.cli.adapter.cli.PinCommand
+import org.kotlogramme.cli.adapter.cli.PinnedCommand
 import org.kotlogramme.cli.adapter.cli.PromoteCommand
 import org.kotlogramme.cli.adapter.cli.ReactCommand
 import org.kotlogramme.cli.adapter.cli.RestrictCommand
@@ -114,6 +115,7 @@ fun main(args: Array<String>) {
                 ForwardCommand(),
                 PinCommand(),
                 UnpinCommand(),
+                PinnedCommand(),
                 ReactCommand(),
                 UnreactCommand(),
                 MarkReadCommand(),

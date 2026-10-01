@@ -51,6 +51,67 @@ class MessageWriteCommandTest {
     }
 
     @Test
+    fun `unpin --all clears every message without a message id`() {
+        val writer = FakeMessageWriter()
+        val fixture = cliFixture(messageWriter = writer)
+
+        val result = fixture.run("unpin", "@ada", "--all")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf("@ada"), writer.unpinnedAll)
+        assertEquals(emptyList(), writer.unpins)
+        assertEquals(listOf("Unpinned every message in @ada."), fixture.output.lines)
+    }
+
+    @Test
+    fun `unpin rejects --all combined with a message id`() {
+        val writer = FakeMessageWriter()
+        val fixture = cliFixture(messageWriter = writer)
+
+        val result = fixture.run("unpin", "@ada", "7", "--all")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("not both"), "stderr was: ${result.stderr}")
+        assertEquals(emptyList(), writer.unpins)
+        assertEquals(emptyList(), writer.unpinnedAll)
+    }
+
+    @Test
+    fun `unpin without a message id or --all is a usage error`() {
+        val writer = FakeMessageWriter()
+        val fixture = cliFixture(messageWriter = writer)
+
+        val result = fixture.run("unpin", "@ada")
+
+        assertEquals(1, result.statusCode)
+        assertEquals(emptyList(), writer.unpins)
+        assertEquals(emptyList(), writer.unpinnedAll)
+    }
+
+    @Test
+    fun `pinned renders the pinned message`() {
+        val writer = FakeMessageWriter()
+        val fixture = cliFixture(messageWriter = writer)
+
+        val result = fixture.run("pinned", "@ada")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf("@ada"), writer.pinnedRequests)
+        assertTrue(fixture.output.text.contains("hello"), "output was: ${fixture.output.text}")
+    }
+
+    @Test
+    fun `pinned says when a chat has none`() {
+        val writer = FakeMessageWriter(pinned = null)
+        val fixture = cliFixture(messageWriter = writer)
+
+        val result = fixture.run("pinned", "@ada")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf("No pinned message in @ada."), fixture.output.lines)
+    }
+
+    @Test
     fun `react and unreact name the message`() {
         val writer = FakeMessageWriter()
         val fixture = cliFixture(messageWriter = writer)

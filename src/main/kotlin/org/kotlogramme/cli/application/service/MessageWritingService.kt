@@ -45,6 +45,10 @@ class MessageWritingService(private val gateway: MessageWriteGateway) : MessageW
         gateway.unpin(reference, messageId)
     }
 
+    override fun unpinAll(reference: String) = gateway.unpinAll(reference)
+
+    override fun pinnedMessage(reference: String): Message? = gateway.pinnedMessage(reference)
+
     override fun react(reference: String, messageId: Int, emoji: String) {
         requirePositiveMessageId(messageId)
         gateway.react(reference, messageId, emoji)

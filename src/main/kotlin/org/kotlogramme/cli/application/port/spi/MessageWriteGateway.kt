@@ -18,6 +18,12 @@ interface MessageWriteGateway {
 
     fun unpin(reference: String, messageId: Int)
 
+    /** Removes every pinned message from the chat. */
+    fun unpinAll(reference: String)
+
+    /** The chat's pinned message, or `null` when it has none. */
+    fun pinnedMessage(reference: String): Message?
+
     fun react(reference: String, messageId: Int, emoji: String)
 
     fun removeReaction(reference: String, messageId: Int)

@@ -507,6 +507,7 @@ internal class FakeMessageWriter(
     private val edited: Message = testMessage,
     private val deletedCount: Int = 1,
     private val forwarded: List<Message> = listOf(testMessage),
+    private val pinned: Message? = testMessage,
     private val rejection: IllegalArgumentException? = null,
 ) : MessageWriter {
     val sends = mutableListOf<SendCall>()
@@ -515,6 +516,8 @@ internal class FakeMessageWriter(
     val forwards = mutableListOf<ForwardCall>()
     val pins = mutableListOf<MessageIdCall>()
     val unpins = mutableListOf<MessageIdCall>()
+    val unpinnedAll = mutableListOf<String>()
+    val pinnedRequests = mutableListOf<String>()
     val reactions = mutableListOf<ReactCall>()
     val removals = mutableListOf<MessageIdCall>()
     val markedRead = mutableListOf<String>()
@@ -557,6 +560,17 @@ internal class FakeMessageWriter(
     override fun unpin(reference: String, messageId: Int) {
         reject()
         unpins += MessageIdCall(reference, messageId)
+    }
+
+    override fun unpinAll(reference: String) {
+        reject()
+        unpinnedAll += reference
+    }
+
+    override fun pinnedMessage(reference: String): Message? {
+        reject()
+        pinnedRequests += reference
+        return pinned
     }
 
     override fun react(reference: String, messageId: Int, emoji: String) {
@@ -905,6 +919,7 @@ internal fun cliFixture(
             ForwardCommand(),
             PinCommand(),
             UnpinCommand(),
+            PinnedCommand(),
             ReactCommand(),
             UnreactCommand(),
             MarkReadCommand(),

@@ -34,6 +34,12 @@ internal interface FacadeMessageWriteOperations {
     /** Unpins message [id] in [peer], which is `messagesUnpinMessage`. */
     fun unpin(peer: TelegramPeer, id: Int)
 
+    /** Unpins every message in [peer], which is `messagesUnpinAllMessages`. */
+    fun unpinAll(peer: TelegramPeer)
+
+    /** The pinned message of [peer], or `null` when it has none, which is `messagesGetPinnedMessage`. */
+    fun pinned(peer: TelegramPeer): Message?
+
     /** Reacts to message [id] in [peer] with [emoji], which is `messagesSendReaction`. */
     fun react(peer: TelegramPeer, id: Int, emoji: String)
 

@@ -120,6 +120,19 @@ class MessageWritingServiceTest {
     }
 
     @Test
+    fun `unpinAll and pinnedMessage pass through the gateway`() {
+        val gateway = FakeMessageWriteGateway()
+
+        MessageWritingService(gateway).apply {
+            unpinAll("@ada")
+            pinnedMessage("@ada")
+        }
+
+        assertEquals(listOf("@ada"), gateway.unpinAlls)
+        assertEquals(listOf("@ada"), gateway.pinnedRequests)
+    }
+
+    @Test
     fun `rejects a non-positive id before the gateway`() {
         val gateway = FakeMessageWriteGateway()
         val service = MessageWritingService(gateway)
@@ -168,10 +181,14 @@ private class FakeMessageWriteGateway : MessageWriteGateway {
     val forwards = mutableListOf<ForwardCall>()
     val pins = mutableListOf<IdCall>()
     val unpins = mutableListOf<IdCall>()
+    val unpinAlls = mutableListOf<String>()
+    val pinnedRequests = mutableListOf<String>()
     val reactions = mutableListOf<ReactCall>()
     val removedReactions = mutableListOf<IdCall>()
     val markReads = mutableListOf<String>()
     val chatActions = mutableListOf<ChatActionCall>()
+
+    var pinnedMessage: Message? = message
 
     var sent: Message = message
     var edited: Message = message
@@ -204,6 +221,15 @@ private class FakeMessageWriteGateway : MessageWriteGateway {
 
     override fun unpin(reference: String, messageId: Int) {
         unpins += IdCall(reference, messageId)
+    }
+
+    override fun unpinAll(reference: String) {
+        unpinAlls += reference
+    }
+
+    override fun pinnedMessage(reference: String): Message? {
+        pinnedRequests += reference
+        return pinnedMessage
     }
 
     override fun react(reference: String, messageId: Int, emoji: String) {

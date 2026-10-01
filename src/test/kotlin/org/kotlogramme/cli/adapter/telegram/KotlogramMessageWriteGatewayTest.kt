@@ -88,6 +88,37 @@ class KotlogramMessageWriteGatewayTest {
     }
 
     @Test
+    fun `unpinAll forwards the resolved peer`() {
+        val operations = FakeMessageWriteOperations()
+
+        gatewayWith(operations, ada).unpinAll("@ada")
+
+        assertEquals(listOf(ada), operations.unpinAlls)
+    }
+
+    @Test
+    fun `pinnedMessage maps the pinned message`() {
+        val operations = FakeMessageWriteOperations().apply {
+            pinnedMessage = message(id = 42, text = "pinned", date = 1_000)
+        }
+
+        val pinned = gatewayWith(operations, ada).pinnedMessage("@ada")
+
+        assertEquals(listOf(ada), operations.pinnedRequests)
+        assertEquals(42, pinned?.id)
+        assertEquals("pinned", pinned?.text)
+    }
+
+    @Test
+    fun `pinnedMessage is null when the facade reports none`() {
+        val operations = FakeMessageWriteOperations().apply { pinnedMessage = null }
+
+        val pinned = gatewayWith(operations, ada).pinnedMessage("@ada")
+
+        assertEquals(null, pinned)
+    }
+
+    @Test
     fun `react forwards the resolved peer, the message id and the emoji`() {
         val operations = FakeMessageWriteOperations()
 
@@ -170,6 +201,7 @@ internal class FakeMessageWriteOperations : FacadeMessageWriteOperations {
     var editedMessage: Message = message(id = 1)
     var deleteCount: Int = 0
     var forwardedMessages: List<Message?> = emptyList()
+    var pinnedMessage: Message? = message(id = 1)
 
     val sends = mutableListOf<SendCall>()
     val edits = mutableListOf<EditCall>()
@@ -177,6 +209,8 @@ internal class FakeMessageWriteOperations : FacadeMessageWriteOperations {
     val forwards = mutableListOf<ForwardCall>()
     val pins = mutableListOf<MessageCall>()
     val unpins = mutableListOf<MessageCall>()
+    val unpinAlls = mutableListOf<TelegramPeer>()
+    val pinnedRequests = mutableListOf<TelegramPeer>()
     val reactions = mutableListOf<ReactionCall>()
     val removedReactions = mutableListOf<MessageCall>()
     val markReads = mutableListOf<TelegramPeer>()
@@ -208,6 +242,15 @@ internal class FakeMessageWriteOperations : FacadeMessageWriteOperations {
 
     override fun unpin(peer: TelegramPeer, id: Int) {
         unpins += MessageCall(peer, id)
+    }
+
+    override fun unpinAll(peer: TelegramPeer) {
+        unpinAlls += peer
+    }
+
+    override fun pinned(peer: TelegramPeer): Message? {
+        pinnedRequests += peer
+        return pinnedMessage
     }
 
     override fun react(peer: TelegramPeer, id: Int, emoji: String) {
