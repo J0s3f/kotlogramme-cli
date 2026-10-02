@@ -16,7 +16,7 @@ internal object Version {
     fun resolve(): String {
         val baked = Version::class.java.classLoader
             .getResourceAsStream(RESOURCE)
-            ?.bufferedReader()
+            ?.bufferedReader(Charsets.UTF_8)
             ?.use { reader ->
                 reader.readLines()
                     .firstOrNull { it.startsWith("version=") }
