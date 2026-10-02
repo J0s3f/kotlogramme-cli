@@ -5,10 +5,12 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
 
 ## Pagination
 
-Every listing command pages. `--after <cursor>` continues from a previous page — the cursor is the
-opaque string the last page printed after its table as `# next: --after <cursor>`, which you paste
-back verbatim. A full page prints that line; a short one does not, so its absence means you are done.
-A malformed cursor is a usage error, never a silent first page.
+Every listing Telegram can return in more than one page takes `--after <cursor>` to continue from a
+previous page — the cursor is the opaque string the last page printed after its table as
+`# next: --after <cursor>`, which you paste back verbatim. A full page prints that line; a short one
+does not, so its absence means you are done. A malformed cursor is a usage error, never a silent
+first page. `contacts`, `sessions`, `folders` and `stickers` arrive whole in one call, so they have no
+cursor.
 
 - `dialogs`, `blocked`, `chat-photo-history` and `profile-photos` also take `--all`, which walks the
   whole set in one call and wins over both the cursor and `--limit`. For `dialogs`, `--all` is the
