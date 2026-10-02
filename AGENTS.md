@@ -50,6 +50,9 @@ The primary development machine is Windows; use PowerShell. CI runs on Linux.
 - The dependency is JitPack's `com.github.J0s3f:kotlogram` (default tag `v0.9.11`, which reaches
   JitPack before Maven Central catches up). Override with `-PkotlogrammeVersion=...` to test a
   different tag.
+- The versions the docs advertise are set and checked by `scripts/version.sh`: `set <cli-version>
+  <facade-tag>` rewrites the README and the build pin, and `check <cli-version>` fails when they
+  disagree. The release workflow runs `check` on the tag, so a stale README cannot ship.
 - Capture full command output to a temp file when you pipe it (`... | Tee-Object -FilePath $env:TEMP\x.log | Select-Object -Last 40`),
   so diagnosing a failure later does not require a rerun.
 

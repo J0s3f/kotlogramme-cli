@@ -37,6 +37,9 @@ jobs:
           fi
           test -n "$version"
           echo "value=$version" >> "$GITHUB_OUTPUT"
+      - name: Check the docs name this release
+        shell: bash
+        run: bash scripts/version.sh check "${{ steps.version.outputs.value }}"
       - name: Build and test the release
         shell: bash
         run: ./gradlew --no-daemon -Pversion="${{ steps.version.outputs.value }}" clean test

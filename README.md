@@ -10,7 +10,7 @@ application.
 > **Status: usable.** Phases 1-9 are implemented: authentication, configuration, dialogs, history,
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline. The current release is
-> [`v0.3.1`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.1), carrying the fat jar and
+> [`v0.3.4`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.4), carrying the fat jar and
 > the distribution; it builds on the `kotlogram` `v0.9.11` tag from JitPack. Later additions beyond
 > the original phases:
 > `download-media`, `list-files` with a server-side media-kind filter, and an upload progress bar for
@@ -82,7 +82,7 @@ still streams in chunks rather than holding the whole file in the heap.
 
 ## Getting the client
 
-The current release is [`v0.3.1`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.1). Its
+The current release is [`v0.3.4`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.4). Its
 GitHub Release carries two assets, both with every dependency and all six native libraries bundled,
 so nothing else has to be downloaded:
 
@@ -90,8 +90,8 @@ so nothing else has to be downloaded:
   ```bash
   java -jar kotlogramme-all.jar --help
   ```
-- **`kotlogramme-0.3.1.zip`** - the `distZip` distribution. Unpack it and run
-  `kotlogramme-0.3.1/bin/kotlogramme` (or `kotlogramme-0.3.1\bin\kotlogramme.bat` on Windows); the
+- **`kotlogramme-0.3.4.zip`** - the `distZip` distribution. Unpack it and run
+  `kotlogramme-0.3.4/bin/kotlogramme` (or `kotlogramme-0.3.4\bin\kotlogramme.bat` on Windows); the
   jar and its dependencies live in `lib/`.
 
 ## Requirements
@@ -138,10 +138,11 @@ the 39.4 MB fat jar, the real win being startup and no JVM.
 
 ## Picking the facade version
 
-The client depends on the facade's `v0.9.11` tag, resolved from JitPack. To test a different tag:
+The client depends on the facade's `v0.9.11` tag, resolved from JitPack. To pin a different one, pass
+it explicitly - any published facade tag works:
 
 ```bash
-./gradlew test -PkotlogrammeVersion=v0.9.6
+./gradlew test -PkotlogrammeVersion=<tag>
 ```
 
 ## Documentation
