@@ -11,7 +11,7 @@ application.
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline. The current release is
 > [`v0.3.1`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.1), carrying the fat jar and
-> the distribution; it builds on the `kotlogram` `v0.9.8` tag from JitPack. Later additions beyond
+> the distribution; it builds on the `kotlogram` `v0.9.9` tag from JitPack. Later additions beyond
 > the original phases:
 > `download-media`, `list-files` with a server-side media-kind filter, and an upload progress bar for
 > `send-file`. Received messages render their formatting, and a message's inline bot is
@@ -118,7 +118,7 @@ the 39.4 MB fat jar, the real win being startup and no JVM.
 
 ## Picking the facade version
 
-The client depends on the facade's `v0.9.8` tag, resolved from JitPack. To test a different tag:
+The client depends on the facade's `v0.9.9` tag, resolved from JitPack. To test a different tag:
 
 ```bash
 ./gradlew test -PkotlogrammeVersion=v0.9.6

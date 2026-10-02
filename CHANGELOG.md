@@ -4,7 +4,7 @@ All notable changes to `kotlogramme-cli` are recorded here.
 
 ## Unreleased
 
-Built on the `kotlogram` `v0.9.8` tag, resolved from JitPack.
+Built on the `kotlogram` `v0.9.9` tag, resolved from JitPack.
 
 ### Features
 
@@ -20,7 +20,7 @@ Built on the `kotlogram` `v0.9.8` tag, resolved from JitPack.
 - **Albums**: `send-album` sends several files as one grouped album.
 - **Saved Messages** is addressable as `me` or `@me`, and `list` shows it first. It is the private
   chat with yourself, which the facade now exposes through its `getSelfPeer` operation; it never
-  appears in a dialog scan, so this needed the facade's `v0.9.8`.
+  appears in a dialog scan, so this needed the facade's `getSelfPeer` operation.
 - **Shell**: `blocked`, `sessions`, `chat-action`, `pinned` and `unpin all` are available mid
   conversation. `help commands` now lists the CLI's full command set and marks which names work in
   the shell, instead of an ambiguous list that named commands the shell does not dispatch.
