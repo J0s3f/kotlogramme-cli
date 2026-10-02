@@ -61,8 +61,18 @@ stale_in() {
 
 case "${mode}" in
   set)
-    for file in "${cli_files[@]}"; do replace "${cli_pattern}" "${cli}" "${file}"; done
-    for file in "${facade_files[@]}"; do replace "${facade_pattern}" "${facade}" "${file}"; done
+    # Rewrite a file only when it actually names a different version, so a no-op `set` does not touch
+    # the working tree (rewriting an already-correct file churns its line endings).
+    for file in "${cli_files[@]}"; do
+      if [ -n "$(stale_in "${cli_pattern}" "${cli}" "${file}")" ]; then
+        replace "${cli_pattern}" "${cli}" "${file}"
+      fi
+    done
+    for file in "${facade_files[@]}"; do
+      if [ -n "$(stale_in "${facade_pattern}" "${facade}" "${file}")" ]; then
+        replace "${facade_pattern}" "${facade}" "${file}"
+      fi
+    done
     echo "docs and build now advertise client ${cli} on facade ${facade}"
     ;;
 
