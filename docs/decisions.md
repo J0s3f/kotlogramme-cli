@@ -246,7 +246,7 @@ failure is why a cleanup problem never masks the outcome of the upload.
 ## 0016 — The facade comes from JitPack rather than Maven Central
 
 **Decision.** The build resolves `com.github.J0s3f:kotlogram` from JitPack, pinned by tag
-(`v0.9.9`). `settings.gradle.kts` adds the JitPack repository beside Maven Central and sets
+(`v0.9.11`). `settings.gradle.kts` adds the JitPack repository beside Maven Central and sets
 `RepositoriesMode.FAIL_ON_PROJECT_REPOS` so every repository is declared in one place;
 `build.gradle.kts` names the JitPack coordinate, and `-PkotlogrammeVersion=...` still selects a
 different tag.
@@ -256,7 +256,7 @@ to be published there. Vendoring the facade jar into the repository. Building th
 as a composite build.
 
 **Why.** A facade tag reaches JitPack as soon as it is pushed, while Maven Central lags behind, so
-JitPack is the only source that has `v0.9.9` today. Pinning the tag keeps the client on the exact
+JitPack is the only source that has `v0.9.11` today. Pinning the tag keeps the client on the exact
 facade build it was tested against, and Maven Central stays first in the list so anything already
 published there is unaffected. The cost is a slower first resolve while JitPack builds the tag and a
 dependency on JitPack's availability, both acceptable next to blocking every client release on Maven

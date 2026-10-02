@@ -2,6 +2,27 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.3.4 - 2026-10-02
+
+Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.
+
+### Features
+
+- **Every listing command pages, and the bounded ones can show everything.** `--after <cursor>`
+  continues from the previous page - the command prints the cursor after its table as
+  `# next: --after <cursor>` - and `--all` walks the whole list in one call on `dialogs`, `blocked`,
+  `chat-photo-history` and `profile-photos`. `history`, `search`, `list-files` and `members` page
+  without `--all`, because their whole set can be unbounded or very large. The shell's `read`,
+  `search`, `files`, `members` and `blocked` verbs take `--after` too, and `blocked` takes `--all`.
+- **`help <verb>` explains one verb.** `help` still lists the verbs and `help commands` still lists
+  the CLI's command set; `help <verb>` adds that verb's usage, what it does and its options, and
+  answers to a verb's aliases, so `help list` and `help dialogs` are the same.
+
+### Changed
+
+- Saved Messages is listed on the first page of `dialogs` only: a paged continuation does not repeat
+  it, and `--all` shows it once at the top.
+
 ## 0.3.3 - 2026-10-02
 
 Built on the `kotlogram` `v0.9.9` tag, resolved from JitPack.

@@ -157,7 +157,7 @@ Acceptance: the shell is unit-tested through its command dispatcher with a fake 
 ### Phase 7 - Beyond the facade's first release
 
 Began against `kotlogramme` 0.2.0 and its gap-closure work; the client now builds on the
-`kotlogram` `v0.9.9` tag from JitPack.
+`kotlogram` `v0.9.11` tag from JitPack.
 
 - **T7.1 Folders.** List and filter by dialog folder; `folders` command.
 - **T7.2 Admin and rights.** Show and edit participant rights.
