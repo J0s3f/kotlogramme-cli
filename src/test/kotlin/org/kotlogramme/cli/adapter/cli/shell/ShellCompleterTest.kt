@@ -67,6 +67,21 @@ class ShellCompleterTest {
         assertEquals(emptyList(), unknown)
     }
 
+    @Test
+    fun `every completed command has help`() {
+        // The same hand-kept list drives the verbs; this catches one the completer offers but `help`
+        // cannot explain.
+        val offered = ShellCompleter { emptyList() }.completeCommands()
+
+        val unexplained = offered.filter { verb ->
+            val output = RecordingOutput()
+            Shell(ScriptedLines(listOf("help $verb")), output, fakeUseCases()).run()
+            output.text.contains("No help for")
+        }
+
+        assertEquals(emptyList(), unexplained)
+    }
+
     private class ScriptedLines(private val lines: List<String>) : LineSource {
         private var index = 0
         override fun read(prompt: String): String? = lines.getOrNull(index++)

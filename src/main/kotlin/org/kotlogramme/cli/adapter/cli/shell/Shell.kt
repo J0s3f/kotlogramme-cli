@@ -110,11 +110,29 @@ class Shell(
      * user discovers what the tool can do, but the list is not generated from the command tree.
      */
     private fun printHelp(arguments: List<String>) {
-        if (arguments.firstOrNull()?.lowercase() == COMMANDS_HELP) {
-            CLI_COMMANDS.forEach(output::line)
+        when (val topic = arguments.firstOrNull()?.lowercase()) {
+            null -> HELP.forEach(output::line)
+            COMMANDS_HELP -> CLI_COMMANDS.forEach(output::line)
+            else -> printVerbHelp(topic)
+        }
+    }
+
+    /**
+     * `help <verb>`: the verb's usage, what it does, and its options.
+     *
+     * The overview carries every verb's usage on one line, so this exists for the options, which do
+     * not fit there, and for looking up a single verb without scanning the list. The names include
+     * the aliases, so `help list` and `help dialogs` answer the same.
+     */
+    private fun printVerbHelp(topic: String) {
+        val verb = VERBS.firstOrNull { entry -> entry.names.any { it.equals(topic, ignoreCase = true) } }
+        if (verb == null) {
+            output.line("No help for '$topic'. Type `help` for the verbs.")
             return
         }
-        HELP.forEach(output::line)
+        output.line(verb.usage)
+        output.line("  " + verb.summary)
+        verb.options.forEach { output.line("  " + it) }
     }
 
     private fun listDialogs() {
@@ -619,40 +637,96 @@ class Shell(
 
         const val DOWNLOAD_USAGE = "Usage: download-media <peer> <message-id> [target]"
 
-        val HELP = listOf(
-            "help [commands]       show this help, or the whole CLI's commands",
-            "dialogs | list       list conversations",
-            "open <peer>          open a chat",
-            "read [--limit N]     read the current chat",
-            "send <text...>       send a message",
-            "reply <id> <text...> reply to a message",
-            "edit <id> <text...>  edit a message in the current chat",
-            "delete <id>          delete a message in the current chat",
-            "forward <id> <to>    forward a message to another peer",
-            "pin <id> | unpin <id>  pin or unpin a message",
-            "unpin all            unpin every message in the current chat",
-            "pinned               show the current chat's pinned message",
-            "react <id> <emoji> | unreact <id>  react to a message",
-            "chat-action [<action>]  report a chat status (default typing)",
-            "mark-read            mark the current chat read",
-            "invite <user>        add a user to the current chat",
-            "kick <user>          remove a user from the current chat",
-            "contacts             list contacts",
-            "blocked              list the blocked accounts",
-            "search <query>       search the current chat, or everywhere",
-            "files [<peer>] [--kind <kind>] [--limit N]  list the files of a chat",
-            "download-media <peer> <message-id> [target]  save a message's media",
-            "send-media-url <url>  send media Telegram fetches from a URL",
-            "copy-media <id>      re-send a message's media here",
-            "stickers             list the installed sticker sets",
-            "sticker-set <set>    show a set with its stickers numbered",
-            "send-sticker <set> <index>  send a sticker in the current chat",
-            "inline <bot> <query> [--send <index>]  query a bot, send a result here",
-            "members [<peer>]     list the current chat's members",
-            "folders              list the dialog folders",
-            "sessions [terminate <hash>]  list active sessions, or drop one",
-            "quit | exit          leave the shell",
+        /**
+         * The shell's verbs, one entry each: the single source for both the `help` overview and
+         * `help <verb>`.
+         *
+         * Keeping them together means a verb cannot describe itself one way in the list and another
+         * way when asked about it. [names] are the words that dispatch the verb, [usage] is the line
+         * the overview shows, [summary] is its one-line description, and [options] are the lines
+         * `help <verb>` adds beneath them.
+         */
+        data class VerbHelp(
+            val names: List<String>,
+            val usage: String,
+            val summary: String,
+            val options: List<String> = emptyList(),
         )
+
+        val VERBS = listOf(
+            VerbHelp(listOf("help"), "help [commands | <verb>]", "show this help, the CLI's commands, or one verb"),
+            VerbHelp(listOf("dialogs", "list"), "dialogs | list", "list conversations"),
+            VerbHelp(listOf("open"), "open <peer>", "open a chat"),
+            VerbHelp(
+                listOf("read"),
+                "read [--limit N]",
+                "read the current chat",
+                listOf("--limit N      how many messages to read (default $TRANSCRIPT_LIMIT)"),
+            ),
+            VerbHelp(listOf("send"), "send <text...>", "send a message"),
+            VerbHelp(listOf("reply"), "reply <id> <text...>", "reply to a message"),
+            VerbHelp(listOf("edit"), "edit <id> <text...>", "edit a message in the current chat"),
+            VerbHelp(listOf("delete"), "delete <id>", "delete a message in the current chat"),
+            VerbHelp(listOf("forward"), "forward <id> <to>", "forward a message to another peer"),
+            VerbHelp(
+                listOf("pin", "unpin"),
+                "pin <id> | unpin <id>",
+                "pin or unpin a message in the current chat",
+                listOf("unpin all      unpin every message in the current chat"),
+            ),
+            VerbHelp(listOf("pinned"), "pinned", "show the current chat's pinned message"),
+            VerbHelp(listOf("react", "unreact"), "react <id> <emoji> | unreact <id>", "react to a message"),
+            VerbHelp(
+                listOf("chat-action"),
+                "chat-action [<action>]",
+                "report a chat status (default $DEFAULT_CHAT_ACTION)",
+            ),
+            VerbHelp(listOf("mark-read"), "mark-read", "mark the current chat read"),
+            VerbHelp(listOf("invite"), "invite <user>", "add a user to the current chat"),
+            VerbHelp(listOf("kick"), "kick <user>", "remove a user from the current chat"),
+            VerbHelp(listOf("contacts"), "contacts", "list contacts"),
+            VerbHelp(listOf("blocked"), "blocked", "list the blocked accounts"),
+            VerbHelp(listOf("search"), "search <query>", "search the current chat, or everywhere"),
+            VerbHelp(
+                listOf("files"),
+                "files [<peer>] [--kind <kind>] [--limit N]",
+                "list the files of a chat",
+                listOf(
+                    "--kind <kind>  which files to list (default $DEFAULT_FILE_KIND)",
+                    "--limit N      how many files to list (default 20)",
+                ),
+            ),
+            VerbHelp(
+                listOf("download-media"),
+                "download-media <peer> <message-id> [target]",
+                "save a message's media to a file",
+            ),
+            VerbHelp(listOf("send-media-url"), "send-media-url <url>", "send media Telegram fetches from a URL"),
+            VerbHelp(listOf("copy-media"), "copy-media <id>", "re-send a message's media here"),
+            VerbHelp(listOf("stickers"), "stickers", "list the installed sticker sets"),
+            VerbHelp(listOf("sticker-set"), "sticker-set <set>", "show a set with its stickers numbered"),
+            VerbHelp(listOf("send-sticker"), "send-sticker <set> <index>", "send a sticker in the current chat"),
+            VerbHelp(
+                listOf("inline"),
+                "inline <bot> <query> [--send <index>]",
+                "query a bot, send a result here",
+                listOf("--send <index>  send that result into the current chat"),
+            ),
+            VerbHelp(listOf("members"), "members [<peer>]", "list a chat's members"),
+            VerbHelp(listOf("folders"), "folders", "list the dialog folders"),
+            VerbHelp(
+                listOf("sessions"),
+                "sessions [terminate <hash>]",
+                "list active sessions, or drop one",
+                listOf("terminate <hash>  drop that session"),
+            ),
+            VerbHelp(listOf("quit", "exit"), "quit | exit", "leave the shell"),
+        )
+
+        /** The overview `help` prints, one line per verb, from [VERBS]. */
+        val HELP: List<String> = VERBS.map { it.usage.padEnd(HELP_COLUMN) + it.summary }
+
+        const val HELP_COLUMN = 22
 
         /**
          * The whole CLI's command set, for `help commands`.

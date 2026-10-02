@@ -180,6 +180,38 @@ class ShellTest {
     }
 
     @Test
+    fun `help for a verb shows its usage and its options`() {
+        val output = run(listOf("help files"))
+
+        assertTrue(output.text.contains("files [<peer>] [--kind <kind>] [--limit N]"), output.text)
+        assertTrue(output.text.contains("--kind <kind>"), output.text)
+        assertTrue(output.text.contains("--limit N"), output.text)
+    }
+
+    @Test
+    fun `help for a verb with no options shows its usage`() {
+        val output = run(listOf("help open"))
+
+        assertTrue(output.text.contains("open <peer>"), output.text)
+    }
+
+    @Test
+    fun `help for an alias answers the same as the verb it names`() {
+        val viaAlias = run(listOf("help list"))
+        val viaName = run(listOf("help dialogs"))
+
+        assertTrue(viaAlias.text.contains("dialogs | list"), viaAlias.text)
+        assertEquals(viaName.text, viaAlias.text)
+    }
+
+    @Test
+    fun `help for a verb it does not know says so`() {
+        val output = run(listOf("help frobnicate"))
+
+        assertTrue(output.text.contains("No help for 'frobnicate'"), output.text)
+    }
+
+    @Test
     fun `the shell stops at end of input`() {
         val lines = ScriptedLineSource(listOf("dialogs"))
 
