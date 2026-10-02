@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.format
 
+import org.jline.utils.WCWidth
 import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.domain.MessageEntity
 
@@ -116,12 +117,52 @@ class MessageStyler private constructor(
 }
 
 /**
- * The visible length of [text], ignoring the ANSI SGR sequences it may carry.
+ * The number of terminal columns [text] occupies, ignoring the ANSI SGR sequences it may carry.
  *
- * The table measures and pads with this so a styled cell and a plain one share a column without the
- * escapes counting towards the width.
+ * Deliberately not `String.length`, which counts UTF-16 code units: a terminal pads by columns, and
+ * the two disagree for everything outside ASCII. A CJK ideograph or a wide emoji is one or two code
+ * units but two columns, a combining mark is a code unit and no column at all, and a flag or a ZWJ
+ * sequence is several code units and one glyph. Measuring code units made a row that contained any
+ * of them wider or narrower than its own border - the drift a live dialog list showed. The width
+ * comes from JLine's grapheme-cluster table because it already knows the emoji and East Asian cases,
+ * and a cluster is never split the way a code-unit sum splits a surrogate pair.
  */
-internal fun visibleLength(text: String): Int = ANSI_SGR.replace(text, "").length
+internal fun visibleLength(text: String): Int {
+    val plain = ANSI_SGR.replace(text, "")
+    var width = 0
+    var index = 0
+    while (index < plain.length) {
+        width += WCWidth.wcwidthForGraphemeCluster(plain, index).coerceAtLeast(0)
+        index += WCWidth.charCountForGraphemeCluster(plain, index).coerceAtLeast(1)
+    }
+    return width
+}
+
+/**
+ * [text] cut to at most [limit] display columns, with an ellipsis when it did not fit.
+ *
+ * The cut falls on a grapheme boundary, so a surrogate pair, a flag or a ZWJ emoji is never split
+ * into an invalid half, and the ellipsis is charged against the same column budget the text is
+ * measured with. `String.take` did neither: it could cut a surrogate pair in two and it counted code
+ * units, so a truncated cell occupied a different number of columns than the column it was padded
+ * for. Truncation happens before styling in every caller, so [text] carries no escapes here.
+ */
+internal fun truncateToWidth(text: String, limit: Int, ellipsis: String = "…"): String {
+    if (visibleLength(text) <= limit) return text
+    val budget = (limit - visibleLength(ellipsis)).coerceAtLeast(0)
+    val kept = StringBuilder()
+    var width = 0
+    var index = 0
+    while (index < text.length) {
+        val cluster = WCWidth.charCountForGraphemeCluster(text, index).coerceAtLeast(1)
+        val clusterWidth = WCWidth.wcwidthForGraphemeCluster(text, index).coerceAtLeast(0)
+        if (width + clusterWidth > budget) break
+        kept.append(text, index, index + cluster)
+        width += clusterWidth
+        index += cluster
+    }
+    return kept.toString().trimEnd() + ellipsis
+}
 
 private val ANSI_SGR = Regex("\u001B\\[[0-9;]*m")
 

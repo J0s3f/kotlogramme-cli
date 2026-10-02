@@ -47,8 +47,12 @@ internal class KotlogramMessageSearchGateway(
      * An animation shares the GIF filter with a gif, so [MediaFileKind.ANIMATION] lands on the same
      * filter [MediaFileKind.GIF] does, which is what Telegram itself does.
      */
-    private fun MediaFileKind.toFilter(): MessageSearchFilter =
-        requireNotNull(MessageSearchFilter.entries.firstOrNull { it.wire == filter }) {
+    private fun MediaFileKind.toFilter(): MessageSearchFilter {
+        check(this != MediaFileKind.ALL) {
+            "MediaFileKind.ALL names no filter; the service expands it before the gateway is asked"
+        }
+        return requireNotNull(MessageSearchFilter.entries.firstOrNull { it.wire == filter }) {
             "no search filter carries the wire name '$filter'"
         }
+    }
 }

@@ -6,11 +6,11 @@ import kotlin.test.assertEquals
 
 class PhotoCommandTest {
     @Test
-    fun `chat-photos lists with the default limit`() {
+    fun `chat-photo-history lists with the default limit`() {
         val fake = FakePhotos(chatPhotoMessages = listOf(testMessage))
         val fixture = cliFixture(photos = fake)
 
-        val result = fixture.run("chat-photos", "@ada")
+        val result = fixture.run("chat-photo-history", "@ada")
 
         assertEquals(0, result.statusCode)
         assertEquals(listOf("@ada" to 50), fake.chatPhotoCalls)

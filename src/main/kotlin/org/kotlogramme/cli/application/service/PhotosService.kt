@@ -5,7 +5,7 @@ import org.kotlogramme.cli.application.port.spi.PhotoGateway
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Photo
 
-/** Lists a peer's chat and profile photos, rejecting a non-positive limit first. */
+/** Lists a chat's photo-change history and a user's profile photos, rejecting a non-positive limit first. */
 class PhotosService(private val gateway: PhotoGateway) : Photos {
     override fun chatPhotos(reference: String, limit: Int): List<Message> {
         requirePositive(limit)

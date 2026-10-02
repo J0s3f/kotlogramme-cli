@@ -2,6 +2,36 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.3.3 - 2026-10-02
+
+Built on the `kotlogram` `v0.9.9` tag, resolved from JitPack.
+
+### Features
+
+- **`list-files` lists every kind by default.** `--kind` gains `all`, and it is the default, so the
+  command named `list-files` now shows a chat's documents and audio beside its photos and videos.
+  Telegram filters one media kind per search and has no "every file" filter, so `all` is the union of
+  the kinds, merged newest first and de-duplicated; `--total --kind all` is the sum of the kinds'
+  counts.
+
+### Changed
+
+- **`chat-photos` is renamed `chat-photo-history`.** It lists the changes to a chat's profile photo,
+  which are service messages, not the photos posted in the chat, and the old name said otherwise. For
+  the photos posted in a chat, `list-files --kind photo` reaches every one the chat holds.
+
+### Fixed
+
+- **Table columns line up when a cell holds a wide character.** The table measured cells in UTF-16
+  code units, but a terminal pads by display columns, and the two differ for CJK (one code unit, two
+  columns), emoji, flags, ZWJ sequences and combining marks. A row containing any of them occupied a
+  different number of columns than its own border, so the columns drifted - a live dialog list showed
+  it. Widths now come from JLine's grapheme-cluster table, and a preview or a quote is truncated on a
+  column budget without splitting a surrogate pair or a flag.
+- **The shell's `open` accepts `me` and `@me`.** The alias the one-shot commands already understood
+  matched nothing in the shell, which resolved peers against the loaded dialogs, where that chat is
+  titled "Saved Messages".
+
 ## 0.3.2 - 2026-10-02
 
 Built on the `kotlogram` `v0.9.9` tag, resolved from JitPack.

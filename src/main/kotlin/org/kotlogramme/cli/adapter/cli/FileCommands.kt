@@ -102,8 +102,8 @@ class ListFilesCommand : CliktCommand(name = "list-files") {
     }
 }
 
-/** The files a listing shows when no kind is given: photos and videos, as the clients list them. */
-internal const val DEFAULT_FILE_KIND = "photo-video"
+/** The files a listing shows when no kind is given: every kind, since the command is `list-files`. */
+internal const val DEFAULT_FILE_KIND = "all"
 
 /**
  * The kind a `--kind` name asks for, or a rejection naming the valid ones.

@@ -107,4 +107,37 @@ class MessageStylingTest {
         assertTrue(colorEnabled(noColor = false, color = true, environment = mapOf("NO_COLOR" to "1"), terminal = false))
         assertFalse(colorEnabled(noColor = true, color = true, environment = emptyMap(), terminal = true))
     }
+
+    @Test
+    fun `visible length counts display columns, not code units`() {
+        assertEquals(3, visibleLength("abc"))
+        // A CJK ideograph is one code unit and two columns.
+        assertEquals(4, visibleLength("\u4f60\u597d"))
+        // An astral emoji is two code units and two columns.
+        assertEquals(2, visibleLength("\ud83d\ude00"))
+        // A combining mark is a code unit and no column.
+        assertEquals(1, visibleLength("e\u0301"))
+        // A flag and a ZWJ family are several code units and one two-column glyph.
+        assertEquals(2, visibleLength("\ud83c\udde6\ud83c\uddf9"))
+        assertEquals(2, visibleLength("\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67"))
+        // An escape sequence is stripped before measuring.
+        assertEquals(2, visibleLength("\u001B[1mab\u001B[22m"))
+    }
+
+    @Test
+    fun `truncation spends a column budget and never splits a grapheme`() {
+        // What fits is returned untouched.
+        assertEquals("abc", truncateToWidth("abc", 3))
+        // The ellipsis costs a column, so two letters plus it fill three columns.
+        assertEquals("ab\u2026", truncateToWidth("ab\ud83d\ude00cd", 3))
+        // One emoji plus the ellipsis fill three columns; the second emoji does not fit.
+        assertEquals("\ud83d\ude00\u2026", truncateToWidth("\ud83d\ude00\ud83d\ude00", 3))
+        // A flag is one glyph and is not cut in half.
+        assertEquals(
+            "\ud83c\udde6\ud83c\uddf9\u2026",
+            truncateToWidth("\ud83c\udde6\ud83c\uddf9\ud83c\udde6\ud83c\uddf9", 3),
+        )
+        // A cut that would land between a high and a low surrogate keeps neither of them.
+        assertEquals("a\u2026", truncateToWidth("a\ud83d\ude00b", 2))
+    }
 }

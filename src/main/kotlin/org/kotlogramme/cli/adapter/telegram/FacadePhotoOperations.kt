@@ -12,7 +12,7 @@ import com.github.badoualy.telegram.api.TelegramPeer
  * delegates to the facade's `getProfilePhotos`, which iterates the underlying `iterProfilePhotos`.
  */
 internal interface FacadePhotoOperations {
-    /** Lists the messages of [peer] that carry a chat photo, which is `messagesGetChatPhotos`. */
+    /** Lists the messages of [peer] that record a change to the chat's photo, which is `messagesGetChatPhotos`. */
     fun chatPhotos(peer: TelegramPeer, limit: Int): List<Message>
 
     /** Lists up to [limit] profile photos of [peer], which is `getProfilePhotos`. */

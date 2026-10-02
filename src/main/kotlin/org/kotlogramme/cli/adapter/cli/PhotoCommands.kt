@@ -10,13 +10,14 @@ import org.kotlogramme.cli.adapter.format.renderFiles
 import org.kotlogramme.cli.adapter.format.renderPhotos
 
 /**
- * Lists a chat's photo messages.
+ * Lists the chat's own photo history.
  *
- * A chat photo is an ordinary message, so the rows carry its id and can be handed to
- * `download-media`; `list-files --kind photo` lists every photo a chat holds, while this asks the
- * library for the chat-photo timeline specifically.
+ * Telegram keeps the changes to a chat's profile photo as service messages, and this is that
+ * timeline, not the photos posted in the chat: for those use `list-files --kind photo`, which asks
+ * for the photo filter and reaches every photo the chat holds. The rows are ordinary messages, so
+ * their ids can still be handed to `download-media`.
  */
-class ChatPhotosCommand : CliktCommand(name = "chat-photos") {
+class ChatPhotoHistoryCommand : CliktCommand(name = "chat-photo-history") {
     private val appContext by requireObject<AppContext>()
 
     private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")

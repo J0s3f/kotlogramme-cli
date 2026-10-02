@@ -38,6 +38,8 @@ data class Chat(
     val pinned: Boolean = false,
     val muted: Boolean = false,
     val archived: Boolean = false,
+    /** True for the private chat with yourself, which the client always labels Saved Messages. */
+    val isSelf: Boolean = false,
 ) {
     val reference: String
         get() = username?.let { "@$it" } ?: id.toString()

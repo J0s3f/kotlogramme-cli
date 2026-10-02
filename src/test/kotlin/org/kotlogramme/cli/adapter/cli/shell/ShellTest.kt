@@ -119,6 +119,33 @@ class ShellTest {
     }
 
     @Test
+    fun `open accepts me and @me for the chat with yourself`() {
+        val saved = Chat(
+            id = 42,
+            title = "Saved Messages",
+            kind = ChatKind.PRIVATE,
+            username = null,
+            lastMessagePreview = null,
+            lastMessageAt = null,
+            isSelf = true,
+        )
+        val dialogs = FakeListDialogs(listOf(saved, ada))
+
+        val bare = run(listOf("open me"), fakeUseCases(dialogs = dialogs))
+        val at = run(listOf("open @me"), fakeUseCases(dialogs = dialogs))
+
+        assertTrue(bare.text.contains("Opened Saved Messages."), bare.text)
+        assertTrue(at.text.contains("Opened Saved Messages."), at.text)
+    }
+
+    @Test
+    fun `open still reports a peer that matches nothing`() {
+        val output = run(listOf("open nobody"), fakeUseCases())
+
+        assertTrue(output.text.contains("No chat matches 'nobody'."), output.text)
+    }
+
+    @Test
     fun `the prompt reflects the current chat`() {
         val lines = ScriptedLineSource(listOf("open @ada"))
 
@@ -335,7 +362,7 @@ class ShellTest {
 
         val output = run(listOf("open @ada", "files"), fakeUseCases(search = search))
 
-        assertEquals(FileSearchCall("@ada", MediaFileKind.PHOTO_VIDEO, 20), search.fileSearches.single())
+        assertEquals(FileSearchCall("@ada", MediaFileKind.ALL, 20), search.fileSearches.single())
         assertTrue(output.text.contains("clip.mp4"), output.text)
     }
 

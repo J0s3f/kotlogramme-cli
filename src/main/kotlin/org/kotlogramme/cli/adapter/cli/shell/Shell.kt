@@ -508,8 +508,15 @@ class Shell(
     }
 
     private fun resolve(peer: String): Chat? {
+        val dialogs = useCases.listDialogs().list(DIALOG_LIMIT)
+        // `me` and `@me` are the Saved Messages alias the one-shot commands already understand;
+        // the shell resolves against the loaded dialogs, where that chat is titled "Saved Messages",
+        // so without this the alias matched nothing.
+        if (peer.removePrefix("@").equals(SELF_ALIAS, ignoreCase = true)) {
+            return dialogs.firstOrNull(Chat::isSelf)
+        }
         val normalized = peer.removePrefix("@").lowercase()
-        return useCases.listDialogs().list(DIALOG_LIMIT).firstOrNull { chat ->
+        return dialogs.firstOrNull { chat ->
             chat.id.toString() == peer ||
                 chat.reference.equals(peer, ignoreCase = true) ||
                 chat.username?.lowercase() == normalized ||
@@ -592,6 +599,8 @@ class Shell(
         const val DEFAULT_CHAT_ACTION = "typing"
         const val DIALOG_LIMIT = 100
         const val CONTACT_LIMIT = 50
+        /** `me` / `@me`, the alias for the private chat with yourself. */
+        const val SELF_ALIAS = "me"
 
         /** How many blocked accounts `blocked` asks for, matching the one-shot command's default. */
         const val BLOCKED_LIMIT = 50
@@ -672,7 +681,7 @@ class Shell(
             "copy-media              both        re-send an existing message's media",
             "download-media          both        save a message's media to a file",
             "files                   shell       list the files of a chat",
-            "list-files              cli         list a chat's files by kind",
+            "list-files              cli         list a chat's files (`--kind all` by default)",
             "edit                    both        edit a message",
             "delete                  both        delete messages",
             "reply                   shell       reply to a message",
@@ -699,7 +708,7 @@ class Shell(
             "listen                  cli         follow incoming updates",
             "folders                 both        list dialog folders",
             "sessions                both        list active sessions, or drop one",
-            "chat-photos             cli         list a chat's photo messages",
+            "chat-photo-history      cli         the chat's profile-photo change history",
             "profile-photos          cli         list a user's profile photos",
             "stickers                both        list the installed sticker sets",
             "sticker-set             both        show a set with its stickers numbered",

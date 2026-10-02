@@ -73,12 +73,9 @@ private fun stripLineBreaks(text: String): String = text
     .replace('\u2028', ' ')
     .replace('\u2029', ' ')
 
-private fun truncateVisible(text: String): String =
-    if (text.length <= QUOTE_LIMIT) text else text.take(QUOTE_LIMIT - 1) + ELLIPSIS
+private fun truncateVisible(text: String): String = truncateToWidth(text, QUOTE_LIMIT)
 
 private const val QUOTE_LIMIT = 80
-
-private const val ELLIPSIS = '…'
 
 /**
  * Moves an entity of the original, unflattened quote onto the truncated text, or drops it when it

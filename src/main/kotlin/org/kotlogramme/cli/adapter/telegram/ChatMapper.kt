@@ -45,7 +45,7 @@ internal const val SAVED_MESSAGES_TITLE = "Saved Messages"
  * profile and reads like a contact rather than the special conversation it is. The label is fixed
  * to [SAVED_MESSAGES_TITLE] so the row is recognisable whatever the account is called.
  */
-internal fun TelegramPeer.toSavedMessagesChat(): Chat = toChat().copy(title = SAVED_MESSAGES_TITLE)
+internal fun TelegramPeer.toSavedMessagesChat(): Chat = toChat().copy(title = SAVED_MESSAGES_TITLE, isSelf = true)
 
 private fun TelegramPeer.title(): String =
     name?.takeIf(String::isNotBlank) ?: username ?: id.toString()

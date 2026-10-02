@@ -989,7 +989,7 @@ internal fun cliFixture(
             ListenCommand(),
             FoldersCommand(),
             SessionsCommand(),
-            ChatPhotosCommand(),
+            ChatPhotoHistoryCommand(),
             ProfilePhotosCommand(),
             InlineCommand(),
             ShellCommand(),

@@ -90,11 +90,76 @@ class SearchMessagesServiceTest {
         assertEquals(emptyList(), gateway.fileSearches)
     }
 
+    @Test
+    fun `all asks every covered kind and merges the answers newest first`() {
+        val gateway = FakeMessageSearchGateway().apply {
+            fileResultsByKind[MediaFileKind.PHOTO_VIDEO] = listOf(messageWith(10), messageWith(4))
+            fileResultsByKind[MediaFileKind.DOCUMENT] = listOf(messageWith(8))
+            fileResultsByKind[MediaFileKind.GIF] = listOf(messageWith(6))
+            fileResultsByKind[MediaFileKind.MUSIC] = listOf(messageWith(2))
+        }
+
+        val result = SearchMessagesService(gateway).files("@ada", MediaFileKind.ALL, limit = 20)
+
+        assertEquals(
+            listOf(
+                FileSearchCall("@ada", MediaFileKind.PHOTO_VIDEO, 20),
+                FileSearchCall("@ada", MediaFileKind.DOCUMENT, 20),
+                FileSearchCall("@ada", MediaFileKind.GIF, 20),
+                FileSearchCall("@ada", MediaFileKind.VOICE, 20),
+                FileSearchCall("@ada", MediaFileKind.MUSIC, 20),
+            ),
+            gateway.fileSearches,
+        )
+        assertEquals(listOf(10, 8, 6, 4, 2), result.map(Message::id))
+    }
+
+    @Test
+    fun `all lists a message the server reports under two kinds once`() {
+        val gateway = FakeMessageSearchGateway().apply {
+            fileResultsByKind[MediaFileKind.PHOTO_VIDEO] = listOf(messageWith(5))
+            fileResultsByKind[MediaFileKind.DOCUMENT] = listOf(messageWith(5))
+        }
+
+        val result = SearchMessagesService(gateway).files("@ada", MediaFileKind.ALL, limit = 20)
+
+        assertEquals(listOf(5), result.map(Message::id))
+    }
+
+    @Test
+    fun `all keeps only the requested number of files`() {
+        val gateway = FakeMessageSearchGateway().apply {
+            fileResultsByKind[MediaFileKind.PHOTO_VIDEO] = listOf(messageWith(10), messageWith(4))
+            fileResultsByKind[MediaFileKind.DOCUMENT] = listOf(messageWith(8), messageWith(2))
+        }
+
+        val result = SearchMessagesService(gateway).files("@ada", MediaFileKind.ALL, limit = 3)
+
+        assertEquals(listOf(10, 8, 4), result.map(Message::id))
+    }
+
+    @Test
+    fun `all total sums the kinds' totals`() {
+        val gateway = FakeMessageSearchGateway().apply {
+            fileTotalsByKind[MediaFileKind.PHOTO_VIDEO] = 4
+            fileTotalsByKind[MediaFileKind.DOCUMENT] = 3
+            fileTotalsByKind[MediaFileKind.GIF] = 1
+            fileTotalsByKind[MediaFileKind.MUSIC] = 2
+        }
+
+        val total = SearchMessagesService(gateway).fileTotal("@ada", MediaFileKind.ALL)
+
+        assertEquals(10, total)
+        assertEquals(5, gateway.fileTotals.size)
+    }
+
     private class FakeMessageSearchGateway : MessageSearchGateway {
         var results: List<Message> = emptyList()
         var totalCount: Int = 0
         var fileResults: List<Message> = emptyList()
         var fileTotalCount: Int = 0
+        val fileResultsByKind = mutableMapOf<MediaFileKind, List<Message>>()
+        val fileTotalsByKind = mutableMapOf<MediaFileKind, Int>()
         val searches = mutableListOf<SearchCall>()
         val totals = mutableListOf<TotalCall>()
         val fileSearches = mutableListOf<FileSearchCall>()
@@ -112,12 +177,12 @@ class SearchMessagesServiceTest {
 
         override fun files(reference: String, kind: MediaFileKind, limit: Int): List<Message> {
             fileSearches += FileSearchCall(reference, kind, limit)
-            return fileResults
+            return fileResultsByKind[kind] ?: fileResults
         }
 
         override fun fileTotal(reference: String, kind: MediaFileKind): Int {
             fileTotals += FileTotalCall(reference, kind)
-            return fileTotalCount
+            return fileTotalsByKind[kind] ?: fileTotalCount
         }
     }
 
@@ -138,4 +203,6 @@ class SearchMessagesServiceTest {
             outgoing = false,
         )
     }
+
+    private fun messageWith(id: Int) = message.copy(id = id)
 }

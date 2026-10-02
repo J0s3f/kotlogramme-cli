@@ -33,15 +33,11 @@ internal const val PREVIEW_LIMIT = 60
  * Collapses [preview] to a single truncated line.
  *
  * A chat's last message can be an essay: rendered verbatim it pads the table to the width of the
- * longest message, which is what a live run showed. Newlines would break the rows outright.
+ * longest message, which is what a live run showed. Newlines would break the rows outright. The cut
+ * is by display columns rather than code units so an emoji or an ideograph does not leave the cell
+ * narrower than the column it was measured for.
  */
-internal fun previewOf(preview: String?): String {
-    val singleLine = preview.orEmpty().replace(WHITESPACE_RUN, " ").trim()
-    return if (singleLine.length <= PREVIEW_LIMIT) {
-        singleLine
-    } else {
-        singleLine.take(PREVIEW_LIMIT - 1).trimEnd() + "…"
-    }
-}
+internal fun previewOf(preview: String?): String =
+    truncateToWidth(preview.orEmpty().replace(WHITESPACE_RUN, " ").trim(), PREVIEW_LIMIT)
 
 private val WHITESPACE_RUN = Regex("\\s+")

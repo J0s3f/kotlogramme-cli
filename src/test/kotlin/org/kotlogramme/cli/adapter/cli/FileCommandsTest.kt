@@ -148,13 +148,13 @@ class FileCommandsTest {
     }
 
     @Test
-    fun `list-files defaults to the photo-video kind and a limit of 20`() {
+    fun `list-files defaults to every kind and a limit of 20`() {
         val search = FakeSearchMessages()
         val fixture = cliFixture(searchMessages = search)
 
         fixture.run("list-files", "@ada")
 
-        assertEquals(FileSearchCall("@ada", MediaFileKind.PHOTO_VIDEO, 20), search.fileSearches.single())
+        assertEquals(FileSearchCall("@ada", MediaFileKind.ALL, 20), search.fileSearches.single())
     }
 
     @Test
@@ -184,7 +184,9 @@ class FileCommandsTest {
 
     @Test
     fun `every kind's filter is the wire name of the facade's search filter`() {
-        for (kind in MediaFileKind.entries) {
+        // ALL names no filter of its own; the service expands it before the gateway is asked.
+        assertEquals("", MediaFileKind.ALL.filter)
+        for (kind in MediaFileKind.entries.filterNot { it == MediaFileKind.ALL }) {
             val filter = MessageSearchFilter.entries.firstOrNull { it.wire == kind.filter }
             assertNotNull(filter, "kind '${kind.cliName}' names wire '${kind.filter}', which no filter carries")
         }
@@ -200,7 +202,7 @@ class FileCommandsTest {
         assertEquals(1, result.statusCode)
         assertTrue(result.stderr.contains("unknown file kind 'nope'"), "stderr was: ${result.stderr}")
         assertTrue(
-            result.stderr.contains("photo, video, photo-video, document, audio, voice, gif, animation"),
+            result.stderr.contains("all, photo, video, photo-video, document, audio, voice, gif, animation"),
             "stderr was: ${result.stderr}",
         )
         assertEquals(emptyList(), search.fileSearches)

@@ -112,6 +112,29 @@ class ConsoleOutputTest {
         assertEquals(1, lines.map(::visibleLength).distinct().size)
     }
 
+    @Test
+    fun `a table lines its columns up by display width when cells hold wide characters`() {
+        val rendered = render(OutputFormat.TABLE) {
+            table(
+                listOf("name", "note"),
+                listOf(
+                    listOf("plain", "abc"),
+                    listOf("cjk", "\u4f60\u597d\u4e16\u754c"),
+                    listOf("emoji", "\ud83d\ude00\ud83d\ude80"),
+                    listOf("combining", "e\u0301e\u0301"),
+                    listOf("flag", "\ud83c\udde6\ud83c\uddf9"),
+                    listOf("zwj", "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67"),
+                ),
+            )
+        }
+
+        // The border, the header and every row must occupy the same number of terminal columns, which
+        // is what visibleLength measures: a code-unit count leaves each wide-character row a different
+        // width, the drift a live dialog list showed.
+        val widths = rendered.lines().map(::visibleLength).distinct()
+        assertEquals(1, widths.size, "the table's lines have different display widths: $widths")
+    }
+
     private fun renderWriter(format: OutputFormat, block: ConsoleOutput.() -> Unit): String {
         val buffer = StringWriter()
         ConsoleOutput(format, buffer).block()

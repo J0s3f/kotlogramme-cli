@@ -8,7 +8,7 @@ import org.kotlogramme.cli.domain.Photo
  * The [PhotoGateway] backed by the kotlogramme facade.
  *
  * References are resolved through the same [ChatReferenceResolver] the rest of the stack uses. A
- * chat photo is a message and is mapped as one; a profile photo has its own shape.
+ * chat-photo change is a message and is mapped as one; a profile photo has its own shape.
  */
 internal class KotlogramPhotoGateway(
     private val operations: FacadePhotoOperations,

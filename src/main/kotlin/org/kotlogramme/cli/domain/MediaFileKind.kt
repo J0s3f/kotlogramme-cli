@@ -11,10 +11,15 @@ package org.kotlogramme.cli.domain
  * `inputMessagesFilter` prefix, and it is the contract with the facade. [cliName] is how a user
  * spells the kind.
  *
+ * [ALL] is not a filter of its own: Telegram has no "every file" filter, so a listing for it is the
+ * union of the other kinds, merged by the service before any filter is named. Its [filter] is
+ * therefore empty and must never reach the gateway.
+ *
  * [ANIMATION] deliberately shares the GIF filter with [GIF]: Telegram has no separate animation
  * filter, and its own clients list animations under the GIF one.
  */
 enum class MediaFileKind(val cliName: String, val filter: String) {
+    ALL("all", ""),
     PHOTOS("photo", "photos"),
     VIDEO("video", "video"),
     PHOTO_VIDEO("photo-video", "photoVideo"),
