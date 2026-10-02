@@ -28,9 +28,9 @@ class ContactsService(private val gateway: ContactGateway) : Contacts {
         gateway.unblock(reference)
     }
 
-    override fun blocked(limit: Int): List<BlockedContact> {
+    override fun blocked(limit: Int, cursor: String?, all: Boolean): List<BlockedContact> {
         requirePositive(limit)
-        return gateway.blocked(limit)
+        return gateway.blocked(limit, cursor, all)
     }
 
     override fun import(contacts: List<ContactToImport>): ContactImportSummary {

@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import org.kotlogramme.TelegramException
 import org.kotlogramme.cli.KotlogrammeCommand
+import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.adapter.format.UploadProgressBar
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryCheck
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryProbe
@@ -174,12 +175,19 @@ internal class FakeAuthenticate(
     }
 }
 
-/** A [ListDialogs] returning canned chats and recording every requested limit. */
+/** A [ListDialogs] returning canned chats and recording every requested limit, cursor and all. */
 internal class FakeListDialogs(private val dialogs: List<Chat> = emptyList()) : ListDialogs {
     val limits = mutableListOf<Int>()
+    val cursors = mutableListOf<String?>()
+    val alls = mutableListOf<Boolean>()
 
-    override fun list(limit: Int): List<Chat> {
+    override fun list(limit: Int, cursor: String?, all: Boolean): List<Chat> {
+        // The gateway rejects a malformed cursor before it reaches the facade; the fake does the
+        // same so a command-level test sees the rejection the user would.
+        if (cursor != null) ListingCursor.parseDialogs(cursor)
         limits += limit
+        cursors += cursor
+        alls += all
         return dialogs
     }
 }
@@ -211,12 +219,16 @@ internal class FakeSearchMessages(
     private val fileTotalResults: Int = 0,
 ) : SearchMessages {
     val searches = mutableListOf<SearchCall>()
+    val searchCursors = mutableListOf<String?>()
     val totals = mutableListOf<SearchCall>()
     val fileSearches = mutableListOf<FileSearchCall>()
+    val fileCursors = mutableListOf<String?>()
     val fileTotals = mutableListOf<Pair<String, MediaFileKind>>()
 
-    override fun search(reference: String?, query: String, limit: Int): List<Message> {
+    override fun search(reference: String?, query: String, limit: Int, cursor: String?): List<Message> {
+        if (cursor != null) ListingCursor.parseDecimal(cursor)
         searches += SearchCall(reference, query, limit)
+        searchCursors += cursor
         return results
     }
 
@@ -225,8 +237,10 @@ internal class FakeSearchMessages(
         return totalResults
     }
 
-    override fun files(reference: String, kind: MediaFileKind, limit: Int): List<Message> {
+    override fun files(reference: String, kind: MediaFileKind, limit: Int, cursor: String?): List<Message> {
+        if (cursor != null) ListingCursor.parseDecimal(cursor)
         fileSearches += FileSearchCall(reference, kind, limit)
+        fileCursors += cursor
         return fileResults
     }
 
@@ -246,6 +260,8 @@ internal class FakeContacts(
 ) : Contacts {
     val limits = mutableListOf<Int>()
     val blockedLimits = mutableListOf<Int>()
+    val blockedCursors = mutableListOf<String?>()
+    val blockedAlls = mutableListOf<Boolean>()
     val searches = mutableListOf<Pair<String, Int>>()
     val blocked = mutableListOf<String>()
     val unblocked = mutableListOf<String>()
@@ -270,8 +286,11 @@ internal class FakeContacts(
         unblocked += reference
     }
 
-    override fun blocked(limit: Int): List<BlockedContact> {
+    override fun blocked(limit: Int, cursor: String?, all: Boolean): List<BlockedContact> {
+        if (cursor != null) ListingCursor.parseDecimal(cursor)
         blockedLimits += limit
+        blockedCursors += cursor
+        blockedAlls += all
         return blockedContacts
     }
 
@@ -307,15 +326,25 @@ internal class FakePhotos(
     private val profile: List<Photo> = emptyList(),
 ) : Photos {
     val chatPhotoCalls = mutableListOf<Pair<String, Int>>()
+    val chatPhotoCursors = mutableListOf<String?>()
+    val chatPhotoAlls = mutableListOf<Boolean>()
     val profilePhotoCalls = mutableListOf<Pair<String, Int>>()
+    val profilePhotoCursors = mutableListOf<String?>()
+    val profilePhotoAlls = mutableListOf<Boolean>()
 
-    override fun chatPhotos(reference: String, limit: Int): List<Message> {
+    override fun chatPhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Message> {
+        if (cursor != null) ListingCursor.parseDecimal(cursor)
         chatPhotoCalls += reference to limit
+        chatPhotoCursors += cursor
+        chatPhotoAlls += all
         return chatPhotoMessages
     }
 
-    override fun profilePhotos(reference: String, limit: Int): List<Photo> {
+    override fun profilePhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Photo> {
+        if (cursor != null) ListingCursor.parseDecimal(cursor)
         profilePhotoCalls += reference to limit
+        profilePhotoCursors += cursor
+        profilePhotoAlls += all
         return profile
     }
 }
@@ -326,11 +355,14 @@ internal data class MemberCall(val reference: String, val limit: Int)
 /** A [ChatMembers] returning canned members and recording every request. */
 internal class FakeChatMembers(private val members: List<Participant> = emptyList()) : ChatMembers {
     val lists = mutableListOf<MemberCall>()
+    val cursors = mutableListOf<String?>()
     val invites = mutableListOf<Pair<String, String>>()
     val kicks = mutableListOf<Pair<String, String>>()
 
-    override fun list(reference: String, limit: Int): List<Participant> {
+    override fun list(reference: String, limit: Int, cursor: String?): List<Participant> {
+        if (cursor != null) ListingCursor.parseDecimal(cursor)
         lists += MemberCall(reference, limit)
+        cursors += cursor
         return members
     }
 

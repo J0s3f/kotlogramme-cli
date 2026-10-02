@@ -14,8 +14,17 @@ internal interface FacadeChatOperations {
     /**
      * The dialogs with their metadata, which is what `messagesGetDialogsMeta` answers; the plain
      * listing projection carries no notification settings, so mute and folder state would be lost.
+     *
+     * [offsetPeer]/[offsetId]/[offsetDate] continue from a previous page, as the cursor the command
+     * printed names them; [all] walks the whole set in one call and wins over them and [limit].
      */
-    fun dialogs(limit: Int): List<Dialog>
+    fun dialogs(
+        limit: Int,
+        offsetPeer: Long? = null,
+        offsetId: Int? = null,
+        offsetDate: Long? = null,
+        all: Boolean = false,
+    ): List<Dialog>
 
     /** Resolves a bare username, which is `contactsResolveUsername`. */
     fun resolveUsername(username: String): TelegramPeer

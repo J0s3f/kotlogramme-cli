@@ -6,7 +6,13 @@ import com.github.badoualy.telegram.api.TelegramPeer
 
 /** The real [FacadeChatOperations], delegating straight to the facade client. */
 internal class KotlogramChatOperations(private val client: TelegramClient) : FacadeChatOperations {
-    override fun dialogs(limit: Int): List<Dialog> = client.messagesGetDialogsMeta(limit)
+    override fun dialogs(
+        limit: Int,
+        offsetPeer: Long?,
+        offsetId: Int?,
+        offsetDate: Long?,
+        all: Boolean,
+    ): List<Dialog> = client.messagesGetDialogsMeta(limit, offsetPeer, offsetId, offsetDate, all)
 
     override fun resolveUsername(username: String): TelegramPeer = client.contactsResolveUsername(username)
 

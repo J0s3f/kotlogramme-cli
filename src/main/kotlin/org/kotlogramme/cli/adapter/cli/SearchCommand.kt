@@ -21,6 +21,7 @@ class SearchCommand : CliktCommand(name = "search") {
     private val query by argument("query", help = "The text to search for")
     private val inPeer by option("--in", help = "Search only this chat; global when omitted")
     private val limit by option("--limit", help = "How many matches to show").int().default(DEFAULT_LIMIT)
+    private val after by option("--after", help = "The cursor to continue from, as the last page printed it")
     private val total by option("--total", help = "Print only the number of matches").flag()
 
     override fun run() {
@@ -29,10 +30,11 @@ class SearchCommand : CliktCommand(name = "search") {
             val matches = rejectInvalidInput { search.total(inPeer, query) }
             appContext.output.line(matches.toString())
         } else {
-        appContext.output.renderMessages(
-            rejectInvalidInput { search.search(inPeer, query, limit) },
-            appContext.messageStyler,
-        )
+            val messages = rejectInvalidInput { search.search(inPeer, query, limit, after) }
+            appContext.output.renderMessages(messages, appContext.messageStyler)
+            if (messages.size == limit) {
+                appContext.output.line("# next: --after ${messages.last().id}")
+            }
         }
     }
 

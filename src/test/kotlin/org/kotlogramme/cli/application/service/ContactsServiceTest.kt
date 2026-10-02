@@ -53,6 +53,17 @@ class ContactsServiceTest {
     }
 
     @Test
+    fun `blocked passes the cursor and all to the gateway`() {
+        val gateway = FakeContactGateway()
+        val service = ContactsService(gateway)
+
+        service.blocked(limit = 20, cursor = "30", all = true)
+
+        assertEquals(listOf<String?>("30"), gateway.blockedCursors)
+        assertEquals(listOf(true), gateway.blockedAlls)
+    }
+
+    @Test
     fun `import passes the contacts through and answers the summary`() {
         val gateway = FakeContactGateway().apply {
             importSummary = ContactImportSummary(imported = listOf(ada), retryCount = 1)
@@ -132,6 +143,8 @@ class ContactsServiceTest {
         val blocked = mutableListOf<String>()
         val unblocked = mutableListOf<String>()
         val blockedLimits = mutableListOf<Int>()
+        val blockedCursors = mutableListOf<String?>()
+        val blockedAlls = mutableListOf<Boolean>()
         val imports = mutableListOf<List<ContactToImport>>()
         val deleted = mutableListOf<String>()
 
@@ -153,8 +166,10 @@ class ContactsServiceTest {
             unblocked += reference
         }
 
-        override fun blocked(limit: Int): List<BlockedContact> {
+        override fun blocked(limit: Int, cursor: String?, all: Boolean): List<BlockedContact> {
             blockedLimits += limit
+            blockedCursors += cursor
+            blockedAlls += all
             return blockedContacts
         }
 

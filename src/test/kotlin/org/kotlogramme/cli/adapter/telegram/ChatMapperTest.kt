@@ -28,6 +28,13 @@ class ChatMapperTest {
     }
 
     @Test
+    fun `maps the dialog's top message id`() {
+        val chat = dialog(peer(id = 7, kind = "user", name = "Ada"), topMessage = 42).toChat(now)
+
+        assertEquals(42, chat.topMessageId)
+    }
+
+    @Test
     fun `maps a small group`() {
         val chat = dialog(peer(id = -9, kind = "group", name = "The Club")).toChat(now)
 

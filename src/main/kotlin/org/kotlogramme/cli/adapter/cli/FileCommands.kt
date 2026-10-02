@@ -83,6 +83,7 @@ class ListFilesCommand : CliktCommand(name = "list-files") {
     private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")
     private val kind by option("--kind", help = "Which files to list: ${fileKindNames()}").default(DEFAULT_KIND)
     private val limit by option("--limit", help = "How many files to list").int().default(DEFAULT_LIMIT)
+    private val after by option("--after", help = "The cursor to continue from, as the last page printed it")
     private val total by option("--total", help = "Print only how many files the chat holds").flag()
 
     override fun run() {
@@ -91,7 +92,11 @@ class ListFilesCommand : CliktCommand(name = "list-files") {
         if (total) {
             appContext.output.line(search.fileTotal(peer, files).toString())
         } else {
-            appContext.output.renderFiles(rejectInvalidInput { search.files(peer, files, limit) })
+            val listed = rejectInvalidInput { search.files(peer, files, limit, after) }
+            appContext.output.renderFiles(listed)
+            if (listed.size == limit) {
+                appContext.output.line("# next: --after ${listed.last().id}")
+            }
         }
     }
 

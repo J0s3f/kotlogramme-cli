@@ -22,8 +22,8 @@ internal class KotlogramContactOperations(private val client: TelegramClient) : 
 
     override fun unblock(peer: TelegramPeer) = client.contactsUnblock(peer)
 
-    override fun blocked(offset: Int, limit: Int): BlockedContacts =
-        client.contactsGetBlocked(offset = offset, limit = limit)
+    override fun blocked(offset: Int, limit: Int, all: Boolean): BlockedContacts =
+        client.contactsGetBlocked(offset = offset, limit = limit, all = all)
 
     override fun importContacts(contacts: List<ContactImport>): ImportedContacts =
         client.contactsImportContacts(contacts)

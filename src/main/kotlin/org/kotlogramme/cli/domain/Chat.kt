@@ -34,6 +34,8 @@ data class Chat(
     val username: String?,
     val lastMessagePreview: String?,
     val lastMessageAt: Instant?,
+    /** The id of the newest message in the dialog, which a dialog listing continues from. */
+    val topMessageId: Int = 0,
     val unreadCount: Int = 0,
     val pinned: Boolean = false,
     val muted: Boolean = false,

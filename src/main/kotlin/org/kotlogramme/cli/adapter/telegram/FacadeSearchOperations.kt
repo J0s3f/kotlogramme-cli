@@ -14,20 +14,32 @@ import com.github.badoualy.telegram.api.TelegramPeer
  * here rather than a flag on [search].
  */
 internal interface FacadeSearchOperations {
-    /** Searches the text of messages in [peer], which is `messagesSearch`. */
-    fun search(peer: TelegramPeer, query: String, limit: Int): List<Message>
+    /**
+     * Searches the text of messages in [peer], which is `messagesSearch`.
+     *
+     * [offsetId] continues from a previous page, as the cursor the command printed names it.
+     */
+    fun search(peer: TelegramPeer, query: String, limit: Int, offsetId: Int? = null): List<Message>
 
     /** Counts the messages in [peer] that match [query], which is `messagesSearchTotal`. */
     fun total(peer: TelegramPeer, query: String): Int
 
-    /** Searches the whole account for [query], which is `messagesSearchGlobal`. */
-    fun searchGlobal(query: String, limit: Int): List<Message>
+    /**
+     * Searches the whole account for [query], which is `messagesSearchGlobal`.
+     *
+     * [offsetId] continues from a previous page, as the cursor the command printed names it.
+     */
+    fun searchGlobal(query: String, limit: Int, offsetId: Int? = null): List<Message>
 
     /** Counts the messages a global search matches, which is `messagesSearchGlobalTotal`. */
     fun totalGlobal(query: String): Int
 
-    /** Lists the messages of [peer] carrying media of [filter], which is `messagesSearch` filtered. */
-    fun searchFiles(peer: TelegramPeer, filter: MessageSearchFilter, limit: Int): List<Message>
+    /**
+     * Lists the messages of [peer] carrying media of [filter], which is `messagesSearch` filtered.
+     *
+     * [offsetId] continues from a previous page, as the cursor the command printed names it.
+     */
+    fun searchFiles(peer: TelegramPeer, filter: MessageSearchFilter, limit: Int, offsetId: Int? = null): List<Message>
 
     /** Counts the messages of [peer] carrying media of [filter], which is `messagesSearchTotal`. */
     fun totalFiles(peer: TelegramPeer, filter: MessageSearchFilter): Int

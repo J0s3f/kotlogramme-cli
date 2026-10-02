@@ -7,13 +7,13 @@ import com.github.badoualy.telegram.api.TelegramPeer
 
 /** The real [FacadeSearchOperations], delegating straight to the facade client. */
 internal class KotlogramSearchOperations(private val client: TelegramClient) : FacadeSearchOperations {
-    override fun search(peer: TelegramPeer, query: String, limit: Int): List<Message> =
-        client.messagesSearch(peer, query, limit = limit)
+    override fun search(peer: TelegramPeer, query: String, limit: Int, offsetId: Int?): List<Message> =
+        client.messagesSearch(peer, query, limit = limit, offsetId = offsetId)
 
     override fun total(peer: TelegramPeer, query: String): Int = client.messagesSearchTotal(peer, query)
 
-    override fun searchGlobal(query: String, limit: Int): List<Message> =
-        client.messagesSearchGlobal(query, limit = limit)
+    override fun searchGlobal(query: String, limit: Int, offsetId: Int?): List<Message> =
+        client.messagesSearchGlobal(query, limit = limit, offsetId = offsetId)
 
     override fun totalGlobal(query: String): Int = client.messagesSearchGlobalTotal(query)
 
@@ -24,8 +24,8 @@ internal class KotlogramSearchOperations(private val client: TelegramClient) : F
      * for nothing in particular with a media filter, and grammers forwards the query as it is, so
      * the filter is what decides the result.
      */
-    override fun searchFiles(peer: TelegramPeer, filter: MessageSearchFilter, limit: Int): List<Message> =
-        client.messagesSearch(peer, query = "", limit = limit, filter = filter)
+    override fun searchFiles(peer: TelegramPeer, filter: MessageSearchFilter, limit: Int, offsetId: Int?): List<Message> =
+        client.messagesSearch(peer, query = "", limit = limit, offsetId = offsetId, filter = filter)
 
     override fun totalFiles(peer: TelegramPeer, filter: MessageSearchFilter): Int =
         client.messagesSearchTotal(peer, query = "", filter = filter)

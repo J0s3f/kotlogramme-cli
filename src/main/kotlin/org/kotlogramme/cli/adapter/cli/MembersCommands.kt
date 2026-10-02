@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import org.kotlogramme.cli.adapter.format.renderParticipants
+import org.kotlogramme.cli.application.ListingCursor
 
 /** Lists a chat's members. */
 class MembersCommand : CliktCommand(name = "members") {
@@ -14,9 +15,15 @@ class MembersCommand : CliktCommand(name = "members") {
 
     private val peer by argument("peer", help = "The chat: @username, numeric id or invite link")
     private val limit by option("--limit", help = "How many members to list").int().default(DEFAULT_LIMIT)
+    private val after by option("--after", help = "The cursor to continue from, as the last page printed it")
 
     override fun run() {
-        appContext.output.renderParticipants(rejectInvalidInput { appContext.chatMembers().list(peer, limit) })
+        val members = rejectInvalidInput { appContext.chatMembers().list(peer, limit, after) }
+        appContext.output.renderParticipants(members)
+        if (members.size == limit) {
+            val startingOffset = after?.let(ListingCursor::parseDecimal) ?: 0
+            appContext.output.line("# next: --after ${startingOffset + members.size}")
+        }
     }
 
     private companion object {

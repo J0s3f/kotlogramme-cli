@@ -6,6 +6,7 @@ import org.kotlogramme.cli.domain.ContactToImport
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ContactsCommandTest {
     private val contacts = listOf(Contact(id = 1, displayName = "Ada", username = "ada", phoneNumber = "+15550100"))
@@ -93,6 +94,61 @@ class ContactsCommandTest {
             ),
             fixture.output.lines,
         )
+    }
+
+    @Test
+    fun `blocked passes the cursor and all to the use case`() {
+        val fake = FakeContacts()
+        val fixture = cliFixture(contacts = fake)
+
+        fixture.run("blocked", "--after", "30", "--all")
+
+        assertEquals(listOf<String?>("30"), fake.blockedCursors)
+        assertEquals(listOf(true), fake.blockedAlls)
+    }
+
+    @Test
+    fun `blocked prints the next cursor on a full page`() {
+        val blocked = (1..50).map { index ->
+            BlockedContact(
+                id = index.toLong(),
+                displayName = "User $index",
+                username = null,
+                blockedAt = Instant.parse("2026-01-01T12:30:00Z"),
+            )
+        }
+        val fake = FakeContacts(blockedContacts = blocked)
+        val fixture = cliFixture(contacts = fake)
+
+        val result = fixture.run("blocked")
+
+        assertEquals(0, result.statusCode)
+        assertTrue(fixture.output.text.contains("# next: --after 50"), fixture.output.text)
+    }
+
+    @Test
+    fun `blocked omits the next cursor on a short page`() {
+        val fake = FakeContacts(
+            blockedContacts = listOf(
+                BlockedContact(1, "Ada", "ada", Instant.parse("2026-01-01T12:30:00Z")),
+            ),
+        )
+        val fixture = cliFixture(contacts = fake)
+
+        fixture.run("blocked")
+
+        assertTrue(!fixture.output.text.contains("# next:"), fixture.output.text)
+    }
+
+    @Test
+    fun `blocked rejects a malformed cursor`() {
+        val fake = FakeContacts()
+        val fixture = cliFixture(contacts = fake)
+
+        val result = fixture.run("blocked", "--after", "abc")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("malformed cursor"), "stderr was: ${result.stderr}")
     }
 
     @Test

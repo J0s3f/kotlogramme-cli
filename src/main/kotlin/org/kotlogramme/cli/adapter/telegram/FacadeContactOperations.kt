@@ -31,8 +31,12 @@ internal interface FacadeContactOperations {
     /** Unblocks [peer], which is `contactsUnblock`. */
     fun unblock(peer: TelegramPeer)
 
-    /** Lists the account's blocked peers, which is `contactsGetBlocked`. */
-    fun blocked(offset: Int, limit: Int): BlockedContacts
+    /**
+     * Lists the account's blocked peers, which is `contactsGetBlocked`.
+     *
+     * [all] walks the whole set in one call and wins over [offset] and [limit].
+     */
+    fun blocked(offset: Int, limit: Int, all: Boolean = false): BlockedContacts
 
     /** Imports saved contacts, which is `contactsImportContacts`. */
     fun importContacts(contacts: List<ContactImport>): ImportedContacts

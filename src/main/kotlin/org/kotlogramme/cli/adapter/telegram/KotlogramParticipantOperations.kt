@@ -6,8 +6,8 @@ import com.github.badoualy.telegram.api.TelegramPeer
 
 /** The real [FacadeParticipantOperations], delegating straight to the facade client. */
 internal class KotlogramParticipantOperations(private val client: TelegramClient) : FacadeParticipantOperations {
-    override fun participants(peer: TelegramPeer, limit: Int): List<Participant> =
-        client.channelsGetParticipants(peer, limit)
+    override fun participants(peer: TelegramPeer, limit: Int, offset: Int?): List<Participant> =
+        client.channelsGetParticipants(peer, limit = limit, offset = offset)
 
     override fun kick(peer: TelegramPeer, user: TelegramPeer) = client.channelsKickParticipant(peer, user)
 

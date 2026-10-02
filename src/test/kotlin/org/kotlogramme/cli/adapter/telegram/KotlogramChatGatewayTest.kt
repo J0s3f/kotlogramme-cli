@@ -75,6 +75,59 @@ class KotlogramChatGatewayTest {
     }
 
     @Test
+    fun `a subsequent page does not repeat Saved Messages`() {
+        val operations = FakeChatOperations().apply {
+            selfPeer = peer(id = 1, kind = "user", name = "Sam Self")
+            dialogs = listOf(dialog(peer(id = 7, kind = "user", name = "Ada")))
+        }
+
+        val chats = KotlogramChatGateway(operations) { now }.dialogs(25, cursor = "1:5:1000", all = false)
+
+        assertEquals(listOf(7L), chats.map { it.id })
+        assertEquals(0, operations.selfResolutions)
+    }
+
+    @Test
+    fun `--all lists Saved Messages once at the top`() {
+        val operations = FakeChatOperations().apply {
+            selfPeer = peer(id = 1, kind = "user", name = "Sam Self")
+            dialogs = listOf(
+                dialog(peer(id = 7, kind = "user", name = "Ada")),
+                dialog(peer(id = 8, kind = "user", name = "Grace")),
+            )
+        }
+
+        val chats = KotlogramChatGateway(operations) { now }.dialogs(25, all = true)
+
+        assertEquals(listOf(1L, 7L, 8L), chats.map { it.id })
+        assertEquals(1, operations.selfResolutions)
+    }
+
+    @Test
+    fun `dialogs parses the cursor into the facade offset triple`() {
+        val operations = FakeChatOperations().apply {
+            selfPeer = peer(id = 1, kind = "user", name = "Sam Self")
+            dialogs = listOf(dialog(peer(id = 7, kind = "user", name = "Ada")))
+        }
+
+        KotlogramChatGateway(operations) { now }.dialogs(25, cursor = "7:5:1000", all = false)
+
+        assertEquals(7L, operations.lastOffsetPeer)
+        assertEquals(5, operations.lastOffsetId)
+        assertEquals(1000L, operations.lastOffsetDate)
+        assertEquals(false, operations.lastAll)
+    }
+
+    @Test
+    fun `dialogs rejects a malformed cursor`() {
+        val operations = FakeChatOperations()
+
+        assertFailsWith<IllegalArgumentException> {
+            KotlogramChatGateway(operations) { now }.dialogs(25, cursor = "not-a-cursor", all = false)
+        }
+    }
+
+    @Test
     fun `resolve reads a username`() {
         val operations = FakeChatOperations().apply {
             resolvedPeer = peer(id = 7, kind = "user", username = "ada", name = "Ada")
@@ -156,6 +209,10 @@ class KotlogramChatGatewayTest {
 internal class FakeChatOperations : FacadeChatOperations {
     var dialogs: List<Dialog> = emptyList()
     var lastDialogsLimit: Int? = null
+    var lastOffsetPeer: Long? = null
+    var lastOffsetId: Int? = null
+    var lastOffsetDate: Long? = null
+    var lastAll: Boolean = false
     var resolvedPeer: TelegramPeer? = null
     var inviteHash: String? = null
     var importedPeer: TelegramPeer? = null
@@ -168,8 +225,12 @@ internal class FakeChatOperations : FacadeChatOperations {
     val resolvedIds = mutableListOf<Long>()
     var selfResolutions = 0
 
-    override fun dialogs(limit: Int): List<Dialog> {
+    override fun dialogs(limit: Int, offsetPeer: Long?, offsetId: Int?, offsetDate: Long?, all: Boolean): List<Dialog> {
         lastDialogsLimit = limit
+        lastOffsetPeer = offsetPeer
+        lastOffsetId = offsetId
+        lastOffsetDate = offsetDate
+        lastAll = all
         return dialogs
     }
 

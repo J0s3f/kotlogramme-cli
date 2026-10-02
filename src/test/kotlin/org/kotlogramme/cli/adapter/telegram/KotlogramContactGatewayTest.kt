@@ -13,6 +13,7 @@ import com.github.badoualy.telegram.api.TelegramPeer
 import org.kotlogramme.cli.domain.ContactToImport
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class KotlogramContactGatewayTest {
@@ -109,6 +110,25 @@ class KotlogramContactGatewayTest {
     }
 
     @Test
+    fun `blocked parses the cursor into the facade offset and all`() {
+        val operations = FakeContactOperations()
+
+        KotlogramContactGateway(operations).blocked(limit = 10, cursor = "30", all = true)
+
+        assertEquals(listOf(30 to 10), operations.blockedCalls)
+        assertEquals(listOf(true), operations.blockedAlls)
+    }
+
+    @Test
+    fun `blocked rejects a malformed cursor`() {
+        val operations = FakeContactOperations()
+
+        assertFailsWith<IllegalArgumentException> {
+            KotlogramContactGateway(operations).blocked(limit = 10, cursor = "abc", all = false)
+        }
+    }
+
+    @Test
     fun `import assigns client ids and maps the saved users`() {
         val operations = FakeContactOperations().apply {
             imported = ImportedContacts(
@@ -166,6 +186,7 @@ internal class FakeContactOperations : FacadeContactOperations {
     val blocked = mutableListOf<TelegramPeer>()
     val unblocked = mutableListOf<TelegramPeer>()
     val blockedCalls = mutableListOf<Pair<Int, Int>>()
+    val blockedAlls = mutableListOf<Boolean>()
     val importedInputs = mutableListOf<List<ContactImport>>()
     val deletedContacts = mutableListOf<TelegramPeer>()
 
@@ -192,8 +213,9 @@ internal class FakeContactOperations : FacadeContactOperations {
         unblocked += peer
     }
 
-    override fun blocked(offset: Int, limit: Int): BlockedContacts {
+    override fun blocked(offset: Int, limit: Int, all: Boolean): BlockedContacts {
         blockedCalls += offset to limit
+        blockedAlls += all
         return blockedPage
     }
 

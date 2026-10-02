@@ -3,6 +3,26 @@
 User-facing features that actually ship, newest first. A feature appears here once it is usable, not
 when it is planned. See [`plan.md`](plan.md) for what is coming.
 
+## Pagination
+
+Every listing command pages. `--after <cursor>` continues from a previous page — the cursor is the
+opaque string the last page printed after its table as `# next: --after <cursor>`, which you paste
+back verbatim. A full page prints that line; a short one does not, so its absence means you are done.
+A malformed cursor is a usage error, never a silent first page.
+
+- `dialogs`, `blocked`, `chat-photo-history` and `profile-photos` also take `--all`, which walks the
+  whole set in one call and wins over both the cursor and `--limit`. For `dialogs`, `--all` is the
+  first page followed by the rest, so the Saved Messages anchor appears exactly once at the top; a
+  paged continuation (`--after`) does not repeat it.
+- `history` already had `--before <id>`; `--after <id>` is an accepted alias for the same thing.
+- The shell's `read`, `search`, `files`, `members` and `blocked` verbs take `--after` too (and
+  `blocked` takes `--all`), and `help <verb>` lists the new options.
+
+The cursor format is per listing shape: a message-id listing (`history`, `search`, `list-files`,
+`chat-photo-history`) uses the last row's message id; an offset-index listing (`blocked`,
+`profile-photos`, `members`) uses the next index, the previous offset plus the rows returned; and
+`dialogs` uses `<peerId>:<topMessageId>:<epochMillis>` from the last row.
+
 ## Media (Phases 4 and 7)
 
 - `send-file <peer> <path|-> [--caption <text>] [--photo] [--video] [--detect] [--no-detect]

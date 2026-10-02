@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.MessageSearchFilter
+import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.application.port.spi.MessageSearchGateway
 import org.kotlogramme.cli.domain.MediaFileKind
 import org.kotlogramme.cli.domain.Message
@@ -19,11 +20,12 @@ internal class KotlogramMessageSearchGateway(
     private val operations: FacadeSearchOperations,
     private val resolver: ChatReferenceResolver,
 ) : MessageSearchGateway {
-    override fun search(reference: String?, query: String, limit: Int): List<Message> {
+    override fun search(reference: String?, query: String, limit: Int, cursor: String?): List<Message> {
+        val offsetId = cursor?.let(ListingCursor::parseDecimal)
         val messages = if (reference == null) {
-            operations.searchGlobal(query, limit)
+            operations.searchGlobal(query, limit, offsetId)
         } else {
-            operations.search(resolver.resolve(reference), query, limit)
+            operations.search(resolver.resolve(reference), query, limit, offsetId)
         }
         return messages.map { it.toMessage() }
     }
@@ -35,8 +37,13 @@ internal class KotlogramMessageSearchGateway(
             operations.total(resolver.resolve(reference), query)
         }
 
-    override fun files(reference: String, kind: MediaFileKind, limit: Int): List<Message> =
-        operations.searchFiles(resolver.resolve(reference), kind.toFilter(), limit).map { it.toMessage() }
+    override fun files(reference: String, kind: MediaFileKind, limit: Int, cursor: String?): List<Message> =
+        operations.searchFiles(
+            peer = resolver.resolve(reference),
+            filter = kind.toFilter(),
+            limit = limit,
+            offsetId = cursor?.let(ListingCursor::parseDecimal),
+        ).map { it.toMessage() }
 
     override fun fileTotal(reference: String, kind: MediaFileKind): Int =
         operations.totalFiles(resolver.resolve(reference), kind.toFilter())

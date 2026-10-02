@@ -12,8 +12,12 @@ import com.github.badoualy.telegram.api.TelegramPeer
  * methods take facade peers only.
  */
 internal interface FacadeParticipantOperations {
-    /** Lists up to [limit] members of [peer], which is `channelsGetParticipants`. */
-    fun participants(peer: TelegramPeer, limit: Int): List<Participant>
+    /**
+     * Lists up to [limit] members of [peer], which is `channelsGetParticipants`.
+     *
+     * [offset] continues from a previous page, as the cursor the command printed names it.
+     */
+    fun participants(peer: TelegramPeer, limit: Int, offset: Int? = null): List<Participant>
 
     /** Removes [user] from [peer], which is `channelsKickParticipant`. */
     fun kick(peer: TelegramPeer, user: TelegramPeer)

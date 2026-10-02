@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.application.port.spi.ParticipantGateway
 import org.kotlogramme.cli.domain.Participant
 
@@ -14,8 +15,12 @@ internal class KotlogramParticipantGateway(
     private val operations: FacadeParticipantOperations,
     private val resolver: ChatReferenceResolver,
 ) : ParticipantGateway {
-    override fun participants(reference: String, limit: Int): List<Participant> =
-        operations.participants(resolver.resolve(reference), limit)
+    override fun participants(reference: String, limit: Int, cursor: String?): List<Participant> =
+        operations.participants(
+            peer = resolver.resolve(reference),
+            limit = limit,
+            offset = cursor?.let(ListingCursor::parseDecimal),
+        )
             .map { it.toParticipant() }
 
     override fun invite(reference: String, userReference: String) =

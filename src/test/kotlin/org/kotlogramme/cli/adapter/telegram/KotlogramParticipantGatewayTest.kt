@@ -29,6 +29,18 @@ class KotlogramParticipantGatewayTest {
     }
 
     @Test
+    fun `participants parses the cursor into the facade offset`() {
+        val chatPeer = peer(id = -9, kind = "channel", name = "The Club", megagroup = true)
+        val chatOperations = FakeParticipantChatOperations().apply { peers["club"] = chatPeer }
+        val operations = FakeParticipantOperations()
+
+        KotlogramParticipantGateway(operations, ChatReferenceResolver(chatOperations))
+            .participants("@club", limit = 50, cursor = "10")
+
+        assertEquals(listOf<Int?>(10), operations.offsets)
+    }
+
+    @Test
     fun `kick resolves both the chat and the user before removing them`() {
         val chatPeer = peer(id = -9, kind = "channel", name = "The Club", megagroup = true)
         val userPeer = peer(id = 1, kind = "user", username = "ada", name = "Ada")
@@ -70,11 +82,13 @@ internal data class InviteCall(val peer: TelegramPeer, val user: TelegramPeer)
 internal class FakeParticipantOperations : FacadeParticipantOperations {
     var page: List<FacadeParticipant> = emptyList()
     val calls = mutableListOf<ParticipantCall>()
+    val offsets = mutableListOf<Int?>()
     val kicks = mutableListOf<KickCall>()
     val invites = mutableListOf<InviteCall>()
 
-    override fun participants(peer: TelegramPeer, limit: Int): List<FacadeParticipant> {
+    override fun participants(peer: TelegramPeer, limit: Int, offset: Int?): List<FacadeParticipant> {
         calls += ParticipantCall(peer, limit)
+        offsets += offset
         return page
     }
 
@@ -92,7 +106,7 @@ internal class FakeParticipantChatOperations : FacadeChatOperations {
     val peers = mutableMapOf<String, TelegramPeer>()
     val resolvedUsernames = mutableListOf<String>()
 
-    override fun dialogs(limit: Int): List<Dialog> = emptyList()
+    override fun dialogs(limit: Int, offsetPeer: Long?, offsetId: Int?, offsetDate: Long?, all: Boolean): List<Dialog> = emptyList()
 
     override fun resolveUsername(username: String): TelegramPeer {
         resolvedUsernames += username

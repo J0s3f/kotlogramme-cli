@@ -96,6 +96,30 @@ class KotlogramMessageSearchGatewayTest {
         assertEquals(4, total)
     }
 
+    @Test
+    fun `search parses the cursor into the facade offsetId`() {
+        val operations = FakeSearchOperations().apply {
+            messages = listOf(message(id = 2, text = "newer", date = 2_000))
+        }
+
+        gatewayWith(operations).search("@ada", "hi", limit = 10, cursor = "99")
+
+        assertEquals(listOf<Int?>(99), operations.searchOffsets)
+    }
+
+    @Test
+    fun `files parses the cursor into the facade offsetId`() {
+        val operations = FakeSearchOperations().apply {
+            fileMessages = listOf(
+                message(id = 3, text = "", date = 3_000, media = com.github.badoualy.telegram.api.Media("video")),
+            )
+        }
+
+        gatewayWith(operations).files("@ada", MediaFileKind.VIDEO, limit = 10, cursor = "99")
+
+        assertEquals(listOf<Int?>(99), operations.fileSearchOffsets)
+    }
+
     private fun gatewayWith(operations: FakeSearchOperations): KotlogramMessageSearchGateway =
         KotlogramMessageSearchGateway(
             operations,
@@ -121,14 +145,18 @@ internal class FakeSearchOperations : FacadeSearchOperations {
     var fileMessages: List<Message> = emptyList()
     var fileTotalCount: Int = 0
     val searches = mutableListOf<PeerSearchCall>()
+    val searchOffsets = mutableListOf<Int?>()
     val totals = mutableListOf<PeerTotalCall>()
     val globalSearches = mutableListOf<GlobalSearchCall>()
+    val globalSearchOffsets = mutableListOf<Int?>()
     val globalTotals = mutableListOf<String>()
     val fileSearches = mutableListOf<FileSearchCall>()
+    val fileSearchOffsets = mutableListOf<Int?>()
     val fileTotals = mutableListOf<FileTotalCall>()
 
-    override fun search(peer: TelegramPeer, query: String, limit: Int): List<Message> {
+    override fun search(peer: TelegramPeer, query: String, limit: Int, offsetId: Int?): List<Message> {
         searches += PeerSearchCall(peer, query, limit)
+        searchOffsets += offsetId
         return messages
     }
 
@@ -137,8 +165,9 @@ internal class FakeSearchOperations : FacadeSearchOperations {
         return totalCount
     }
 
-    override fun searchGlobal(query: String, limit: Int): List<Message> {
+    override fun searchGlobal(query: String, limit: Int, offsetId: Int?): List<Message> {
         globalSearches += GlobalSearchCall(query, limit)
+        globalSearchOffsets += offsetId
         return globalMessages
     }
 
@@ -147,8 +176,9 @@ internal class FakeSearchOperations : FacadeSearchOperations {
         return globalTotalCount
     }
 
-    override fun searchFiles(peer: TelegramPeer, filter: MessageSearchFilter, limit: Int): List<Message> {
+    override fun searchFiles(peer: TelegramPeer, filter: MessageSearchFilter, limit: Int, offsetId: Int?): List<Message> {
         fileSearches += FileSearchCall(peer, filter, limit)
+        fileSearchOffsets += offsetId
         return fileMessages
     }
 

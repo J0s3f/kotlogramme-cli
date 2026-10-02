@@ -6,9 +6,9 @@ import org.kotlogramme.cli.domain.Participant
 
 /** Lists a chat's members and removes one, validating the arguments before calling the gateway. */
 class ChatMembersService(private val gateway: ParticipantGateway) : ChatMembers {
-    override fun list(reference: String, limit: Int): List<Participant> {
+    override fun list(reference: String, limit: Int, cursor: String?): List<Participant> {
         require(limit > 0) { "limit must be positive but was $limit" }
-        return gateway.participants(reference, limit)
+        return gateway.participants(reference, limit, cursor)
     }
 
     override fun invite(reference: String, userReference: String) {

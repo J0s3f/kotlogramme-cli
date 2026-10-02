@@ -6,6 +6,7 @@ import org.kotlogramme.cli.adapter.cli.EditCall
 import org.kotlogramme.cli.adapter.cli.ChatActionCall
 import org.kotlogramme.cli.adapter.cli.FakeChatMembers
 import org.kotlogramme.cli.adapter.cli.FakeContacts
+import org.kotlogramme.cli.adapter.cli.HistoryCall
 import org.kotlogramme.cli.adapter.cli.FakeDownloadMedia
 import org.kotlogramme.cli.adapter.cli.FakeInlineBots
 import org.kotlogramme.cli.adapter.cli.FakeListDialogs
@@ -59,6 +60,7 @@ import java.nio.file.Path
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ShellTest {
@@ -271,6 +273,92 @@ class ShellTest {
     }
 
     @Test
+    fun `read --after passes the cursor to the use case`() {
+        val history = FakeReadHistory(listOf(message(1, "one")))
+
+        run(listOf("open @ada", "read --after 5"), fakeUseCases(history = history))
+
+        assertEquals(listOf(HistoryCall("@ada", 20, 5)), history.calls)
+    }
+
+    @Test
+    fun `read prints the next cursor on a full page`() {
+        val messages = (1..20).map { index -> message(index, "message $index") }
+        val history = FakeReadHistory(messages)
+
+        val output = run(listOf("open @ada", "read"), fakeUseCases(history = history))
+
+        assertTrue(output.text.contains("# next: --after 20"), output.text)
+    }
+
+    @Test
+    fun `read omits the next cursor on a short page`() {
+        val history = FakeReadHistory(listOf(message(1, "one")))
+
+        val output = run(listOf("open @ada", "read"), fakeUseCases(history = history))
+
+        assertFalse(output.text.contains("# next:"), output.text)
+    }
+
+    @Test
+    fun `read rejects a malformed --after`() {
+        val history = FakeReadHistory(listOf(message(1, "one")))
+
+        val output = run(listOf("open @ada", "read --after abc"), fakeUseCases(history = history))
+
+        assertTrue(output.text.contains("Usage: read"), output.text)
+        assertEquals(emptyList(), history.calls)
+    }
+
+    @Test
+    fun `search --after passes the cursor to the use case`() {
+        val search = FakeSearchMessages()
+
+        run(listOf("open @ada", "search hello --after 7"), fakeUseCases(search = search))
+
+        assertEquals(listOf<String?>("7"), search.searchCursors)
+    }
+
+    @Test
+    fun `search prints the next cursor on a full page`() {
+        val messages = (1..20).map { index -> message(index, "message $index") }
+        val search = FakeSearchMessages(messages)
+
+        val output = run(listOf("open @ada", "search hello"), fakeUseCases(search = search))
+
+        assertTrue(output.text.contains("# next: --after 20"), output.text)
+    }
+
+    @Test
+    fun `search omits the next cursor on a short page`() {
+        val search = FakeSearchMessages(listOf(message(1, "one")))
+
+        val output = run(listOf("open @ada", "search hello"), fakeUseCases(search = search))
+
+        assertFalse(output.text.contains("# next:"), output.text)
+    }
+
+    @Test
+    fun `search rejects a malformed --after`() {
+        val search = FakeSearchMessages()
+
+        val output = run(listOf("open @ada", "search hello --after abc"), fakeUseCases(search = search))
+
+        assertTrue(output.text.contains("malformed cursor"), output.text)
+        assertEquals(emptyList(), search.searches)
+    }
+
+    @Test
+    fun `search --after with no value reports the usage`() {
+        val search = FakeSearchMessages()
+
+        val output = run(listOf("open @ada", "search hello --after"), fakeUseCases(search = search))
+
+        assertTrue(output.text.contains("Usage: search"), output.text)
+        assertEquals(emptyList(), search.searches)
+    }
+
+    @Test
     fun `stickers lists the installed sets`() {
         val stickers = FakeStickers(sets = listOf(testStickerSet()))
 
@@ -380,6 +468,48 @@ class ShellTest {
     }
 
     @Test
+    fun `members --after passes the cursor to the use case`() {
+        val members = FakeChatMembers()
+
+        run(listOf("members @club --after 10"), fakeUseCases(members = members))
+
+        assertEquals(listOf<String?>("10"), members.cursors)
+    }
+
+    @Test
+    fun `members prints the next cursor on a full page`() {
+        val members = (1..50).map { index ->
+            Participant(id = index.toLong(), displayName = "User $index", username = null, role = "member")
+        }
+        val fake = FakeChatMembers(members)
+
+        val output = run(listOf("members @club"), fakeUseCases(members = fake))
+
+        assertTrue(output.text.contains("# next: --after 50"), output.text)
+    }
+
+    @Test
+    fun `members omits the next cursor on a short page`() {
+        val members = FakeChatMembers(
+            listOf(Participant(id = 1, displayName = "Ada", username = "ada", role = "member")),
+        )
+
+        val output = run(listOf("members @club"), fakeUseCases(members = members))
+
+        assertFalse(output.text.contains("# next:"), output.text)
+    }
+
+    @Test
+    fun `members rejects a malformed --after`() {
+        val members = FakeChatMembers()
+
+        val output = run(listOf("members @club --after abc"), fakeUseCases(members = members))
+
+        assertTrue(output.text.contains("malformed cursor"), output.text)
+        assertEquals(emptyList(), members.lists)
+    }
+
+    @Test
     fun `folders lists the dialog folders`() {
         val folders = FakeListFolders(listOf(Folder(id = 1, title = "Work", kind = "filter")))
 
@@ -405,6 +535,44 @@ class ShellTest {
         run(listOf("files @club --kind video --limit 5"), fakeUseCases(search = search))
 
         assertEquals(FileSearchCall("@club", MediaFileKind.VIDEO, 5), search.fileSearches.single())
+    }
+
+    @Test
+    fun `files --after passes the cursor to the use case`() {
+        val search = FakeSearchMessages()
+
+        run(listOf("open @ada", "files --after 9"), fakeUseCases(search = search))
+
+        assertEquals(listOf<String?>("9"), search.fileCursors)
+    }
+
+    @Test
+    fun `files prints the next cursor on a full page`() {
+        val files = (1..20).map { index -> fileMessage(index, "clip$index.mp4") }
+        val search = FakeSearchMessages(fileResults = files)
+
+        val output = run(listOf("open @ada", "files"), fakeUseCases(search = search))
+
+        assertTrue(output.text.contains("# next: --after 20"), output.text)
+    }
+
+    @Test
+    fun `files omits the next cursor on a short page`() {
+        val search = FakeSearchMessages(fileResults = listOf(fileMessage(7, "clip.mp4")))
+
+        val output = run(listOf("open @ada", "files"), fakeUseCases(search = search))
+
+        assertFalse(output.text.contains("# next:"), output.text)
+    }
+
+    @Test
+    fun `files rejects a malformed --after`() {
+        val search = FakeSearchMessages()
+
+        val output = run(listOf("open @ada", "files --after abc"), fakeUseCases(search = search))
+
+        assertTrue(output.text.contains("malformed cursor"), output.text)
+        assertEquals(emptyList(), search.fileSearches)
     }
 
     @Test
@@ -582,6 +750,59 @@ class ShellTest {
 
         assertEquals(listOf(50), contacts.blockedLimits)
         assertTrue(output.text.contains("Mallory"), output.text)
+    }
+
+    @Test
+    fun `blocked --after passes the cursor to the use case`() {
+        val contacts = FakeContacts()
+
+        run(listOf("blocked --after 10"), fakeUseCases(contacts = contacts))
+
+        assertEquals(listOf<String?>("10"), contacts.blockedCursors)
+    }
+
+    @Test
+    fun `blocked --all passes all to the use case`() {
+        val contacts = FakeContacts()
+
+        run(listOf("blocked --all"), fakeUseCases(contacts = contacts))
+
+        assertEquals(listOf(true), contacts.blockedAlls)
+    }
+
+    @Test
+    fun `blocked prints the next cursor on a full page`() {
+        val blocked = (1..50).map { index ->
+            BlockedContact(index.toLong(), "User $index", null, Instant.parse("2026-01-02T00:00:00Z"))
+        }
+        val contacts = FakeContacts(blockedContacts = blocked)
+
+        val output = run(listOf("blocked"), fakeUseCases(contacts = contacts))
+
+        assertTrue(output.text.contains("# next: --after 50"), output.text)
+    }
+
+    @Test
+    fun `blocked omits the next cursor on a short page`() {
+        val contacts = FakeContacts(
+            blockedContacts = listOf(
+                BlockedContact(9, "Mallory", "mal", Instant.parse("2026-01-02T00:00:00Z")),
+            ),
+        )
+
+        val output = run(listOf("blocked"), fakeUseCases(contacts = contacts))
+
+        assertFalse(output.text.contains("# next:"), output.text)
+    }
+
+    @Test
+    fun `blocked rejects a malformed --after`() {
+        val contacts = FakeContacts()
+
+        val output = run(listOf("blocked --after abc"), fakeUseCases(contacts = contacts))
+
+        assertTrue(output.text.contains("malformed cursor"), output.text)
+        assertEquals(emptyList(), contacts.blockedCursors)
     }
 
     @Test

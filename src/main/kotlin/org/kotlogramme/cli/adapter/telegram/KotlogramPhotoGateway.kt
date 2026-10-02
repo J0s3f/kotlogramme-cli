@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.application.port.spi.PhotoGateway
 import org.kotlogramme.cli.domain.Message
 import org.kotlogramme.cli.domain.Photo
@@ -14,9 +15,19 @@ internal class KotlogramPhotoGateway(
     private val operations: FacadePhotoOperations,
     private val resolver: ChatReferenceResolver,
 ) : PhotoGateway {
-    override fun chatPhotos(reference: String, limit: Int): List<Message> =
-        operations.chatPhotos(resolver.resolve(reference), limit).map { it.toMessage() }
+    override fun chatPhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Message> =
+        operations.chatPhotos(
+            peer = resolver.resolve(reference),
+            limit = limit,
+            offsetId = cursor?.let(ListingCursor::parseDecimal),
+            all = all,
+        ).map { it.toMessage() }
 
-    override fun profilePhotos(reference: String, limit: Int): List<Photo> =
-        operations.profilePhotos(resolver.resolve(reference), limit).map { it.toPhoto() }
+    override fun profilePhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Photo> =
+        operations.profilePhotos(
+            peer = resolver.resolve(reference),
+            limit = limit,
+            offset = cursor?.let(ListingCursor::parseDecimal),
+            all = all,
+        ).map { it.toPhoto() }
 }

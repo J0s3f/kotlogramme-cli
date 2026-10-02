@@ -12,9 +12,19 @@ import org.kotlogramme.cli.domain.Photo
  * and is listed only.
  */
 interface Photos {
-    /** Lists the messages that record a change to the chat's own photo, most recent first. */
-    fun chatPhotos(reference: String, limit: Int): List<Message>
+    /**
+     * Lists the messages that record a change to the chat's own photo, most recent first.
+     *
+     * [cursor] continues from a previous page, as the `# next:` line printed it; [all] walks the
+     * whole set in one call and wins over both [cursor] and [limit].
+     */
+    fun chatPhotos(reference: String, limit: Int, cursor: String? = null, all: Boolean = false): List<Message>
 
-    /** Lists a user's profile photos, most recent first. */
-    fun profilePhotos(reference: String, limit: Int): List<Photo>
+    /**
+     * Lists a user's profile photos, most recent first.
+     *
+     * [cursor] continues from a previous page, as the `# next:` line printed it; [all] walks the
+     * whole set in one call and wins over both [cursor] and [limit].
+     */
+    fun profilePhotos(reference: String, limit: Int, cursor: String? = null, all: Boolean = false): List<Photo>
 }

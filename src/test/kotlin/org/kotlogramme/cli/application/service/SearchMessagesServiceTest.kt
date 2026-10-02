@@ -82,6 +82,26 @@ class SearchMessagesServiceTest {
     }
 
     @Test
+    fun `search passes the cursor to the gateway`() {
+        val gateway = FakeMessageSearchGateway().apply { results = listOf(message) }
+
+        val result = SearchMessagesService(gateway).search("@ada", "hi", limit = 10, cursor = "99")
+
+        assertEquals(listOf<String?>("99"), gateway.searchCursors)
+        assertEquals(listOf(message), result)
+    }
+
+    @Test
+    fun `files passes the cursor to the gateway`() {
+        val gateway = FakeMessageSearchGateway().apply { fileResults = listOf(message) }
+
+        val result = SearchMessagesService(gateway).files("@ada", MediaFileKind.VIDEO, limit = 15, cursor = "99")
+
+        assertEquals(listOf<String?>("99"), gateway.fileCursors)
+        assertEquals(listOf(message), result)
+    }
+
+    @Test
     fun `files rejects a non-positive limit before the gateway`() {
         val gateway = FakeMessageSearchGateway()
         val service = SearchMessagesService(gateway)
@@ -161,12 +181,15 @@ class SearchMessagesServiceTest {
         val fileResultsByKind = mutableMapOf<MediaFileKind, List<Message>>()
         val fileTotalsByKind = mutableMapOf<MediaFileKind, Int>()
         val searches = mutableListOf<SearchCall>()
+        val searchCursors = mutableListOf<String?>()
         val totals = mutableListOf<TotalCall>()
         val fileSearches = mutableListOf<FileSearchCall>()
+        val fileCursors = mutableListOf<String?>()
         val fileTotals = mutableListOf<FileTotalCall>()
 
-        override fun search(reference: String?, query: String, limit: Int): List<Message> {
+        override fun search(reference: String?, query: String, limit: Int, cursor: String?): List<Message> {
             searches += SearchCall(reference, query, limit)
+            searchCursors += cursor
             return results
         }
 
@@ -175,8 +198,9 @@ class SearchMessagesServiceTest {
             return totalCount
         }
 
-        override fun files(reference: String, kind: MediaFileKind, limit: Int): List<Message> {
+        override fun files(reference: String, kind: MediaFileKind, limit: Int, cursor: String?): List<Message> {
             fileSearches += FileSearchCall(reference, kind, limit)
+            fileCursors += cursor
             return fileResultsByKind[kind] ?: fileResults
         }
 

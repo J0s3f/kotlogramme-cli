@@ -15,7 +15,13 @@ interface Contacts {
 
     fun unblock(reference: String)
 
-    fun blocked(limit: Int): List<BlockedContact>
+    /**
+     * Lists the account's blocked peers, newest block first.
+     *
+     * [cursor] continues from a previous page, as the `# next:` line printed it; [all] walks the
+     * whole set in one call and wins over both [cursor] and [limit].
+     */
+    fun blocked(limit: Int, cursor: String? = null, all: Boolean = false): List<BlockedContact>
 
     fun import(contacts: List<ContactToImport>): ContactImportSummary
 

@@ -7,14 +7,14 @@ import org.kotlogramme.cli.domain.Photo
 
 /** Lists a chat's photo-change history and a user's profile photos, rejecting a non-positive limit first. */
 class PhotosService(private val gateway: PhotoGateway) : Photos {
-    override fun chatPhotos(reference: String, limit: Int): List<Message> {
+    override fun chatPhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Message> {
         requirePositive(limit)
-        return gateway.chatPhotos(reference, limit)
+        return gateway.chatPhotos(reference, limit, cursor, all)
     }
 
-    override fun profilePhotos(reference: String, limit: Int): List<Photo> {
+    override fun profilePhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Photo> {
         requirePositive(limit)
-        return gateway.profilePhotos(reference, limit)
+        return gateway.profilePhotos(reference, limit, cursor, all)
     }
 
     private fun requirePositive(limit: Int) {

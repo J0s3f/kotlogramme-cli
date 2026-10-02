@@ -7,10 +7,10 @@ import org.kotlogramme.cli.domain.Message
 
 /** Searches messages in one chat or globally, validating the query and limit first. */
 class SearchMessagesService(private val gateway: MessageSearchGateway) : SearchMessages {
-    override fun search(reference: String?, query: String, limit: Int): List<Message> {
+    override fun search(reference: String?, query: String, limit: Int, cursor: String?): List<Message> {
         require(query.isNotBlank()) { "query must not be blank" }
         require(limit > 0) { "limit must be positive but was $limit" }
-        return gateway.search(reference, query, limit)
+        return gateway.search(reference, query, limit, cursor)
     }
 
     override fun total(reference: String?, query: String): Int {
@@ -27,11 +27,11 @@ class SearchMessagesService(private val gateway: MessageSearchGateway) : SearchM
      * are merged newest first. A message the server reports under two of them - a track that is both
      * a document and music - is listed once.
      */
-    override fun files(reference: String, kind: MediaFileKind, limit: Int): List<Message> {
+    override fun files(reference: String, kind: MediaFileKind, limit: Int, cursor: String?): List<Message> {
         require(limit > 0) { "limit must be positive but was $limit" }
-        if (kind != MediaFileKind.ALL) return gateway.files(reference, kind, limit)
+        if (kind != MediaFileKind.ALL) return gateway.files(reference, kind, limit, cursor)
         return ALL_KINDS
-            .flatMap { gateway.files(reference, it, limit) }
+            .flatMap { gateway.files(reference, it, limit, cursor) }
             .distinctBy(Message::id)
             .sortedByDescending(Message::id)
             .take(limit)

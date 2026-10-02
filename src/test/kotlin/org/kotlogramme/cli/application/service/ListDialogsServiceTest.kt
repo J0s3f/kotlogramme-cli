@@ -19,6 +19,17 @@ class ListDialogsServiceTest {
     }
 
     @Test
+    fun `passes the cursor and all to the gateway`() {
+        val gateway = FakeChatGateway().apply { chats = listOf(chat) }
+
+        val result = ListDialogsService(gateway).list(10, "7:5:1000", all = true)
+
+        assertEquals(listOf<String?>("7:5:1000"), gateway.cursors)
+        assertEquals(listOf(true), gateway.alls)
+        assertEquals(listOf(chat), result)
+    }
+
+    @Test
     fun `rejects a non-positive limit`() {
         val gateway = FakeChatGateway()
 
@@ -29,10 +40,14 @@ class ListDialogsServiceTest {
 
     private class FakeChatGateway : ChatGateway {
         val limits = mutableListOf<Int>()
+        val cursors = mutableListOf<String?>()
+        val alls = mutableListOf<Boolean>()
         var chats: List<Chat> = emptyList()
 
-        override fun dialogs(limit: Int): List<Chat> {
+        override fun dialogs(limit: Int, cursor: String?, all: Boolean): List<Chat> {
             limits += limit
+            cursors += cursor
+            alls += all
             return chats
         }
 

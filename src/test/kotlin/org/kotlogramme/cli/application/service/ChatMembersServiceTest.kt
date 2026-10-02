@@ -46,6 +46,16 @@ class ChatMembersServiceTest {
     }
 
     @Test
+    fun `list passes the cursor to the gateway`() {
+        val gateway = FakeParticipantGateway().apply { members = listOf(ada) }
+
+        val result = ChatMembersService(gateway).list("@club", limit = 20, cursor = "10")
+
+        assertEquals(listOf<String?>("10"), gateway.cursors)
+        assertEquals(listOf(ada), result)
+    }
+
+    @Test
     fun `rejects a non-positive limit before the gateway`() {
         val gateway = FakeParticipantGateway()
         val service = ChatMembersService(gateway)
@@ -68,11 +78,13 @@ class ChatMembersServiceTest {
     private class FakeParticipantGateway : ParticipantGateway {
         var members: List<Participant> = emptyList()
         val listCalls = mutableListOf<MemberCall>()
+        val cursors = mutableListOf<String?>()
         val invites = mutableListOf<MemberKick>()
         val kicks = mutableListOf<MemberKick>()
 
-        override fun participants(reference: String, limit: Int): List<Participant> {
+        override fun participants(reference: String, limit: Int, cursor: String?): List<Participant> {
             listCalls += MemberCall(reference, limit)
+            cursors += cursor
             return members
         }
 

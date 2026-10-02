@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.ContactImport
+import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.application.port.spi.ContactGateway
 import org.kotlogramme.cli.domain.BlockedContact
 import org.kotlogramme.cli.domain.Contact
@@ -32,8 +33,12 @@ internal class KotlogramContactGateway(private val operations: FacadeContactOper
 
     override fun unblock(reference: String) = operations.unblock(operations.resolve(reference))
 
-    override fun blocked(limit: Int): List<BlockedContact> =
-        operations.blocked(offset = 0, limit = limit).blocked
+    override fun blocked(limit: Int, cursor: String?, all: Boolean): List<BlockedContact> =
+        operations.blocked(
+            offset = cursor?.let(ListingCursor::parseDecimal) ?: 0,
+            limit = limit,
+            all = all,
+        ).blocked
             .take(limit)
             .map { it.toBlockedContact() }
 

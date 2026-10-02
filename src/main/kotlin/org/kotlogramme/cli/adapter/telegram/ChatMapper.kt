@@ -19,6 +19,7 @@ private const val ARCHIVE_FOLDER_ID = 1
 internal fun Dialog.toChat(now: Instant): Chat = peer.toChat().copy(
     lastMessagePreview = lastMessage?.preview(),
     lastMessageAt = lastMessage?.date?.let(Instant::ofEpochMilli),
+    topMessageId = topMessage,
     unreadCount = unreadCount ?: 0,
     pinned = pinned,
     muted = isMuted(now),

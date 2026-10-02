@@ -83,7 +83,7 @@ class Shell(
                 "invite" -> invite(arguments)
                 "kick" -> kick(arguments)
                 "contacts" -> listContacts()
-                "blocked" -> listBlocked()
+                "blocked" -> listBlocked(arguments)
                 "search" -> search(arguments)
                 "files" -> listFiles(arguments)
                 "download-media" -> downloadMedia(arguments)
@@ -158,8 +158,19 @@ class Shell(
     private fun read(arguments: List<String>) {
         val chat = requireChat() ?: return
         val limit = pageLimit(arguments, READ_USAGE) ?: return
-        remember(useCases.readHistory().read(chat.reference, limit, beforeMessageId = null))
+        val after = cursorAfter(arguments, READ_USAGE)
+        if (after == null && AFTER_OPTION in arguments) return
+        val beforeMessageId = after?.toIntOrNull()
+        if (after != null && beforeMessageId == null) {
+            output.line(READ_USAGE)
+            return
+        }
+        val page = useCases.readHistory().read(chat.reference, limit, beforeMessageId)
+        remember(page)
         output.renderMessages(orderedTranscript(), messageStyler)
+        if (page.size == limit) {
+            output.line("# next: --after ${page.last().id}")
+        }
     }
 
     private fun send(arguments: List<String>, replyToMessageId: Int?) {
@@ -341,22 +352,38 @@ class Shell(
         output.renderContacts(useCases.contacts().list(CONTACT_LIMIT))
     }
 
-    /** Lists the blocked accounts, the read-only half of the contact surface. */
-    private fun listBlocked() {
-        output.renderBlockedContacts(useCases.contacts().blocked(BLOCKED_LIMIT))
+    /**
+     * Lists the blocked accounts, the read-only half of the contact surface.
+     *
+     * `--after` continues from a previous page and `--all` walks the whole set in one call, both as
+     * the one-shot command takes them.
+     */
+    private fun listBlocked(arguments: List<String>) {
+        val after = cursorAfter(arguments, BLOCKED_USAGE)
+        if (after == null && AFTER_OPTION in arguments) return
+        val all = arguments.contains(ALL_OPTION)
+        val blocked = useCases.contacts().blocked(BLOCKED_LIMIT, after, all)
+        output.renderBlockedContacts(blocked)
+        if (blocked.size == BLOCKED_LIMIT && !all) {
+            val startingOffset = after?.toIntOrNull() ?: 0
+            output.line("# next: --after ${startingOffset + blocked.size}")
+        }
     }
 
     private fun search(arguments: List<String>) {
-        val query = arguments.joinToString(" ").trim()
+        val query = wordsOf(arguments).joinToString(" ").trim()
         if (query.isEmpty()) {
-            output.line("Usage: search <query>")
+            output.line(SEARCH_USAGE)
             return
         }
+        val after = cursorAfter(arguments, SEARCH_USAGE)
+        if (after == null && AFTER_OPTION in arguments) return
         val scope = currentChat?.reference
-        output.renderMessages(
-            useCases.searchMessages().search(scope, query, TRANSCRIPT_LIMIT),
-            messageStyler,
-        )
+        val messages = useCases.searchMessages().search(scope, query, TRANSCRIPT_LIMIT, after)
+        output.renderMessages(messages, messageStyler)
+        if (messages.size == TRANSCRIPT_LIMIT) {
+            output.line("# next: --after ${messages.last().id}")
+        }
     }
 
     private fun listStickerSets() {
@@ -429,9 +456,15 @@ class Shell(
     }
 
     private fun listMembers(arguments: List<String>) {
-        val peer = arguments.firstOrNull()
-        val reference = peer ?: requireChat()?.reference ?: return
-        output.renderParticipants(useCases.chatMembers().list(reference, MEMBER_LIMIT))
+        val peer = wordsOf(arguments).firstOrNull() ?: requireChat()?.reference ?: return
+        val after = cursorAfter(arguments, MEMBERS_USAGE)
+        if (after == null && AFTER_OPTION in arguments) return
+        val members = useCases.chatMembers().list(peer, MEMBER_LIMIT, after)
+        output.renderParticipants(members)
+        if (members.size == MEMBER_LIMIT) {
+            val startingOffset = after?.toIntOrNull() ?: 0
+            output.line("# next: --after ${startingOffset + members.size}")
+        }
     }
 
     private fun listFolders() {
@@ -475,7 +508,13 @@ class Shell(
         val kind = mediaFileKindOf(valueAfter(arguments, KIND_OPTION) ?: DEFAULT_FILE_KIND)
         // `--kind` is parsed above, so the limit check only sees the `--limit` a line carries.
         val limit = pageLimit(without(arguments, KIND_OPTION), FILES_USAGE) ?: return
-        output.renderFiles(useCases.searchMessages().files(peer, kind, limit))
+        val after = cursorAfter(arguments, FILES_USAGE)
+        if (after == null && AFTER_OPTION in arguments) return
+        val files = useCases.searchMessages().files(peer, kind, limit, after)
+        output.renderFiles(files)
+        if (files.size == limit) {
+            output.line("# next: --after ${files.last().id}")
+        }
     }
 
     /**
@@ -550,16 +589,37 @@ class Shell(
     /**
      * The `--limit` a verb carries, or [TRANSCRIPT_LIMIT]; a value that is not a positive number
      * reports [usage] and gives nothing, the way the shell reports every other malformed line.
+     *
+     * `--after` is a paging cursor, not a page size, so it is set aside before the limit is read.
      */
     private fun pageLimit(arguments: List<String>, usage: String): Int? {
-        if (arguments.isEmpty()) return TRANSCRIPT_LIMIT
-        val index = arguments.indexOf(LIMIT_OPTION)
-        val limit = arguments.getOrNull(index + 1)?.toIntOrNull()
+        val paging = without(arguments, AFTER_OPTION)
+        if (paging.isEmpty()) return TRANSCRIPT_LIMIT
+        val index = paging.indexOf(LIMIT_OPTION)
+        val limit = paging.getOrNull(index + 1)?.toIntOrNull()
         if (index < 0 || limit == null || limit <= 0) {
             output.line(usage)
             return null
         }
         return limit
+    }
+
+    /**
+     * The `--after` cursor a verb carries, or null when it is absent.
+     *
+     * A cursor that is present but has no value reports [usage] and answers null, which the caller
+     * treats as a stop; the `AFTER_OPTION in arguments` check tells an absent cursor from a rejected
+     * one.
+     */
+    private fun cursorAfter(arguments: List<String>, usage: String): String? {
+        val index = arguments.indexOf(AFTER_OPTION)
+        if (index < 0) return null
+        val cursor = arguments.getOrNull(index + 1)?.takeUnless { it.startsWith(OPTION_PREFIX) }
+        if (cursor == null) {
+            output.line(usage)
+            return null
+        }
+        return cursor
     }
 
     /** The words of [arguments] that are neither an option nor the value it was given. */
@@ -609,8 +669,10 @@ class Shell(
         const val EXIT = "exit"
         const val OPTION_PREFIX = "--"
         const val LIMIT_OPTION = "--limit"
+        const val AFTER_OPTION = "--after"
         const val KIND_OPTION = "--kind"
         const val SEND_OPTION = "--send"
+        const val ALL_OPTION = "--all"
         const val COMMANDS_HELP = "commands"
         const val ALL = "all"
         const val TERMINATE = "terminate"
@@ -631,9 +693,15 @@ class Shell(
 
         const val NO_CHAT_PROMPT = "> "
 
-        const val READ_USAGE = "Usage: read [--limit N]"
+        const val READ_USAGE = "Usage: read [--limit N] [--after <id>]"
 
-        const val FILES_USAGE = "Usage: files [<peer>] [--kind <kind>] [--limit N]"
+        const val SEARCH_USAGE = "Usage: search <query> [--after <id>]"
+
+        const val FILES_USAGE = "Usage: files [<peer>] [--kind <kind>] [--limit N] [--after <id>]"
+
+        const val MEMBERS_USAGE = "Usage: members [<peer>] [--after <cursor>]"
+
+        const val BLOCKED_USAGE = "Usage: blocked [--after <cursor>] [--all]"
 
         const val DOWNLOAD_USAGE = "Usage: download-media <peer> <message-id> [target]"
 
@@ -659,9 +727,12 @@ class Shell(
             VerbHelp(listOf("open"), "open <peer>", "open a chat"),
             VerbHelp(
                 listOf("read"),
-                "read [--limit N]",
+                "read [--limit N] [--after <cursor>]",
                 "read the current chat",
-                listOf("--limit N      how many messages to read (default $TRANSCRIPT_LIMIT)"),
+                listOf(
+                    "--limit N         how many messages to read (default $TRANSCRIPT_LIMIT)",
+                    "--after <cursor>  the cursor to continue from, as the last page printed it",
+                ),
             ),
             VerbHelp(listOf("send"), "send <text...>", "send a message"),
             VerbHelp(listOf("reply"), "reply <id> <text...>", "reply to a message"),
@@ -685,15 +756,29 @@ class Shell(
             VerbHelp(listOf("invite"), "invite <user>", "add a user to the current chat"),
             VerbHelp(listOf("kick"), "kick <user>", "remove a user from the current chat"),
             VerbHelp(listOf("contacts"), "contacts", "list contacts"),
-            VerbHelp(listOf("blocked"), "blocked", "list the blocked accounts"),
-            VerbHelp(listOf("search"), "search <query>", "search the current chat, or everywhere"),
+            VerbHelp(
+                listOf("blocked"),
+                "blocked [--after <cursor>] [--all]",
+                "list the blocked accounts",
+                listOf(
+                    "--all             list every blocked account in one call",
+                    "--after <cursor>  the cursor to continue from, as the last page printed it",
+                ),
+            ),
+            VerbHelp(
+                listOf("search"),
+                "search <query> [--after <cursor>]",
+                "search the current chat, or everywhere",
+                listOf("--after <cursor>  the cursor to continue from, as the last page printed it"),
+            ),
             VerbHelp(
                 listOf("files"),
-                "files [<peer>] [--kind <kind>] [--limit N]",
+                "files [<peer>] [--kind <kind>] [--limit N] [--after <cursor>]",
                 "list the files of a chat",
                 listOf(
-                    "--kind <kind>  which files to list (default $DEFAULT_FILE_KIND)",
-                    "--limit N      how many files to list (default 20)",
+                    "--kind <kind>     which files to list (default $DEFAULT_FILE_KIND)",
+                    "--limit N         how many files to list (default 20)",
+                    "--after <cursor>  the cursor to continue from, as the last page printed it",
                 ),
             ),
             VerbHelp(
@@ -712,7 +797,12 @@ class Shell(
                 "query a bot, send a result here",
                 listOf("--send <index>  send that result into the current chat"),
             ),
-            VerbHelp(listOf("members"), "members [<peer>]", "list a chat's members"),
+            VerbHelp(
+                listOf("members"),
+                "members [<peer>] [--after <cursor>]",
+                "list a chat's members",
+                listOf("--after <cursor>  the cursor to continue from, as the last page printed it"),
+            ),
             VerbHelp(listOf("folders"), "folders", "list the dialog folders"),
             VerbHelp(
                 listOf("sessions"),

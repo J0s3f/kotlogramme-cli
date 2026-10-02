@@ -30,6 +30,28 @@ class PhotosServiceTest {
     }
 
     @Test
+    fun `chatPhotos passes the cursor and all to the gateway`() {
+        val gateway = FakePhotoGateway().apply { chats = listOf(chatPhoto) }
+
+        val result = PhotosService(gateway).chatPhotos("@ada", limit = 20, cursor = "99", all = true)
+
+        assertEquals(listOf<String?>("99"), gateway.chatCursors)
+        assertEquals(listOf(true), gateway.chatAlls)
+        assertEquals(listOf(chatPhoto), result)
+    }
+
+    @Test
+    fun `profilePhotos passes the cursor and all to the gateway`() {
+        val gateway = FakePhotoGateway().apply { profile = listOf(profilePhoto) }
+
+        val result = PhotosService(gateway).profilePhotos("@ada", limit = 5, cursor = "10", all = true)
+
+        assertEquals(listOf<String?>("10"), gateway.profileCursors)
+        assertEquals(listOf(true), gateway.profileAlls)
+        assertEquals(listOf(profilePhoto), result)
+    }
+
+    @Test
     fun `rejects a non-positive limit before the gateway`() {
         val gateway = FakePhotoGateway()
         val service = PhotosService(gateway)
@@ -44,15 +66,23 @@ class PhotosServiceTest {
         var chats: List<Message> = emptyList()
         var profile: List<Photo> = emptyList()
         val chatCalls = mutableListOf<Pair<String, Int>>()
+        val chatCursors = mutableListOf<String?>()
+        val chatAlls = mutableListOf<Boolean>()
         val profileCalls = mutableListOf<Pair<String, Int>>()
+        val profileCursors = mutableListOf<String?>()
+        val profileAlls = mutableListOf<Boolean>()
 
-        override fun chatPhotos(reference: String, limit: Int): List<Message> {
+        override fun chatPhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Message> {
             chatCalls += reference to limit
+            chatCursors += cursor
+            chatAlls += all
             return chats
         }
 
-        override fun profilePhotos(reference: String, limit: Int): List<Photo> {
+        override fun profilePhotos(reference: String, limit: Int, cursor: String?, all: Boolean): List<Photo> {
             profileCalls += reference to limit
+            profileCursors += cursor
+            profileAlls += all
             return profile
         }
     }

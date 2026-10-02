@@ -5,10 +5,12 @@ import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import org.kotlogramme.cli.adapter.format.renderBlockedContacts
 import org.kotlogramme.cli.adapter.format.renderContacts
+import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.domain.ContactToImport
 
 /** Searches the account's contacts and the public directory. */
@@ -56,9 +58,19 @@ class BlockedCommand : CliktCommand(name = "blocked") {
     private val appContext by requireObject<AppContext>()
 
     private val limit by option("--limit", help = "How many blocked peers to list").int().default(DEFAULT_LIMIT)
+    private val after by option("--after", help = "The cursor to continue from, as the last page printed it")
+    private val all by option(
+        "--all",
+        help = "List every blocked peer in one call, ignoring the cursor and the limit",
+    ).flag()
 
     override fun run() {
-        appContext.output.renderBlockedContacts(rejectInvalidInput { appContext.contacts().blocked(limit) })
+        val blocked = rejectInvalidInput { appContext.contacts().blocked(limit, after, all) }
+        appContext.output.renderBlockedContacts(blocked)
+        if (blocked.size == limit && !all) {
+            val startingOffset = after?.let(ListingCursor::parseDecimal) ?: 0
+            appContext.output.line("# next: --after ${startingOffset + blocked.size}")
+        }
     }
 
     private companion object {

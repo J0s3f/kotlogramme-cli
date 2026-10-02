@@ -11,6 +11,7 @@ import java.nio.file.Path
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -229,5 +230,68 @@ class FileCommandsTest {
         assertEquals(listOf("42"), fixture.output.lines)
         assertEquals(listOf("@ada" to MediaFileKind.DOCUMENT), search.fileTotals)
         assertEquals(emptyList(), search.fileSearches)
+    }
+
+    @Test
+    fun `list-files passes the cursor to the use case`() {
+        val search = FakeSearchMessages()
+        val fixture = cliFixture(searchMessages = search)
+
+        fixture.run("list-files", "@ada", "--after", "99")
+
+        assertEquals(listOf<String?>("99"), search.fileCursors)
+    }
+
+    @Test
+    fun `list-files prints the next cursor on a full page`() {
+        val messages = (1..20).map { index ->
+            Message(
+                id = index,
+                senderName = "Ada",
+                text = "",
+                sentAt = Instant.parse("2026-01-01T12:30:00Z"),
+                outgoing = false,
+                media = MediaInfo(kind = "video", sizeBytes = 1024, name = "clip.mp4"),
+            )
+        }
+        val search = FakeSearchMessages(fileResults = messages)
+        val fixture = cliFixture(searchMessages = search)
+
+        val result = fixture.run("list-files", "@ada")
+
+        assertEquals(0, result.statusCode)
+        assertTrue(fixture.output.text.contains("# next: --after 20"), fixture.output.text)
+    }
+
+    @Test
+    fun `list-files omits the next cursor on a short page`() {
+        val search = FakeSearchMessages(
+            fileResults = listOf(
+                Message(
+                    id = 7,
+                    senderName = "Ada",
+                    text = "",
+                    sentAt = Instant.parse("2026-01-01T12:30:00Z"),
+                    outgoing = false,
+                    media = MediaInfo(kind = "video", sizeBytes = 1024, name = "clip.mp4"),
+                ),
+            ),
+        )
+        val fixture = cliFixture(searchMessages = search)
+
+        fixture.run("list-files", "@ada")
+
+        assertTrue(!fixture.output.text.contains("# next:"), fixture.output.text)
+    }
+
+    @Test
+    fun `list-files rejects a malformed cursor`() {
+        val search = FakeSearchMessages()
+        val fixture = cliFixture(searchMessages = search)
+
+        val result = fixture.run("list-files", "@ada", "--after", "abc")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("malformed cursor"), "stderr was: ${result.stderr}")
     }
 }
