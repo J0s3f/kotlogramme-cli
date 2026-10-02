@@ -2,7 +2,7 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
-## Unreleased
+## 0.3.2 - 2026-10-02
 
 Built on the `kotlogram` `v0.9.9` tag, resolved from JitPack.
 
@@ -18,9 +18,9 @@ Built on the `kotlogram` `v0.9.9` tag, resolved from JitPack.
   removes them all.
 - **Photos**: `chat-photos` and `profile-photos` list a chat's or account's photos.
 - **Albums**: `send-album` sends several files as one grouped album.
-- **Saved Messages** is addressable as `me` or `@me`, and `list` shows it first. It is the private
-  chat with yourself, which the facade now exposes through its `getSelfPeer` operation; it never
-  appears in a dialog scan, so this needed the facade's `getSelfPeer` operation.
+- **Saved Messages** is addressable as `me` or `@me`, and `dialogs` shows it first. It is the private
+  chat with yourself, which never appears in a dialog scan, so this needed the facade's `getSelfPeer`
+  operation.
 - **Shell**: `blocked`, `sessions`, `chat-action`, `pinned` and `unpin all` are available mid
   conversation. `help commands` now lists the CLI's full command set and marks which names work in
   the shell, instead of an ambiguous list that named commands the shell does not dispatch.
@@ -47,6 +47,10 @@ Built on the `kotlogram` `v0.9.9` tag, resolved from JitPack.
   sets the console code page to UTF-8 and swaps the streams to match, then restores the code page it
   actually read on exit. Both paths are strict no-ops when the environment is already correct, and
   piped, redirected and JSON output is byte-for-byte unchanged.
+- **Emoji survive the facade's JNI boundary again.** The facade up to `v0.9.8` decoded JNI's Modified
+  UTF-8 as standard UTF-8, so an astral-plane character was stored in Telegram as six replacement
+  characters. This release builds on the fixed `v0.9.9` facade; a live send and read-back of a body
+  mixing Cyrillic, an emoji and CJK is byte-for-byte identical to the bytes that went in.
 
 ## 0.3.1 - 2026-10-01
 
