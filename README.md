@@ -96,9 +96,29 @@ so nothing else has to be downloaded:
 
 ## Requirements
 
-- **JDK 25** (the newest LTS). Gradle can fetch it automatically via the toolchain resolver.
-- Nothing else: the native Telegram libraries are bundled inside the facade jar and the right
-  one is loaded for the host at startup.
+- **JDK 25** to run the client (it targets the newest LTS). Nothing else has to be installed: every
+  library below, and the native Telegram library for the host, are bundled into the distribution.
+  Gradle can fetch the JDK automatically via the toolchain resolver when building.
+- **Telegram API credentials**: an `api_id` and `api_hash` from <https://my.telegram.org>, set with
+  `kotlogramme config set` or the `TG_API_ID`/`TG_API_HASH` environment variables.
+- **A Telegram account to sign in with** (`kotlogramme login`), or a bot token. Reading dialogs,
+  history and a chat's files needs an ordinary account.
+- **A supported platform**: Windows, Linux or macOS on x86_64 or aarch64.
+- Network access to Telegram.
+
+### Dependencies
+
+The client is built from these libraries. The distribution is self-contained - they are all bundled
+into `kotlogramme-all.jar`, so none has to be installed - and each keeps its own licence.
+
+- [`com.github.J0s3f:kotlogram`](https://github.com/J0s3f/kotlogram) - the facade this client
+  exercises, pinned by tag (see [Picking the facade version](#picking-the-facade-version)); it
+  carries grammers and the six native Telegram libraries.
+- [Clikt](https://ajalt.github.io/clikt/) 5.1.0 - command-line parsing, options and help.
+- [JLine](https://jline.org/) 4.4.6 - the interactive shell, completion and terminal output.
+- [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 1.11.0 (JSON) - the
+  `--json` output format and the configuration file.
+- [SLF4J](https://www.slf4j.org/) 2.0.20 (simple binding) - logging, quiet unless a level is set.
 
 ## Build and run
 
