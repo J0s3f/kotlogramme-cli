@@ -12,6 +12,27 @@ All notable changes to `kotlogramme-cli` are recorded here.
   neither are the plain and JSON formats. The interactive shell follows the window as it is resized.
 - The global `--table-width N` option sets the width tables are wrapped to, also off a terminal;
   `--table-width 0` never wraps.
+- A wrapped cell breaks between words first, then after a path separator, hyphen or underscore, and
+  only cuts a piece that is wider than the column. Hyperlinks and other escape sequences in a cell
+  take no room and a link stays open across the lines it wraps onto.
+
+### Fixed
+
+- The name cache drops expired names when it adds one, so a `listen` that runs for weeks no longer
+  keeps every name it ever saw.
+- Reading the configuration no longer creates its directory; the first save does.
+- Colour and the upload progress bar follow whether the console is a terminal, not whether the JVM
+  has a console object.
+- `doctor` reaches the data centre by name and falls back to its address when the name does not
+  resolve.
+- Restricting a user takes its expiry from the clock port, and a raw update is decoded once.
+
+### Changed
+
+- The native smoke test reads `doctor` as JSON, so rewording a row cannot break it.
+- Documentation must be valid UTF-8 (checked in CI), line endings are fixed by `.gitattributes`, a tag
+  whose release already exists is refused before anything is built, and a push of a tree that already
+  passed CI is not tested again.
 
 ## 0.6.2 - 2026-10-07
 

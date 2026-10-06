@@ -7,7 +7,9 @@ when it is planned. See [`plan.md`](plan.md) for what is coming.
 
 A table in the default format never grows wider than the terminal it is shown on. When its natural
 width would be greater, the widest columns are narrowed first and their cells are wrapped onto extra
-lines at spaces; a word longer than its column, such as a path or a URL, is cut at the column edge.
+lines at spaces, so words stay whole. A word longer than its column, such as a path or a URL, breaks
+after a `/`, `\`, `-` or `_`, and only a piece wider than the column itself is cut at its edge. A
+hyperlink in a cell stays a link on every line it wraps onto.
 The borders stay aligned on every line, a wrapped cell keeps its colour on each line, and wide
 characters and emoji are never split. Narrow columns such as ids are left alone, and a header stays on
 one line while its column can afford it. A table that fits is printed exactly as before.
