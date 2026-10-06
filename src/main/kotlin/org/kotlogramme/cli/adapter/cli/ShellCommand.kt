@@ -45,7 +45,7 @@ class ShellCommand : CliktCommand(name = "shell") {
             .variable(LineReader.HISTORY_FILE, appContext.configDir.resolve(HISTORY_FILE).toString())
             .build()
         try {
-            val output = appContext.outputOn(terminal.writer())
+            val output = appContext.outputOn(terminal.writer()) { terminal.size.columns.takeIf { it > 0 } }
             Shell(JLineLineSource(reader), output, useCases, appContext.messageStyler).run()
         } finally {
             runCatching { reader.history.save() }

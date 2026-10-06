@@ -978,7 +978,7 @@ internal fun cliFixture(
         progressFactory = progressFactory,
         downloadMediaFactory = { downloadMedia },
     )
-    val root = KotlogrammeCommand { _, _, _ -> context }
+    val root = KotlogrammeCommand { context }
         .subcommands(
             ConfigCommand(),
             LoginCommand(),

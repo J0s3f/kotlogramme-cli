@@ -3,6 +3,22 @@
 User-facing features that actually ship, newest first. A feature appears here once it is usable, not
 when it is planned. See [`plan.md`](plan.md) for what is coming.
 
+## Table width
+
+A table in the default format never grows wider than the terminal it is shown on. When its natural
+width would be greater, the widest columns are narrowed first and their cells are wrapped onto extra
+lines at spaces; a word longer than its column, such as a path or a URL, is cut at the column edge.
+The borders stay aligned on every line, a wrapped cell keeps its colour on each line, and wide
+characters and emoji are never split. Narrow columns such as ids are left alone, and a header stays on
+one line while its column can afford it. A table that fits is printed exactly as before.
+
+Only an interactive terminal is fitted. A pipe or a file gets the full width, so a script reading a
+table sees the same text whatever the window size, and the plain and JSON formats are never wrapped.
+The global `--table-width N` option, which goes before the command (`kotlogramme --table-width 80
+dialogs`), overrides the detection: it wraps to `N` columns even when the output is not a terminal, and
+`--table-width 0` never wraps. In the interactive shell the width follows the terminal when the window
+is resized.
+
 ## Pagination
 
 Every listing Telegram can return in more than one page takes `--after <cursor>` to continue from a

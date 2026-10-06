@@ -8,7 +8,9 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.versionOption
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
+import com.github.ajalt.clikt.parameters.types.restrictTo
 import org.kotlogramme.cli.adapter.cli.AppContext
 import org.kotlogramme.cli.adapter.cli.BlockCommand
 import org.kotlogramme.cli.adapter.cli.BlockedCommand
@@ -25,6 +27,7 @@ import org.kotlogramme.cli.adapter.cli.DownloadMediaCommand
 import org.kotlogramme.cli.adapter.cli.EditCommand
 import org.kotlogramme.cli.adapter.cli.FoldersCommand
 import org.kotlogramme.cli.adapter.cli.ForwardCommand
+import org.kotlogramme.cli.adapter.cli.GlobalOptions
 import org.kotlogramme.cli.adapter.cli.HistoryCommand
 import org.kotlogramme.cli.adapter.cli.ImportContactsCommand
 import org.kotlogramme.cli.adapter.cli.InlineCommand
@@ -58,6 +61,7 @@ import org.kotlogramme.cli.adapter.cli.UnblockCommand
 import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
+import org.kotlogramme.cli.adapter.format.TableWidth
 import org.kotlogramme.cli.adapter.telegram.SidecarNativeLibrary
 import org.kotlogramme.TelegramException
 import java.nio.file.Path
@@ -65,9 +69,7 @@ import kotlin.system.exitProcess
 
 /** The root of the command tree. Every user-facing command hangs off this. */
 class KotlogrammeCommand(
-    private val appContextFactory: (Path?, Boolean, Boolean) -> AppContext = { directory, noColor, color ->
-        AppContext.create(directory, noColor, color)
-    },
+    private val appContextFactory: (GlobalOptions) -> AppContext = { options -> AppContext.create(options) },
 ) : CliktCommand(name = "kotlogramme") {
     private val configDir by option(
         "--config-dir",
@@ -84,6 +86,11 @@ class KotlogrammeCommand(
         help = "Style message text with ANSI colour even off a terminal, for a pager such as less -R",
     ).flag()
 
+    private val tableWidth by option(
+        "--table-width",
+        help = "Wrap tables to this many columns instead of the terminal's width; 0 never wraps",
+    ).int().restrictTo(min = 0)
+
     init {
         // A chat reference is `@username`, so `@` must not be read as an argument file.
         context {
@@ -92,7 +99,8 @@ class KotlogrammeCommand(
     }
 
     override fun run() {
-        currentContext.obj = appContextFactory(configDir, noColor, color)
+        val options = GlobalOptions(configDir, noColor, color, TableWidth.of(tableWidth))
+        currentContext.obj = appContextFactory(options)
     }
 }
 

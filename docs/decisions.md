@@ -391,3 +391,25 @@ library there costs nothing and removes both the per-start copy and the leak, an
 executable 9 MB smaller. The smoke test asserts that the library is loaded from beside the executable
 and that no extraction directory is created. FFM is verified at run time by `doctor`; JLine's own
 metadata covers the Unix calls but not the Windows ones.
+
+## 0023 — Tables wrap to the terminal, and only on a terminal
+
+**Decision.** `ConsoleOutput` lays a table out for the terminal's width when the output is an
+interactive terminal: the widest columns are narrowed first to the largest cap that fits, their cells
+wrap at spaces (long words are cut on a grapheme boundary, and an open ANSI style is closed and
+reopened at each break), and the borders stay aligned across the extra lines. `--table-width N` sets
+the width instead of detecting it, and `0` turns wrapping off. The setting is a sealed type, so no
+caller branches on `null` and `0`. Plain and JSON output are never wrapped.
+
+**Alternatives.** Shortening the text of the cells that were too long, which was done for `doctor` and
+cannot help message text or dialog titles. Truncating with an ellipsis, which loses information in a
+table people read to find something. Letting the terminal soft-wrap, which is what made every border
+line of a wide table wrap and the table unreadable. Wrapping everywhere, which would make the output a
+script reads depend on the size of a window it is not shown in.
+
+**Why.** The width is measured with the same grapheme-aware function that already pads cells, so
+wrapped and padded text cannot disagree. Detecting only an interactive output, and only trusting it
+when the terminal reports one, keeps piped output byte-identical to before. An explicit width exists
+because a person sometimes wants a wrapped table in a file, or on a screen whose size the terminal
+cannot know.
+

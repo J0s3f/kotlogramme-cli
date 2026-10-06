@@ -2,6 +2,17 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## Unreleased
+
+### Features
+
+- Tables no longer run past the edge of the terminal. When a table is wider than the terminal, the
+  widest columns are narrowed and their cells wrapped onto extra lines, with the borders kept aligned
+  and colour, wide characters and emoji kept intact. Output that is not a terminal is not wrapped, and
+  neither are the plain and JSON formats. The interactive shell follows the window as it is resized.
+- The global `--table-width N` option sets the width tables are wrapped to, also off a terminal;
+  `--table-width 0` never wraps.
+
 ## 0.6.2 - 2026-10-07
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

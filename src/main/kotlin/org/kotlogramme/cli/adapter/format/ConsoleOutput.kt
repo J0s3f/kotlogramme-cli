@@ -22,19 +22,34 @@ import java.io.Writer
  * JLine terminal without passing through `System.out`: JLine writes with `WriteConsoleW`, which
  * renders non-ASCII correctly at any console code page, where a `System.out` encoder would have
  * turned those characters into `?` before the terminal ever saw them.
+ *
+ * [terminalWidth] is the width of the terminal the output is shown on, or `null` when it is not a
+ * terminal. A table in [OutputFormat.TABLE] is wrapped to fit it; the plain and JSON formats are for
+ * programs and are never wrapped. It is a function because a terminal can be resized between two
+ * tables.
  */
 class ConsoleOutput(
     private val format: OutputFormat,
     private val out: PrintWriter,
+    private val terminalWidth: () -> Int? = { null },
 ) : Output {
     /**
      * Renders to [out], preserving the stream's own charset so a redirected run stays byte-identical
      * to what `System.out` would have written.
      */
-    constructor(format: OutputFormat, out: PrintStream = System.out) : this(format, PrintWriter(out, true, out.charset()))
+    constructor(
+        format: OutputFormat,
+        out: PrintStream = System.out,
+        terminalWidth: () -> Int? = { null },
+    ) : this(format, PrintWriter(out, true, out.charset()), terminalWidth)
 
     /** Renders to a [writer], such as a JLine terminal's, using the writer's own encoding. */
-    constructor(format: OutputFormat, writer: Writer) : this(format, PrintWriter(writer, true))
+    constructor(
+        format: OutputFormat,
+        writer: Writer,
+        terminalWidth: () -> Int? = { null },
+    ) : this(format, PrintWriter(writer, true), terminalWidth)
+
     override fun line(text: String) {
         out.println(text)
     }
@@ -49,23 +64,9 @@ class ConsoleOutput(
     }
 
     private fun asciiTable(headers: List<String>, rows: List<List<String>>) {
-        val columnCount = maxOf(headers.size, rows.maxOfOrNull(List<String>::size) ?: 0)
-        val widths = (0 until columnCount).map { column ->
-            (listOf(headers) + rows).maxOf { row -> visibleLength(cell(row, column)) }
-        }
-        val border = widths.joinToString(separator = "+", prefix = "+", postfix = "+") { "-".repeat(it + 2) }
-        line(border)
-        line(rowFor(headers, widths))
-        line(border)
-        rows.forEach { line(rowFor(it, widths)) }
-        line(border)
+        val width = runCatching(terminalWidth).getOrNull()?.takeIf { it > 0 }
+        renderAsciiTable(headers, rows, width).forEach(::line)
     }
-
-    private fun rowFor(row: List<String>, widths: List<Int>): String =
-        widths.indices.joinToString(separator = "|", prefix = "|", postfix = "|") { column ->
-            val cell = cell(row, column)
-            " " + cell + " ".repeat(widths[column] - visibleLength(cell)) + " "
-        }
 
     private fun delimitedTable(headers: List<String>, rows: List<List<String>>, separator: String) {
         line(headers.joinToString(separator))

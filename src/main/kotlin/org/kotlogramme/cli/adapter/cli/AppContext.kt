@@ -6,6 +6,8 @@ import org.kotlogramme.cli.adapter.config.JsonConfigStore
 import org.kotlogramme.cli.adapter.format.ConsoleOutput
 import org.kotlogramme.cli.adapter.format.MessageStyler
 import org.kotlogramme.cli.adapter.format.UploadProgressBar
+import org.kotlogramme.cli.adapter.format.TerminalColumns
+import org.kotlogramme.cli.adapter.format.TableWidth
 import org.kotlogramme.cli.adapter.format.colorEnabled
 import org.kotlogramme.cli.adapter.format.messageStylerFor
 import org.kotlogramme.cli.adapter.media.FileMediaProbe
@@ -130,6 +132,7 @@ class AppContext(
      */
     val isInteractiveTerminal: Boolean = false,
     private val progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
+    private val tableWidth: TableWidth = TableWidth.Detect,
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -148,7 +151,8 @@ class AppContext(
      * console code page, where [output]'s `System.out` would have turned them into `?` first. The
      * fallback [output] stays the seam for every run without a terminal.
      */
-    fun outputOn(writer: Writer): Output = ConsoleOutput(outputFormat, writer)
+    fun outputOn(writer: Writer, terminalWidth: () -> Int? = { null }): Output =
+        ConsoleOutput(outputFormat, writer) { tableWidth.resolve(terminalWidth) }
 
     /**
      * The credentials for this run: the ones in the config, falling back to the `TG_API_ID` and
@@ -254,11 +258,10 @@ class AppContext(
          * `--no-color` is ASCII.
          */
         fun create(
-            configDir: Path? = null,
-            noColor: Boolean = false,
-            color: Boolean = false,
+            options: GlobalOptions = GlobalOptions(),
             environment: Map<String, String> = System.getenv(),
         ): AppContext {
+            val (configDir, noColor, color, tableWidth) = options
             val dir = ConfigPaths(configDirOverride = configDir?.toString()).baseDir()
             val configStore = JsonConfigStore(dir)
             val format = configStore.load().outputFormat
@@ -272,17 +275,19 @@ class AppContext(
             // writer through [outputOn]; JLine renders via `WriteConsoleW` and needs none of this.
             WindowsConsoleUtf8.apply(terminal = terminal)
             val styled = colorEnabled(noColor, color, environment, terminal = terminal)
+            val columns = TerminalColumns()
             // Output and the progress bar keep `System.out` here, which is now the stream the call
             // above replaced when a fix was warranted.
             return AppContext(
                 configDir = dir,
                 configStore = configStore,
-                output = ConsoleOutput(format),
+                output = ConsoleOutput(format) { tableWidth.resolve(columns::get) },
                 environment = environment,
                 messageStyler = messageStylerFor(format, styled),
                 outputFormat = format,
                 isInteractiveTerminal = terminal,
                 progressFactory = { UploadProgressBar(out = System.out, color = styled) },
+                tableWidth = tableWidth,
             )
         }
     }
