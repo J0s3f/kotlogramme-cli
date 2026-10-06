@@ -187,7 +187,7 @@ tasks.register<Exec>("nativeSmokeTest") {
 
 // Keep the image's AWT support libraries alongside the executable: image probing uses ImageIO.
 val nativeDistributionFiles = fileTree(layout.buildDirectory.dir("native/nativeCompile")) {
-    include(nativeExecutableName, "*.dll", "*.so", "*.dylib")
+    include(nativeExecutableName, "*.dll", "*.so", "*.so.*", "*.dylib")
 }
 
 tasks.register<Zip>("nativeDistZip") {
@@ -221,4 +221,23 @@ tasks.register("nativeDist") {
     group = "distribution"
     description = "Builds and verifies the native package for the host platform."
     dependsOn(if (nativeOs == "windows") "nativeDistZip" else "nativeDistTar")
+}
+tasks.register<Exec>("nativePackagingTest") {
+    group = "verification"
+    description = "Checks that single-file selection ignores licenses and includes every native library."
+    commandLine("pwsh", "-NoProfile", "-File", file("scripts/test-native-packaging.ps1").absolutePath)
+}
+
+tasks.register<Exec>("nativeSingle") {
+    group = "distribution"
+    description = "Creates and tests one portable executable with Wrappe when native libraries are needed."
+    dependsOn(tasks.named("nativeSmokeTest"), tasks.named("nativePackagingTest"))
+    commandLine(
+        "pwsh", "-NoProfile", "-File", file("scripts/build-native-single.ps1").absolutePath,
+        "-NativeDirectory", layout.buildDirectory.dir("native/nativeCompile").get().asFile.absolutePath,
+        "-OutputDirectory", layout.buildDirectory.dir("distributions").get().asFile.absolutePath,
+        "-Platform", nativePlatform,
+        "-Version", version.toString(),
+    )
+    providers.environmentVariable("WRAPPE_BIN").orNull?.let { args("-Wrappe", it) }
 }

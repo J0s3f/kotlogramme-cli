@@ -9,10 +9,10 @@ Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.
 ### Features
 
 - **Native distributions without a JRE or JDK.** Windows x86_64, Linux x86_64/ARM64 and macOS
-  Intel/Apple Silicon packages include the compiled executable and its native support libraries.
+  Intel/Apple Silicon single-file executables embed the native program and its support libraries using Wrappe.
 - **Native CI and release packages.** Every native target uses Liberica NIK 25, runs offline smoke
-  checks with Java removed from its environment, and uploads a zip or tar.gz. Releases wait for
-  all five native builds and attach their archives alongside the JVM artifacts. Windows ARM64
+  checks with Java removed from its environment, and uploads a single-file executable. Releases wait
+  for all five native builds and attach those executables alongside the JVM artifacts. Windows ARM64
   remains covered by the JVM distribution and an ARM64 CI job.
 
 ### Fixed

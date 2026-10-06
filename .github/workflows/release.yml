@@ -65,21 +65,21 @@ jobs:
         shell: bash
         run: |
           jar tf build/libs/kotlogramme-all.jar | grep -E '^native/(linux-x86_64/libkotlogramme\.so|linux-aarch64/libkotlogramme\.so|windows-x86_64/kotlogramme\.dll|windows-aarch64/kotlogramme\.dll|macos-x86_64/libkotlogramme\.dylib|macos-aarch64/libkotlogramme\.dylib)$'
-      - name: Download verified native packages
+      - name: Download verified single-file executables
         uses: actions/download-artifact@v8
         with:
           pattern: native-*
           path: release-assets
           merge-multiple: true
-      - name: Verify all five native packages are present
+      - name: Verify all five single-file executables are present
         shell: bash
         env:
           RELEASE_VERSION: ${{ needs.version.outputs.value }}
         run: |
           for platform in linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64; do
-            test -s "release-assets/kotlogramme-$RELEASE_VERSION-$platform.tar.gz"
+            test -s "release-assets/kotlogramme-$RELEASE_VERSION-$platform"
           done
-          test -s "release-assets/kotlogramme-$RELEASE_VERSION-windows-x86_64.zip"
+          test -s "release-assets/kotlogramme-$RELEASE_VERSION-windows-x86_64.exe"
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,4 +93,8 @@ jobs:
             --generate-notes \
             build/libs/kotlogramme-all.jar \
             build/distributions/*.zip \
-            release-assets/*
+            release-assets/kotlogramme-"$RELEASE_VERSION"-linux-x86_64 \
+            release-assets/kotlogramme-"$RELEASE_VERSION"-linux-aarch64 \
+            release-assets/kotlogramme-"$RELEASE_VERSION"-macos-x86_64 \
+            release-assets/kotlogramme-"$RELEASE_VERSION"-macos-aarch64 \
+            release-assets/kotlogramme-"$RELEASE_VERSION"-windows-x86_64.exe

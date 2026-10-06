@@ -8,3 +8,10 @@ The applicable license texts are available in the grammers source distribution.
 JNI is provided by the jni Rust crate:
 https://crates.io/crates/jni
 Licensed under MIT or Apache-2.0.
+
+Single-file native distributions use Wrappe:
+https://github.com/Systemcluster/wrappe
+Licensed under BSD-2-Clause; its license is included in the packed payload.
+
+Windows single-file native distributions include Microsoft Visual C++ redistributable runtime
+files from the MSVC build toolchain. These files remain subject to Microsoft's redistribution terms.

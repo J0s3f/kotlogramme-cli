@@ -14,7 +14,7 @@ $nativeDirectory = Split-Path -Parent $Executable
 Get-ChildItem -LiteralPath $nativeDirectory -File |
     Where-Object { $_.Extension -in @('.dll', '.so', '.dylib') } |
     ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $testDirectory }
-function Invoke-NativeCheck([string[]]$Arguments, [string]$Expected, [string]$InputText = '') {
+function Invoke-NativeCheck([string[]]$Arguments, [string]$Expected, [string]$InputText = '', [int]$ExpectedExitCode = 0) {
     $start = [Diagnostics.ProcessStartInfo]::new($isolatedExecutable)
     $start.WorkingDirectory = $testDirectory
     $start.UseShellExecute = $false
@@ -38,7 +38,7 @@ function Invoke-NativeCheck([string[]]$Arguments, [string]$Expected, [string]$In
         throw "Native check timed out: $Arguments"
     }
     $output = $stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()
-    if ($process.ExitCode -ne 0 -or $output -notmatch $Expected) {
+    if ($process.ExitCode -ne $ExpectedExitCode -or $output -notmatch $Expected) {
         throw "Native check failed ($($process.ExitCode)): $Arguments`n$output"
     }
     Write-Host "PASS: $Arguments"
@@ -47,6 +47,7 @@ function Invoke-NativeCheck([string[]]$Arguments, [string]$Expected, [string]$In
 try {
     $configDirectory = Join-Path $testDirectory 'config-ü'
     Invoke-NativeCheck @('--help') 'Usage:'
+    Invoke-NativeCheck @('--not-a-real-option') 'no such option' -ExpectedExitCode 1
     Invoke-NativeCheck @('--version') 'kotlogramme.*\d+\.\d+'
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'config', 'set', '--api-id', '12345', '--api-hash', 'offline-smoke-test') 'saved|updated|Saved|Updated'
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'config') '12345'

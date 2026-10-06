@@ -1,103 +1,107 @@
-# Standalone native packages
+# Standalone single-file executables
 
-GraalVM Native Image compiles this Kotlin/JVM client into a native executable that requires no
-installed JRE or JDK. The Telegram library for the build's OS and architecture is embedded and
-extracted into the user's temporary directory when needed. Keep the generated AWT support libraries
-beside the executable: these small native DLLs/shared libraries are part of the portable package,
-not an installed Java runtime. A writable temporary directory is required.
+GraalVM Native Image compiles this Kotlin/JVM client without requiring a JRE or JDK on the user's
+machine. The image includes the host's Telegram library and generates native support libraries.
+[Wrappe](https://github.com/Systemcluster/wrappe) 1.0.6 packs those files into one portable executable.
+No installer is needed. When a native build truly needs only one file, the packager copies that
+executable directly rather than adding a launcher.
 
-## Targets and CI
+## Targets and release assets
 
-CI uses **Liberica Native Image Kit 25** (a GraalVM-based distribution) consistently for five targets:
+CI uses **Liberica Native Image Kit 25** consistently for five targets:
 
-| Package platform | GitHub runner | Archive |
+| Platform | GitHub runner | Single-file release asset |
 | --- | --- | --- |
-| `linux-x86_64` | `ubuntu-22.04` | `.tar.gz` |
-| `linux-aarch64` | `ubuntu-24.04-arm` | `.tar.gz` |
-| `macos-x86_64` | `macos-15-intel` | `.tar.gz` |
-| `macos-aarch64` | `macos-15` | `.tar.gz` |
-| `windows-x86_64` | `windows-2025` | `.zip` |
+| Linux x86_64 | `ubuntu-22.04` | `kotlogramme-<version>-linux-x86_64` |
+| Linux ARM64 | `ubuntu-24.04-arm` | `kotlogramme-<version>-linux-aarch64` |
+| Intel macOS | `macos-15-intel` | `kotlogramme-<version>-macos-x86_64` |
+| Apple Silicon macOS | `macos-15` | `kotlogramme-<version>-macos-aarch64` |
+| Windows x86_64 | `windows-2025` | `kotlogramme-<version>-windows-x86_64.exe` |
 
-The reusable `.github/workflows/native.yml` runs the offline JVM suite, builds the native client,
-checks it with Java removed from its environment, and uploads the package on each runner. The CI
-workflow calls it on pushes and pull requests. The release workflow calls it with the release
-version, waits for all native builds, checks that all five archives are present, then attaches them
-alongside the existing fat jar and JVM distribution. A native failure prevents a partial release.
+Releases contain exactly these five executables, `kotlogramme-all.jar`, and the Java distribution
+zip with launch scripts. Native archives with separate libraries are not published. All five native
+jobs must succeed and supply their single-file assets before the release is created.
 
-The facade also supports **Windows ARM64**, but GraalVM and Liberica NIK currently have no Windows
-ARM64 Native Image toolchain. CI verifies that platform using an ARM64 Liberica JDK and the real
-bundled facade DLL. The JVM release remains available for it; there is no archive mislabelled as a
-Windows ARM64 native build. NIK retains Intel macOS support after Oracle/GraalVM CE stopped shipping
-it in newer JDK 25 releases.
+The facade also supports Windows ARM64, but GraalVM/NIK has no native compiler for that platform.
+The JVM distribution and an ARM64 Liberica JDK CI job cover it. NIK maintains Intel macOS support
+where recent Oracle/GraalVM CE JDK 25 releases no longer supply an Intel macOS toolchain.
 
-Linux x86_64 packages target Ubuntu 22.04 (glibc 2.35); ARM64 packages target Ubuntu 24.04
-(glibc 2.39), required by the facade's ARM64 library. They need compatible system libraries and
-are not musl/static Alpine builds. macOS packages are built on macOS 15. Windows
-requires the Microsoft Visual C++ runtime used by the facade DLL (`VCRUNTIME140.dll`); the local
-machine and hosted runner already supply it. None of these requirements involves installing Java.
+Linux x86_64 targets Ubuntu 22.04 (glibc 2.35); ARM64 targets Ubuntu 24.04 (glibc 2.39), required by
+the facade's ARM64 library. The packer cannot lower that library's glibc requirement. macOS images
+are built on macOS 15. Windows single-file payloads include the MSVC x64 redistributable runtime
+from the C++ toolchain, alongside the generated support DLLs.
 
-## Local build
+## Run
 
-Use PowerShell 7, a GraalVM/NIK JDK 25 with Native Image, and the native compiler prerequisites:
-MSVC C++ tools and Windows SDK on Windows; GCC and zlib development files on Linux; Xcode command
-line tools on macOS. The regular JVM build remains available independently of Native Image.
+On Windows run the downloaded `.exe`. On Linux/macOS mark the downloaded file executable:
+
+```bash
+chmod +x kotlogramme-0.4.0-linux-x86_64
+./kotlogramme-0.4.0-linux-x86_64 --help
+```
+
+Use the filename for your OS and architecture. The file can be renamed to `kotlogramme` (or
+`kotlogramme.exe`) and put on PATH. Relative file arguments resolve against the caller's directory.
+
+Wrappe extracts into a versioned directory under the system temporary directory and verifies cached
+files before reuse. The CLI prints no packer banner. On Unix the runner replaces itself with the
+native program, preserving terminal I/O and signals. Windows waits for the native process and
+returns its exit code. Extracted files are cached rather than removed after every command, so
+parallel CLI commands can reuse the native files. No permanent system installation is performed.
+
+## Build
+
+Use PowerShell 7, a GraalVM/NIK JDK 25 with Native Image, and native compiler prerequisites: MSVC C++
+tools and Windows SDK on Windows, GCC/zlib development files on Linux, Xcode command line tools on
+macOS. The normal JVM test loop remains independent of native compilation.
 
 For the supplied Windows installation:
 
 ```powershell
 .\scripts\build-native-windows.ps1
-# A different Oracle GraalVM or Liberica NIK installation:
 .\scripts\build-native-windows.ps1 -GraalVmHome 'C:\Tools\another-native-image-jdk-25'
 ```
 
-The script defaults to `C:\Tools\graalvm-jdk-25.0.4+7.1`, runs `clean test nativeDist`, and restores
-the caller's Java environment. On any supported native build host, set `JAVA_HOME` and `GRAALVM_HOME`
-to the native-image JDK, then run the wrapper:
+The script defaults to `C:\Tools\graalvm-jdk-25.0.4+7.1`, runs `clean test nativeSingle`, and restores
+the Java environment. On other native hosts set `JAVA_HOME` and `GRAALVM_HOME` to the Native Image JDK:
 
 ```bash
-./gradlew --no-daemon clean test nativeDist
+./gradlew --no-daemon -Pversion=0.4.0 clean test nativeSingle
 ```
 
-On Windows use `gradlew.bat`. Outputs are:
+On Windows use `gradlew.bat` and quote `'-Pversion=0.4.0'` in PowerShell. The single-file output lands
+in `build/distributions/`. The original native executable and support libraries remain under
+`build/native/nativeCompile/` for development. `nativeCompile` compiles, `nativeSmokeTest` checks
+those files, and `nativeSingle` builds and checks the single-file executable. Native zip/tar tasks
+remain local development options, but those archives are excluded from releases.
 
-- `build/native/nativeCompile/kotlogramme` (`kotlogramme.exe` on Windows), plus native support libraries.
-- `build/distributions/kotlogramme-<version>-<platform>.zip` on Windows or `.tar.gz` on Linux/macOS.
+Windows, macOS and Linux x86_64 use Wrappe's pinned release binaries verified by SHA-256. Linux
+ARM64 builds Wrappe 1.0.6 from source because its release does not bundle an ARM64 Linux runner:
 
-Archives contain the executable, generated support libraries, project license and third-party
-notices. Unpack the entire archive and run the executable there. Unix archives preserve executable
-permissions. `nativeCompile` compiles; `nativeSmokeTest` also checks the native files; `nativeDist`
-chooses the host's archive format. `nativeDistZip` and `nativeDistTar` are available explicitly.
-Native compilation is opt-in: ordinary `test` requires no GraalVM or C++ compiler.
+```bash
+cargo install wrappe --version 1.0.6 --locked --root /absolute/path/to/wrappe
+export WRAPPE_BIN=/absolute/path/to/wrappe/bin/wrappe
+./gradlew --no-daemon clean test nativeSingle
+```
 
-## Verification
+Rust is needed only to build the ARM64 packer; users do not need it installed. The project maintains
+no custom extraction launcher. AppImage and MSI packaging are not part of this distribution.
 
-`scripts/test-native.ps1` copies the executable and support libraries into a fresh temporary
-directory, removes Java environment variables, and removes Java from PATH. It checks help, the
-embedded version, configuration persistence in a Unicode directory, `doctor`, and a scripted shell.
-Credentials are dummy values. `doctor` creates and closes the client without making a network query;
-the test never signs in or sends/receives messages. Temporary config and session data are removed.
+## Verification and compatibility
 
-Locally verified on Windows x86_64 with Oracle GraalVM 25.0.4+7.1 and Liberica NIK 25.0.4.1-1:
-`clean test nativeDist` succeeds,
-all 714 JVM tests pass, and all six native smoke checks pass without Java on PATH. Actionlint validates
-the CI, reusable native workflow and release workflow. Cross-platform results come from execution
-on the respective CI runners; local Windows checks do not establish their results.
-Authenticated Telegram operations and an interactive console are not covered by the native smoke
-checks. No live Telegram tests belong in the default build loop.
+The native smoke script copies only its input executable and any sidecars into a fresh temporary
+directory, removes Java environment variables and Java from PATH, and checks help, a nonzero usage
+error, version, Unicode config paths, offline `doctor`, and a scripted shell. The same checks run on
+the raw native files and the packed executable. Dummy credentials are used; no Telegram query is
+made. The packing tests ensure license text does not trigger wrapping and all support libraries,
+including versioned shared libraries, are selected.
 
-## Compatibility configuration
+The base native matrix passed all nine jobs, including Windows ARM64 JVM coverage. Locally the
+Windows single-file executable passes all seven smoke checks, and all 714 JVM tests pass. Hosted
+single-file results are established by the packaging CI run on each platform. These checks do not
+cover authenticated Telegram operations or a full interactive-console session.
 
-The build derives reflection registrations for the facade's protocol/raw classes from the resolved
-jar, because generic response decoding resolves Kotlin serializers reflectively. This avoids a
-hand-maintained class list or tracing against a real Telegram account and tracks facade overrides.
-The registrations cover that bounded model surface; future facade changes still need native checks.
-
-The generated metadata embeds only the build host's Telegram library. Static app metadata includes
-the version resource, raw schema and Windows console FFM downcalls; JLine and Mordant ship their own
-metadata. Native-library loaders initialize at runtime. `-march=compatibility` targets broadly
-compatible CPUs, and `--no-fallback` prevents silently producing a launcher that needs Java.
-
-References: [NIK downloads and supported platforms](https://bell-sw.com/pages/downloads/native-image-kit/),
-[Native Build Tools](https://graalvm.github.io/native-build-tools/latest/gradle-plugin),
-[GraalVM metadata](https://www.graalvm.org/jdk25/reference-manual/native-image/metadata/),
-[GitHub runner platforms](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+The build derives serializer reflection registrations from the resolved facade jar, embeds only
+its host Telegram library, preserves schema/version resources, and includes the Windows console
+FFM metadata. Runtime loader initialization, `-march=compatibility`, and `--no-fallback` keep the
+image portable without silently reintroducing Java.

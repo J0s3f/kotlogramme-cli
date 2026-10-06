@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       version:
-        description: Version embedded in the native executables and archive names
+        description: Version embedded in the native executables and file names
         required: false
         default: 0.1.0-SNAPSHOT
         type: string
@@ -42,16 +42,22 @@ jobs:
       - name: Install Linux compiler prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential zlib1g-dev
+      - name: Build the Linux ARM64 Wrappe runner
+        if: matrix.platform == 'linux-aarch64'
+        shell: bash
+        run: |
+          cargo install wrappe --version 1.0.6 --locked --root "$RUNNER_TEMP/wrappe"
+          echo "WRAPPE_BIN=$RUNNER_TEMP/wrappe/bin/wrappe" >> "$GITHUB_ENV"
       - name: Build, test and package the native client
         shell: bash
         env:
           NATIVE_VERSION: ${{ inputs.version }}
-        run: ./gradlew --no-daemon -Pversion="$NATIVE_VERSION" clean test nativeDist
-      - name: Upload the verified native package
+        run: ./gradlew --no-daemon -Pversion="$NATIVE_VERSION" clean test nativeSingle
+      - name: Upload the verified single-file executable
         uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.platform }}
           path: |
-            build/distributions/kotlogramme-*-${{ matrix.platform }}.zip
-            build/distributions/kotlogramme-*-${{ matrix.platform }}.tar.gz
+            build/distributions/kotlogramme-*-${{ matrix.platform }}
+            build/distributions/kotlogramme-*-${{ matrix.platform }}.exe
           if-no-files-found: error

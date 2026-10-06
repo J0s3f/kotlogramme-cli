@@ -13,9 +13,9 @@ $graalVmHomeBefore = $env:GRAALVM_HOME
 try {
     $env:JAVA_HOME = $GraalVmHome
     $env:GRAALVM_HOME = $GraalVmHome
-    & (Join-Path $repository 'gradlew.bat') -p $repository --no-daemon clean test nativeDist
+    & (Join-Path $repository 'gradlew.bat') -p $repository --no-daemon clean test nativeSingle
     if ($LASTEXITCODE -ne 0) { throw "Native build failed with exit code $LASTEXITCODE." }
-    Write-Host "Executable: $(Join-Path $repository 'build\native\nativeCompile\kotlogramme.exe')"
+    Write-Host "Portable executable directory: $(Join-Path $repository 'build\distributions')"
 } finally {
     $env:JAVA_HOME = $javaHomeBefore
     $env:GRAALVM_HOME = $graalVmHomeBefore

@@ -83,7 +83,7 @@ still streams in chunks rather than holding the whole file in the heap.
 ## Getting the client
 
 The current release is [`v0.4.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.4.0). Its
-GitHub Release carries the JVM artifacts below and five native platform packages:
+GitHub Release carries the JVM artifacts below and five single-file native executables:
 
 - **`kotlogramme-all.jar`** - a single runnable fat jar. Run it with JDK 25:
   ```bash
@@ -93,14 +93,14 @@ GitHub Release carries the JVM artifacts below and five native platform packages
   `kotlogramme-0.4.0/bin/kotlogramme` (or `kotlogramme-0.4.0\bin\kotlogramme.bat` on Windows); the
   jar and its dependencies live in `lib/`.
 
-- **Native packages** — `kotlogramme-0.4.0-windows-x86_64.zip` and
-  `kotlogramme-0.4.0-{linux,macos}-{x86_64,aarch64}.tar.gz`. Unpack the entire package and run
-  `kotlogramme.exe` on Windows or `./kotlogramme` on Linux/macOS. No JRE or JDK is required; keep
-  the bundled support libraries beside the executable. See [native requirements](docs/native-image.md).
+- **Single-file native executables** — `kotlogramme-0.4.0-windows-x86_64.exe` and
+  `kotlogramme-0.4.0-{linux,macos}-{x86_64,aarch64}`. Run the downloaded file directly; on
+  Linux/macOS first use `chmod +x`. These require no JRE, JDK or installer. Support libraries are
+  embedded by Wrappe and extracted into a temporary cache. See [native requirements](docs/native-image.md).
 
 ## Requirements
 
-- **JDK 25** to run the JVM distributions (the native packages require no Java) (it targets the newest LTS). Nothing else has to be installed: every
+- **JDK 25** to run the JVM distributions; native executables require no Java. Every
   library below, and the native Telegram library for the host, are bundled into the distribution.
   Gradle can fetch the JDK automatically via the toolchain resolver when building.
 - **Telegram API credentials**: an `api_id` and `api_hash` from <https://my.telegram.org>, set with
@@ -134,17 +134,18 @@ build/install/kotlogramme/bin/kotlogramme --help
 
 On Windows, use `gradlew.bat` and the generated `build\install\kotlogramme\bin\kotlogramme.bat`.
 
-Standalone GraalVM builds run without a JRE or JDK on Windows x86_64 and Linux/macOS x86_64 and ARM64:
+Standalone GraalVM builds packed with Wrappe run without a JRE or JDK on Windows x86_64 and Linux/macOS x86_64 and ARM64:
 
 ```powershell
 .\scripts\build-native-windows.ps1
-build\native\nativeCompile\kotlogramme.exe --help
+build\distributions\kotlogramme-0.1.0-SNAPSHOT-windows-x86_64.exe --help
 ```
 
 The script uses `C:\Tools\graalvm-jdk-25.0.4+7.1` by default. Building also needs the MSVC C++ tools
-and Windows SDK; keep the generated support DLLs beside the executable. See [`docs/native-image.md`](docs/native-image.md)
-for setup, offline verification and platform packages. CI uses Liberica NIK 25 for all five native
-targets; the release workflow attaches their verified zip/tar.gz archives. Windows ARM64 uses the JVM distribution.
+and Windows SDK. It compiles the native client and uses Wrappe to create and test one portable
+executable. CI uses Liberica NIK 25 on all five native targets; releases contain their single-file
+executables alongside the bundled jar and Java zip. Windows ARM64 uses the JVM distribution.
+See [`docs/native-image.md`](docs/native-image.md) for setup, platform requirements and verification.
 
 ## Picking the facade version
 

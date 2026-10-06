@@ -294,3 +294,25 @@ Linux x86_64 builds use Ubuntu 22.04 for a broader glibc baseline. ARM64 uses Ub
 the facade's ARM64 ELF library has a strong GLIBC_2.39 requirement. The x86_64 library's reference to
 that version is weak, so it loads on the older runner. Compiling the image on an older ARM64 runner
 cannot lower the requirements of the already-built facade library.
+## 0018 — Wrappe supplies the single-file runner on every native platform
+
+**Decision.** Pack the GraalVM executable and support libraries with Wrappe 1.0.6. Use verified
+release packers for Windows, macOS and Linux x86_64, and compile its native ARM64 Linux runner from
+the pinned Rust crate. Windows payloads also include MSVC redistributable DLLs. Preserve caller
+working directory, console I/O and exit status; suppress packer banners and verify cached files.
+If the native output already consists of one runtime file, copy it directly. Publish only five
+single-file native executables plus the bundled jar and Java distribution zip.
+
+**Alternatives.** A custom Go extraction runner passed initial Windows tests but would add code for
+signals, cleanup and caching that an existing packer already provides. PyInstaller is established
+but would add a Python runtime to a native application. Wrappe explicitly supports both Mac CPU
+architectures and Windows. AppImage is a conventional Linux option with ready ARM64 tooling, but
+the user chose Wrappe after comparing the two to keep one format across platforms. MSI and native
+archives with separate DLLs/shared libraries were excluded by the user's distribution preference.
+
+**Why.** The user wants one downloadable program without Java or an installer. Reusing a maintained
+open-source packer avoids a bespoke launcher. The versioned extraction cache supports repeated and
+parallel CLI commands; cleanup-after-every-run would risk deleting files another process still
+uses. Unix exec preserves signals directly; Windows console mode waits and returns the native
+exit code. Keeping raw native outputs locally supports diagnosis without exposing multi-file
+native archives in the release.

@@ -221,12 +221,11 @@ Credentials are read from the config first and fall back to the `TG_API_ID` / `T
 environment variables. Without either, commands that need Telegram explain how to provide them
 instead of failing with a stack trace.
 
-## Standalone native packages
+## Standalone single-file executables
 
-Native distributions require no JRE or JDK. Windows x86_64 uses zip; Linux and macOS on x86_64 and
-ARM64 use tar.gz, with the executable, support libraries and license notices. Build the host's
-package with `nativeDist`; Windows has `scripts/build-native-windows.ps1` for the supplied GraalVM
-installation. CI uses Liberica NIK 25 and runs offline startup, configuration, native-library and
-scripted-shell checks. Releases attach all five packages after every native build succeeds. Windows
-ARM64 remains covered by the JVM distribution because NIK has no native compiler for that platform.
-See [native-image.md](native-image.md) for requirements and verification limits.
+Windows x86_64 and Linux/macOS x86_64 and ARM64 have portable single-file executables requiring no
+JRE, JDK or installer. GraalVM/NIK compiles the application; Wrappe embeds the generated support
+libraries. CI checks both the native files and the packed executable with Java removed from their
+environment. Releases include only the five single-file executables, bundled jar and Java zip with
+launch scripts. `nativeSingle` builds the host's executable; Windows has a helper for the supplied
+GraalVM installation. Windows ARM64 uses the JVM distribution. See [native-image.md](native-image.md).
