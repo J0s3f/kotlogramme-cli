@@ -17,26 +17,10 @@ permissions:
 jobs:
   version:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      actions: read
     outputs:
       value: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v7
-      - name: Require a passing ci run for this commit
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # The ci workflow does not run for tags, so a tag on a commit that never passed it would
-          # skip the Windows, macOS and ARM64 test jobs. Refuse to release such a commit.
-          passed="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci --commit "$GITHUB_SHA" \
-            --status success --json databaseId --jq length)"
-          if [ "$passed" -eq 0 ]; then
-            echo "No successful ci run for $GITHUB_SHA. Push the commit to a branch and let ci pass first." >&2
-            exit 1
-          fi
       - name: Determine and validate the release version
         id: version
         shell: bash
@@ -49,6 +33,9 @@ jobs:
           bash scripts/version.sh check "$version"
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
+  test:
+    uses: ./.github/workflows/test.yml
+
   native:
     needs: version
     uses: ./.github/workflows/native.yml
@@ -56,7 +43,7 @@ jobs:
       version: ${{ needs.version.outputs.value }}
 
   release:
-    needs: [version, native]
+    needs: [version, test, native]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -67,11 +54,6 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v6
-      - name: Build and test the release
-        shell: bash
-        env:
-          RELEASE_VERSION: ${{ needs.version.outputs.value }}
-        run: ./gradlew --no-daemon -Pversion="$RELEASE_VERSION" clean test
       - name: Build the fat jar and the distribution
         shell: bash
         env:
