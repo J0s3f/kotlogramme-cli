@@ -47,10 +47,36 @@ class WrapCellTest {
     }
 
     @Test
-    fun `cuts a path that has no spaces`() {
-        val path = """C:\very\long\path\name"""
+    fun `breaks a path after its separators`() {
+        val path = "C:\\very\\long\\path\\name"
 
-        assertEquals(listOf("""C:\very\""", """long\pat""", """h\name"""), wrapCell(path, 8))
+        assertEquals(listOf("C:\\very\\", "long\\", "path\\", "name"), wrapCell(path, 8))
+    }
+
+    @Test
+    fun `breaks a path after a slash`() {
+        assertEquals(listOf("/usr/local/", "share/doc"), wrapCell("/usr/local/share/doc", 11))
+    }
+
+    @Test
+    fun `cuts a segment that is wider than the line`() {
+        assertEquals(listOf("/ab/", "cdef", "ghij"), wrapCell("/ab/cdefghij", 4))
+    }
+
+    @Test
+    fun `prefers a space to a separator`() {
+        assertEquals(listOf("see", "/usr/local/bin"), wrapCell("see /usr/local/bin", 14))
+    }
+
+    @Test
+    fun `breaks after a hyphen or an underscore when there is no space`() {
+        assertEquals(listOf("well-", "known"), wrapCell("well-known", 7))
+        assertEquals(listOf("user_", "name"), wrapCell("user_name", 6))
+    }
+
+    @Test
+    fun `breaks between words before cutting a word`() {
+        assertEquals(listOf("one two", "three four"), wrapCell("one two three four", 10))
     }
 
     @Test

@@ -128,7 +128,7 @@ class MessageStyler private constructor(
  * and a cluster is never split the way a code-unit sum splits a surrogate pair.
  */
 internal fun visibleLength(text: String): Int {
-    val plain = ANSI_SGR.replace(text, "")
+    val plain = ANSI_ESCAPE.replace(text, "")
     var width = 0
     var index = 0
     while (index < plain.length) {
@@ -164,7 +164,8 @@ internal fun truncateToWidth(text: String, limit: Int, ellipsis: String = "…")
     return kept.toString().trimEnd() + ellipsis
 }
 
-private val ANSI_SGR = Regex("\u001B\\[[0-9;]*m")
+/** Any escape sequence a terminal consumes without printing: a CSI one such as a colour, or an OSC one such as a link. */
+internal val ANSI_ESCAPE = Regex("\u001B(?:\\[[0-?]*[ -/]*[@-~]|\\][^\u0007\u001B]*(?:\u0007|\u001B\\\\))")
 
 /**
  * Whether ANSI colour may be emitted. `--no-color` wins over everything; an explicit `--color`

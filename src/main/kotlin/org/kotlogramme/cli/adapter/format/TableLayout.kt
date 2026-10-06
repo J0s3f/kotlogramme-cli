@@ -95,11 +95,12 @@ internal fun fitColumns(natural: List<Int>, floors: List<Int>, available: Int): 
  * [text] broken into lines of at most [width] display columns.
  *
  * Text that already fits and has no line break comes back untouched, so a table that fits renders as
- * it always did. Otherwise lines break at spaces, a word longer than a line is cut at the edge, and
- * the cut falls on a grapheme boundary, so a flag or a ZWJ emoji is never split. The width is counted
- * as [visibleLength] counts it: wide characters take two columns and escapes none. A style that is
- * open where a line ends is closed there and opened again at the start of the next line, so it
- * neither leaks into the neighbouring cell nor stops halfway down the wrapped text.
+ * it always did. Otherwise lines break at spaces, a word longer than a line breaks after a separator
+ * such as `/`, `\` or `-`, and a segment longer than a line is cut at the edge on a grapheme boundary,
+ * so a flag or a ZWJ emoji is never split. The width is counted as [visibleLength] counts it: wide
+ * characters take two columns and escapes none. A style or hyperlink that is open where a line ends is
+ * closed there and opened again at the start of the next line, so it neither leaks into the
+ * neighbouring cell nor stops halfway down the wrapped text. Other escapes stay where they were.
  */
 internal fun wrapCell(text: String, width: Int): List<String> {
     val limit = width.coerceAtLeast(1)
@@ -107,17 +108,17 @@ internal fun wrapCell(text: String, width: Int): List<String> {
     return LineBreaker(limit).lay(atomsOf(text.replace("\r", "")))
 }
 
-private enum class AtomKind { TEXT, SPACE, STYLE, NEWLINE }
+private enum class AtomKind { TEXT, SPACE, STYLE, LINK, PASSTHROUGH, NEWLINE }
 
-private class Atom(val text: String, val width: Int, val kind: AtomKind)
+private class Atom(val text: String, val width: Int, val kind: AtomKind, val breaksAfter: Boolean = false)
 
 private fun atomsOf(text: String): List<Atom> {
     val atoms = mutableListOf<Atom>()
     var index = 0
     while (index < text.length) {
-        val escape = SGR_SEQUENCE.matchAt(text, index)
+        val escape = ANSI_ESCAPE.matchAt(text, index)
         if (escape != null) {
-            atoms += Atom(escape.value, 0, AtomKind.STYLE)
+            atoms += Atom(escape.value, 0, escapeKind(escape.value))
             index += escape.value.length
             continue
         }
@@ -129,28 +130,44 @@ private fun atomsOf(text: String): List<Atom> {
         val length = WCWidth.charCountForGraphemeCluster(text, index).coerceAtLeast(1)
         val cluster = text.substring(index, index + length)
         val kind = if (cluster == " ") AtomKind.SPACE else AtomKind.TEXT
-        atoms += Atom(cluster, WCWidth.wcwidthForGraphemeCluster(text, index).coerceAtLeast(0), kind)
+        val width = WCWidth.wcwidthForGraphemeCluster(text, index).coerceAtLeast(0)
+        atoms += Atom(cluster, width, kind, breaksAfter = cluster in BREAK_AFTER)
         index += length
     }
     return atoms
 }
 
-private val SGR_SEQUENCE = Regex("\u001B\\[[0-9;]*m")
-private const val STYLE_RESET = "\u001B[0m"
+private fun escapeKind(escape: String): AtomKind = when {
+    escape.startsWith(LINK_PREFIX) -> AtomKind.LINK
+    escape.endsWith("m") && escape.startsWith("\u001B[") -> AtomKind.STYLE
+    else -> AtomKind.PASSTHROUGH
+}
 
-/** Fills lines greedily, breaking at spaces, and carries the open style from one line to the next. */
+/** Characters a long word may be broken after when it has no space to break at: paths, hyphens, snake_case. */
+private val BREAK_AFTER = setOf("/", "\\", "-", "_")
+private const val STYLE_RESET = "\u001B[0m"
+private const val LINK_PREFIX = "\u001B]8;"
+private const val LINK_CLOSE = "\u001B]8;;\u001B\\"
+
+/**
+ * Fills lines greedily and carries the open style and link from one line to the next.
+ *
+ * A line breaks at its last space when it has one, so words stay whole; a word with no space before it
+ * breaks after its last separator such as `/` or `\`; only a segment wider than the line is cut.
+ */
 private class LineBreaker(private val limit: Int) {
     private val lines = mutableListOf<String>()
     private var line = mutableListOf<Atom>()
     private var lineWidth = 0
     private var openStyle: List<String> = emptyList()
+    private var openLink: String? = null
     private var continuation = false
 
     fun lay(atoms: List<Atom>): List<String> {
         for (atom in atoms) {
             when (atom.kind) {
                 AtomKind.NEWLINE -> endParagraph()
-                AtomKind.STYLE -> line += atom
+                AtomKind.STYLE, AtomKind.LINK, AtomKind.PASSTHROUGH -> line += atom
                 AtomKind.SPACE, AtomKind.TEXT -> place(atom)
             }
         }
@@ -166,8 +183,11 @@ private class LineBreaker(private val limit: Int) {
                 return
             }
             val lastSpace = line.indexOfLast { it.kind == AtomKind.SPACE }
+            val lastSeparator = line.indexOfLast { it.breaksAfter }
             if (lastSpace >= 0 && line.take(lastSpace).any { it.kind == AtomKind.TEXT }) {
                 softBreak(lastSpace, lastSpace + 1)
+            } else if (lastSeparator > 0) {
+                softBreak(lastSeparator + 1, lastSeparator + 1)
             } else {
                 softBreak(line.size, line.size)
             }
@@ -193,15 +213,22 @@ private class LineBreaker(private val limit: Int) {
     }
 
     private fun emit(atoms: List<Atom>) {
-        val ending = styleAfter(openStyle, atoms)
-        val prefix = openStyle.joinToString("")
-        val suffix = if (ending.isEmpty()) "" else STYLE_RESET
+        val styleAtEnd = atoms.filter { it.kind == AtomKind.STYLE }
+            .fold(openStyle) { open, escape -> open.applying(escape.text) }
+        val linkAtEnd = atoms.filter { it.kind == AtomKind.LINK }
+            .fold(openLink) { _, escape -> escape.text.linkTarget() }
+        val prefix = openStyle.joinToString("") + (openLink ?: "")
+        val suffix = (if (linkAtEnd == null) "" else LINK_CLOSE) + (if (styleAtEnd.isEmpty()) "" else STYLE_RESET)
         lines += prefix + atoms.joinToString("") { it.text } + suffix
-        openStyle = ending
+        openStyle = styleAtEnd
+        openLink = linkAtEnd
     }
 
-    private fun styleAfter(start: List<String>, atoms: List<Atom>): List<String> =
-        atoms.filter { it.kind == AtomKind.STYLE }.fold(start) { open, escape -> open.applying(escape.text) }
+    /** The link this escape opens, or null when it closes one: an OSC 8 escape with no target ends the link. */
+    private fun String.linkTarget(): String? {
+        val target = removePrefix(LINK_PREFIX).removeSuffix("\u0007").removeSuffix("\u001B\\").substringAfter(';')
+        return if (target.isEmpty()) null else this
+    }
 
     /** The styles open after [escape]: `ESC[0m` and `ESC[m` close everything, any other code is added. */
     private fun List<String>.applying(escape: String): List<String> {
