@@ -15,7 +15,32 @@ permissions:
   contents: read
 
 jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      value: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Determine and validate the release version
+        id: version
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          version="${REQUESTED_VERSION:-${GITHUB_REF_NAME#v}}"
+          test -n "$version"
+          bash scripts/test-version.sh
+          bash scripts/version.sh check "$version"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+  native:
+    needs: version
+    uses: ./.github/workflows/native.yml
+    with:
+      version: ${{ needs.version.outputs.value }}
+
   release:
+    needs: [version, native]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -26,39 +51,46 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v6
-      - name: Determine the release version
-        id: version
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            version="${{ inputs.version }}"
-          else
-            version="${GITHUB_REF_NAME#v}"
-          fi
-          test -n "$version"
-          echo "value=$version" >> "$GITHUB_OUTPUT"
-      - name: Check the docs name this release
-        shell: bash
-        run: bash scripts/version.sh check "${{ steps.version.outputs.value }}"
       - name: Build and test the release
         shell: bash
-        run: ./gradlew --no-daemon -Pversion="${{ steps.version.outputs.value }}" clean test
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.value }}
+        run: ./gradlew --no-daemon -Pversion="$RELEASE_VERSION" clean test
       - name: Build the fat jar and the distribution
         shell: bash
-        run: ./gradlew --no-daemon -Pversion="${{ steps.version.outputs.value }}" shadowJar distZip
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.value }}
+        run: ./gradlew --no-daemon -Pversion="$RELEASE_VERSION" shadowJar distZip
       - name: Verify the fat jar bundles every native library
         shell: bash
         run: |
           jar tf build/libs/kotlogramme-all.jar | grep -E '^native/(linux-x86_64/libkotlogramme\.so|linux-aarch64/libkotlogramme\.so|windows-x86_64/kotlogramme\.dll|windows-aarch64/kotlogramme\.dll|macos-x86_64/libkotlogramme\.dylib|macos-aarch64/libkotlogramme\.dylib)$'
+      - name: Download verified native packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: native-*
+          path: release-assets
+          merge-multiple: true
+      - name: Verify all five native packages are present
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.value }}
+        run: |
+          for platform in linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64; do
+            test -s "release-assets/kotlogramme-$RELEASE_VERSION-$platform.tar.gz"
+          done
+          test -s "release-assets/kotlogramme-$RELEASE_VERSION-windows-x86_64.zip"
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.version.outputs.value }}
         shell: bash
         run: |
-          tag="v${{ steps.version.outputs.value }}"
+          tag="v$RELEASE_VERSION"
           gh release create "$tag" \
             --title "$tag" \
             --target "$GITHUB_SHA" \
             --generate-notes \
             build/libs/kotlogramme-all.jar \
-            build/distributions/*.zip
+            build/distributions/*.zip \
+            release-assets/*

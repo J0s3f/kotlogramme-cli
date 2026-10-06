@@ -1,0 +1,12 @@
+{
+  "resources": [
+    { "glob": "kotlogramme-version.properties" },
+    { "glob": "raw/telegram-layer-*.json" }
+  ],
+  "foreign": {
+    "downcalls": [
+      { "returnType": "int", "parameterTypes": [] },
+      { "returnType": "int", "parameterTypes": ["int"] }
+    ]
+  }
+}

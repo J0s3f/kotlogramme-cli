@@ -56,6 +56,18 @@ The primary development machine is Windows; use PowerShell. CI runs on Linux.
 - Capture full command output to a temp file when you pipe it (`... | Tee-Object -FilePath $env:TEMP\x.log | Select-Object -Last 40`),
   so diagnosing a failure later does not require a rerun.
 
+### Native distributions
+
+- Native CI builds use **Liberica NIK 25** on every native target, including Intel macOS. Keep one
+  distribution across the matrix. Windows ARM64 has no NIK/GraalVM native compiler and uses JVM CI.
+- Set `JAVA_HOME` and `GRAALVM_HOME` to a Native Image JDK, then run `clean test nativeDist`.
+  `scripts/build-native-windows.ps1` defaults to the supplied local Oracle GraalVM installation,
+  `C:\Tools\graalvm-jdk-25.0.4+7.1`; `-GraalVmHome` accepts NIK too.
+- `nativeDist` includes the executable and generated support libraries. Keep those libraries beside
+  the executable. Run `nativeSmokeTest` offline; never collect metadata through live Telegram tests.
+- The reusable native workflow supplies both CI artifacts and release packages. All native targets
+  must pass before release creation; do not mark an unsupported architecture as a native build.
+
 ### Tests and secrets
 
 - **Never** run live Telegram tests as part of the normal loop. Anything that would contact

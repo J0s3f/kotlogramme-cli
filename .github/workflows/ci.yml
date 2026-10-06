@@ -29,6 +29,9 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v6
+      - name: Test release version updates
+        shell: bash
+        run: bash scripts/test-version.sh
       - name: Build and test
         shell: bash
         run: ./gradlew --no-daemon clean test
@@ -48,3 +51,32 @@ jobs:
           jar tf build/libs/kotlogramme-all.jar | grep -E '^native/.*\.(dll|so|dylib)$' || true
           echo "native entries: $native_count"
           test "$native_count" -eq 6
+
+  native:
+    uses: ./.github/workflows/native.yml
+
+  windows-arm:
+    # GraalVM has no Windows ARM64 Native Image toolchain; verify the JVM facade there.
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: liberica
+          java-version: '25'
+          architecture: aarch64
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Test release version updates
+        shell: bash
+        run: bash scripts/test-version.sh
+      - name: Build and test the Windows ARM64 JVM distribution
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon clean test shadowJar
+      - name: Verify the Windows ARM64 native facade loads
+        shell: pwsh
+        env:
+          TG_API_ID: '1'
+          TG_API_HASH: '0'
+        run: |
+          java -jar build/libs/kotlogramme-all.jar doctor
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

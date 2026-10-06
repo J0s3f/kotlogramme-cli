@@ -1,0 +1,57 @@
+name: native packages
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version embedded in the native executables and archive names
+        required: false
+        default: 0.1.0-SNAPSHOT
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native ${{ matrix.platform }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x86_64
+            runner: ubuntu-22.04
+          - platform: linux-aarch64
+            runner: ubuntu-22.04-arm
+          - platform: macos-x86_64
+            runner: macos-15-intel
+          - platform: macos-aarch64
+            runner: macos-15
+          - platform: windows-x86_64
+            runner: windows-2025
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: liberica
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Install Linux compiler prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential zlib1g-dev
+      - name: Build, test and package the native client
+        shell: bash
+        env:
+          NATIVE_VERSION: ${{ inputs.version }}
+        run: ./gradlew --no-daemon -Pversion="$NATIVE_VERSION" clean test nativeDist
+      - name: Upload the verified native package
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.platform }}
+          path: |
+            build/distributions/kotlogramme-*-${{ matrix.platform }}.zip
+            build/distributions/kotlogramme-*-${{ matrix.platform }}.tar.gz
+          if-no-files-found: error

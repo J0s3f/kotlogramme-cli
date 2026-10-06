@@ -220,3 +220,13 @@ trace.
 Credentials are read from the config first and fall back to the `TG_API_ID` / `TG_API_HASH`
 environment variables. Without either, commands that need Telegram explain how to provide them
 instead of failing with a stack trace.
+
+## Standalone native packages
+
+Native distributions require no JRE or JDK. Windows x86_64 uses zip; Linux and macOS on x86_64 and
+ARM64 use tar.gz, with the executable, support libraries and license notices. Build the host's
+package with `nativeDist`; Windows has `scripts/build-native-windows.ps1` for the supplied GraalVM
+installation. CI uses Liberica NIK 25 and runs offline startup, configuration, native-library and
+scripted-shell checks. Releases attach all five packages after every native build succeeds. Windows
+ARM64 remains covered by the JVM distribution because NIK has no native compiler for that platform.
+See [native-image.md](native-image.md) for requirements and verification limits.
