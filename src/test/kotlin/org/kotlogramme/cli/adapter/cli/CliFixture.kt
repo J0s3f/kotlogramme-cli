@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.cli
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import org.kotlogramme.TelegramException
+import org.kotlogramme.cli.FakeClock
 import org.kotlogramme.cli.KotlogrammeCommand
 import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.adapter.format.UploadProgressBar
@@ -26,6 +27,7 @@ import org.kotlogramme.cli.application.port.api.Sessions
 import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
+import org.kotlogramme.cli.application.port.spi.Clock
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.Diagnostic
 import org.kotlogramme.cli.application.port.spi.Output
@@ -954,6 +956,7 @@ internal fun cliFixture(
     sendCommand: SendCommand = SendCommand(),
     interactiveTerminal: Boolean = false,
     progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
+    clock: Clock = FakeClock(),
 ): CliFixture {
     val context = AppContext(
         configDir = configDir,
@@ -977,6 +980,7 @@ internal fun cliFixture(
         isInteractiveTerminal = interactiveTerminal,
         progressFactory = progressFactory,
         downloadMediaFactory = { downloadMedia },
+        clock = clock,
     )
     val root = KotlogrammeCommand { context }
         .subcommands(

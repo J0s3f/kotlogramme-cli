@@ -64,6 +64,7 @@ import org.kotlogramme.cli.application.port.api.Sessions
 import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
+import org.kotlogramme.cli.application.port.spi.Clock
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.MediaGateway
 import org.kotlogramme.cli.application.port.spi.MediaProbe
@@ -133,6 +134,8 @@ class AppContext(
     val isInteractiveTerminal: Boolean = false,
     private val progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
     private val tableWidth: TableWidth = TableWidth.Detect,
+    /** The time every command that expires or compares against now asks for. */
+    val clock: Clock = SystemClock(),
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
@@ -265,7 +268,7 @@ class AppContext(
             val dir = ConfigPaths(configDirOverride = configDir?.toString()).baseDir()
             val configStore = JsonConfigStore(dir)
             val format = configStore.load().outputFormat
-            val terminal = System.console() != null
+            val terminal = System.console()?.isTerminal == true
             // A one-shot command has no JLine terminal, and building one would start a background
             // console reader that would steal stdin from `send-file -`. Instead, fix the process's
             // own stdout in place: on a Windows console at a legacy code page the JVM's encoder turns

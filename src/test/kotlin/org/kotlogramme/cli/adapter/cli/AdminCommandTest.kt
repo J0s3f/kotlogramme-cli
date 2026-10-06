@@ -1,9 +1,9 @@
 package org.kotlogramme.cli.adapter.cli
 
+import org.kotlogramme.cli.FakeClock
 import org.kotlogramme.cli.domain.ChatRestrictions
 import org.kotlogramme.cli.domain.ChatRights
 import java.time.Duration
-import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -88,17 +88,15 @@ class AdminCommandTest {
     @Test
     fun `restrict bans by default with a finite expiry`() {
         val fake = FakeAdminRights()
-        val fixture = cliFixture(adminRights = fake)
-        val before = Instant.now()
+        val clock = FakeClock()
+        val fixture = cliFixture(adminRights = fake, clock = clock)
 
         val result = fixture.run("restrict", "@team", "@ada")
 
         assertEquals(0, result.statusCode)
         val applied = fake.restrictions.single().restrictions
         assertEquals(ChatRestrictions.NONE_ALLOWED, applied.copy(untilDate = null))
-        val until = assertNotNull(applied.untilDate)
-        assertTrue(until.isAfter(before), "expiry $until was not after $before")
-        assertTrue(until.isBefore(before.plus(Duration.ofHours(25))), "expiry $until was not finite")
+        assertEquals(clock.now().plus(Duration.ofHours(24)), applied.untilDate)
     }
 
     @Test

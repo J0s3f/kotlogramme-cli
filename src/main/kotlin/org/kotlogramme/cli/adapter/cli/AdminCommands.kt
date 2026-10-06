@@ -76,7 +76,7 @@ class RestrictCommand : CliktCommand(name = "restrict") {
         appContext.output.line(summary())
     }
 
-    private fun expiry(): Instant? = if (forever) null else Instant.now().plus(DEFAULT_BAN)
+    private fun expiry(): Instant? = if (forever) null else appContext.clock.now().plus(DEFAULT_BAN)
 
     private fun summary(): String =
         if (forever) "Restricted $user in $peer, forever." else "Restricted $user in $peer for ${DEFAULT_BAN_HOURS}h."
