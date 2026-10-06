@@ -182,9 +182,12 @@ trace.
 - `members <peer> [--limit <n>]` - lists a chat's members with their role.
 - `invite <peer> <user>` - adds a member to a channel, supergroup or group.
 - `kick <peer> <user>` - removes a member from a chat.
-- `listen [--once] [--json]` — follows the live update stream, printing each update as it arrives.
-  `--once` stops after the first update, which is what makes it scriptable; `--json` prints one JSON
-  object per line; Ctrl-C ends the stream cleanly instead of killing the process mid-print. The
+- `listen [--once] [--all] [--json]` — follows the live update stream, printing each message as it
+  arrives. Updates that carry no message, such as read receipts and contact status changes, are
+  hidden unless `--all` is given; each then shows its Telegram update name and its content decoded
+  to JSON (nested under `data` with `--json`). A message from a chat whose name the update does not
+  carry shows the numeric peer or sender id. `--once` stops after the first shown update, which is
+  what makes it scriptable; `--json` prints one JSON object per line; Ctrl-C ends the stream cleanly instead of killing the process mid-print. The
   stream is followed on the facade's own background update loop, which polls in short waits and joins
   its thread on stop, so a stop costs at most that one short poll rather than the facade's 30 s one.
 - `stickers` — lists the installed sticker sets with their short name, title, count and flags.

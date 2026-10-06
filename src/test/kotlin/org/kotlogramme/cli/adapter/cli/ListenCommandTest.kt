@@ -47,6 +47,85 @@ class ListenCommandTest {
     }
 
     @Test
+    fun `listen hides updates that carry no message`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(IncomingUpdate.Other("updateUserStatus"), update)))
+
+        fixture.run("listen")
+
+        assertEquals(
+            listOf(
+                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text",
+                "message\u0009Ada\u00097\u0009Ada Lovelace\u00092026-01-01T12:30:00Z\u0009hello",
+            ),
+            fixture.output.lines,
+        )
+    }
+
+    @Test
+    fun `listen --all also shows updates that carry no message`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(IncomingUpdate.Other("updateUserStatus", "ab12"))))
+
+        fixture.run("listen", "--all")
+
+        assertEquals(
+            listOf(
+                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text",
+                "updateUserStatus\u0009\u0009\u0009\u0009\u0009ab12",
+            ),
+            fixture.output.lines,
+        )
+    }
+
+    @Test
+    fun `listen --all --once stops at the first update of any kind`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(IncomingUpdate.Other("updateUserStatus"), update)))
+
+        fixture.run("listen", "--all", "--once")
+
+        assertEquals(2, fixture.output.lines.size)
+    }
+
+    @Test
+    fun `listen --all --json nests the data of an update`() {
+        val status = IncomingUpdate.Other("updateUserStatus", """{"user_id":5}""")
+        val fixture = cliFixture(listen = FakeListen(listOf(status)))
+
+        fixture.run("listen", "--all", "--json")
+
+        assertEquals(
+            listOf(
+                """{"kind":"updateUserStatus","chat":"","message_id":"","from":"","time":"","text":"",""" +
+                    """"data":{"user_id":5}}""",
+            ),
+            fixture.output.lines,
+        )
+    }
+
+    @Test
+    fun `listen prints nothing when only hidden updates arrive`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(IncomingUpdate.Other("updateUserStatus"))))
+
+        fixture.run("listen")
+
+        assertEquals(emptyList(), fixture.output.lines)
+    }
+
+    @Test
+    fun `listen --once waits for a message and not for a hidden update`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(IncomingUpdate.Other("updateUserStatus"), update, update)))
+
+        fixture.run("listen", "--once")
+
+        assertEquals(
+            listOf(
+                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text",
+                "message\u0009Ada\u00097\u0009Ada Lovelace\u00092026-01-01T12:30:00Z\u0009hello",
+            ),
+            fixture.output.lines,
+        )
+    }
+
+    @Test
     fun `listen --json prints one JSON object per update`() {
         val fixture = cliFixture(listen = FakeListen(listOf(update)))
 

@@ -71,6 +71,26 @@ class UpdateRenderingTest {
     }
 
     @Test
+    fun `an update shows its data in the text column`() {
+        val status = IncomingUpdate.Other("updateUserStatus", """{"user_id":5}""")
+
+        assertEquals(listOf("updateUserStatus", "", "", "", "", """{"user_id":5}"""), updateRow(status))
+    }
+
+    @Test
+    fun `the json line nests the data of an update as an object`() {
+        val status = IncomingUpdate.Other("updateUserStatus", """{"user_id":5}""")
+
+        val rendered = render(OutputFormat.PLAIN) { renderUpdateJson(status) }
+
+        assertEquals(
+            """{"kind":"updateUserStatus","chat":"","message_id":"","from":"","time":"","text":"",""" +
+                """"data":{"user_id":5}}""",
+            rendered,
+        )
+    }
+
+    @Test
     fun `a json update is an array of one object`() {
         val rendered = render(OutputFormat.JSON) { renderUpdate(newMessage) }
 

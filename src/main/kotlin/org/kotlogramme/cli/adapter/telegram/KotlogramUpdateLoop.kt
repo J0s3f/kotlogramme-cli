@@ -1,8 +1,11 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.Message
 import com.github.badoualy.telegram.api.TypedUpdate
 import com.github.badoualy.telegram.api.UpdatesApi
 import org.kotlogramme.cli.application.port.spi.UpdateLoop
+import org.kotlogramme.cli.domain.Chat
+import org.kotlogramme.cli.domain.ChatKind
 import org.kotlogramme.cli.domain.IncomingUpdate
 
 /**
@@ -33,6 +36,27 @@ internal class KotlogramUpdateLoop(
  * `null` when it carries none; every other kind becomes [IncomingUpdate.Other].
  */
 internal fun TypedUpdate.toIncomingUpdate(): IncomingUpdate {
-    val message = message ?: return IncomingUpdate.Other(kind)
-    return IncomingUpdate.NewMessage(message.peer?.toChat(), message.toMessage())
+    val message = message ?: return otherUpdate()
+    return IncomingUpdate.NewMessage(message.chat(), message.toMessage())
+}
+
+/** A raw update is named after the Telegram update it carries, and its payload is decoded to JSON. */
+private fun TypedUpdate.otherUpdate(): IncomingUpdate.Other = IncomingUpdate.Other(
+    kind = rawUpdate?.name ?: kind,
+    data = rawUpdate?.toJson().orEmpty(),
+)
+
+/**
+ * The chat a message arrived in. An update that names only a peer id, such as a message you sent
+ * from another client to a contact, has no resolved peer, so the id stands in for the title.
+ */
+private fun Message.chat(): Chat? = peer?.toChat() ?: peerId?.let { id ->
+    Chat(
+        id = id,
+        title = id.toString(),
+        kind = ChatKind.PRIVATE,
+        username = null,
+        lastMessagePreview = null,
+        lastMessageAt = null,
+    )
 }

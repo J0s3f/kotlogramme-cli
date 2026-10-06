@@ -1,5 +1,7 @@
 package org.kotlogramme.cli.adapter.format
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.kotlogramme.cli.application.port.spi.Output
@@ -35,15 +37,27 @@ internal fun updateRow(update: IncomingUpdate, styler: MessageStyler = MessageSt
         DateTimeFormatter.ISO_INSTANT.format(update.message.sentAt),
         styler.style(update.message.text, update.message.entities),
     )
-    is IncomingUpdate.Other -> listOf(update.kind, "", "", "", "", "")
+    is IncomingUpdate.Other -> listOf(update.kind, "", "", "", "", update.data)
 }
 
 /** [update] as one JSON object keyed by [UPDATE_HEADERS]; pure, for tests and JSON Lines. */
 internal fun updateJson(update: IncomingUpdate): String {
     val row = updateRow(update)
-    return JsonObject(
-        UPDATE_HEADERS.withIndex().associate { (column, header) -> header to JsonPrimitive(row[column]) },
-    ).toString()
+    val columns = UPDATE_HEADERS.withIndex().associate { (column, header) -> header to JsonPrimitive(row[column]) }
+    return JsonObject(columns + dataColumn(update)).toString()
+}
+
+/**
+ * An update's data is JSON already, so it is nested as an object instead of an escaped string, and
+ * the text column that carries it in a table is left empty.
+ */
+private fun dataColumn(update: IncomingUpdate): Map<String, JsonElement> = when (update) {
+    is IncomingUpdate.Other -> if (update.data.isEmpty()) {
+        emptyMap()
+    } else {
+        mapOf("text" to JsonPrimitive(""), "data" to Json.parseToJsonElement(update.data))
+    }
+    is IncomingUpdate.NewMessage -> emptyMap()
 }
 
 private const val NEW_MESSAGE_KIND = "message"

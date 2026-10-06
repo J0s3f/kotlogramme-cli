@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.RawUpdate
 import com.github.badoualy.telegram.api.TypedUpdate
 import org.kotlogramme.cli.domain.IncomingUpdate
 import kotlin.test.Test
@@ -34,5 +35,63 @@ class TypedUpdateMappingTest {
         val update = TypedUpdate(kind = "typing").toIncomingUpdate()
 
         assertEquals(IncomingUpdate.Other("typing"), update)
+    }
+
+    @Test
+    fun `names a raw update after the Telegram update it carries`() {
+        val raw = RawUpdate("updateReadHistoryInbox", byteArrayOf())
+
+        val update = TypedUpdate(kind = "raw", rawUpdate = raw).toIncomingUpdate()
+
+        assertEquals(IncomingUpdate.Other("updateReadHistoryInbox", """{"undecoded":""}"""), update)
+    }
+
+    @Test
+    fun `carries the decoded payload of a raw update`() {
+        val payload = java.util.HexFormat.of().parseHex("def8bde5b50f5911000000004939b9edec07c56a")
+        val status = RawUpdate("updateUserStatus", payload)
+
+        val update = TypedUpdate(kind = "raw", rawUpdate = status).toIncomingUpdate() as IncomingUpdate.Other
+
+        assertEquals("updateUserStatus", update.kind)
+        assertEquals(true, update.data.contains("\"user_id\":291049397"), update.data)
+    }
+
+    @Test
+    fun `prefers the resolved peer over the peer id`() {
+        val facadeMessage = message(id = 9, text = "hi", peer = peer(id = 7, name = "Ada"), peerId = 4711)
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage).toIncomingUpdate()
+
+        assertEquals("Ada", (update as IncomingUpdate.NewMessage).chat?.title)
+    }
+
+    @Test
+    fun `prefers the resolved sender over the sender id`() {
+        val facadeMessage = message(id = 9, text = "hi", sender = user(id = 3, firstName = "Ada"), senderId = 815)
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage).toIncomingUpdate()
+
+        assertEquals("Ada", (update as IncomingUpdate.NewMessage).message.senderName)
+    }
+
+    @Test
+    fun `falls back to the peer id when the update carries no peer`() {
+        val facadeMessage = message(id = 9, text = "hi", peerId = 4711)
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage).toIncomingUpdate()
+
+        val chat = (update as IncomingUpdate.NewMessage).chat
+        assertEquals(4711, chat?.id)
+        assertEquals("4711", chat?.title)
+    }
+
+    @Test
+    fun `falls back to the sender id when the update carries no sender`() {
+        val facadeMessage = message(id = 9, text = "hi", senderId = 815)
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage).toIncomingUpdate()
+
+        assertEquals("815", (update as IncomingUpdate.NewMessage).message.senderName)
     }
 }

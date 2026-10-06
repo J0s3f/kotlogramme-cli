@@ -68,6 +68,7 @@ private fun FacadeMessage.senderName(): String =
     sender?.displayName()
         ?: postAuthor?.takeIf(String::isNotBlank)
         ?: peer?.name?.takeIf(String::isNotBlank)
+        ?: senderId?.toString()
         ?: ""
 
 internal fun User.displayName(): String = listOf(firstName.orEmpty(), lastName.orEmpty())
