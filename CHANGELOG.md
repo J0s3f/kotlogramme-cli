@@ -2,6 +2,16 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## Unreleased
+
+### Changed
+
+- `doctor` no longer requires API credentials and reports one row per check instead of a single
+  library line: runtime, native library, Telegram schema, terminal libraries, temporary directory,
+  configuration, credentials, session, network and, when credentials are set, the account. Every
+  check is reported even if another fails, and only a failed check makes the command exit with an
+  error.
+
 ## 0.5.1 - 2026-10-06
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

@@ -352,3 +352,21 @@ in a few lines without a dependency, and a port that tests move by hand keeps th
 instant and deterministic. A failed or empty lookup is never cached, so a transient failure heals on
 the next update.
 
+## 0021 — `doctor` is a list of independent diagnostics
+
+**Decision.** `doctor` runs a list of `Diagnostic` ports through one `DoctorService` and prints one
+row per check. Checks that need nothing from the user always run; the one that needs credentials runs
+when they are set and is listed as skipped otherwise. A check that throws, including a link error, is
+reported as failed and the rest still run. Only a failed check makes the command exit with an error.
+The native library check builds the client with placeholder credentials against a scratch session.
+
+**Alternatives.** Keeping one library check that requires credentials, which made `doctor` useless on
+exactly the machine that has not been set up yet. Running the library check with the user's
+credentials and session, which ties it to the configuration and opens the real session file. One
+large function with a try block per check, which cannot be tested one check at a time.
+
+**Why.** The commands that fail on a new machine fail for reasons that are independent of each other:
+a missing library, an unwritable directory, no terminal, no network. Showing all of them in one run is
+what a doctor is for, and a port per check lets each be tested with a fake or a temporary directory.
+Treating no credentials, no session and being offline as warnings keeps the exit code meaningful.
+

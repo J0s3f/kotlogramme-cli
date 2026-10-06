@@ -23,7 +23,7 @@ import java.util.HexFormat
  */
 internal fun RawUpdate.toJson(): String {
     val undecoded = JsonObject(mapOf("undecoded" to JsonPrimitive(hex(data))))
-    return (runCatching { decode(data) }.getOrNull() ?: undecoded).toString()
+    return (runCatching { decodeUpdate(data) }.getOrNull() ?: undecoded).toString()
 }
 
 /** The `user_id` field of the payload, or `null` when it has none or cannot be decoded. */
@@ -31,7 +31,8 @@ internal fun RawUpdate.userId(): Long? = runCatching {
     Json.parseToJsonElement(toJson()).jsonObject["user_id"]?.jsonPrimitive?.long
 }.getOrNull()
 
-private fun decode(payload: ByteArray): JsonElement {
+/** Decodes [payload], an `Update` in TL form, into JSON; throws when the schema cannot read it. */
+internal fun decodeUpdate(payload: ByteArray): JsonElement {
     val wrapped = UPDATE_SHORT_ID + payload + UPDATE_SHORT_DATE
     val updates = RawTelegramApi.decodeResponse(UPDATES_METHOD, wrapped) as RawValue.Object
     val update = updates.fields.getValue("update") as RawValue.Object

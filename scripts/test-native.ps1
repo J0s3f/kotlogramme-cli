@@ -55,8 +55,12 @@ try {
     Invoke-NativeCheck @('--version') 'kotlogramme.*\d+\.\d+'
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'config', 'set', '--api-id', '12345', '--api-hash', 'offline-smoke-test') 'saved|updated|Saved|Updated'
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'config') '12345'
-    # Doctor constructs and closes the JNI client without making a network query.
-    Invoke-NativeCheck @('--config-dir', $configDirectory, 'doctor') 'Client: created and closed without a network query'
+    # Doctor needs no credentials: it loads the native library, the Telegram schema and the terminal
+    # libraries, and skips the checks that would talk to Telegram. A failed check exits non-zero.
+    $bareDirectory = Join-Path $testDirectory 'config-bare'
+    Invoke-NativeCheck @('--config-dir', $bareDirectory, 'doctor') '(?s)Native library[^
+]*loaded.*Telegram schema[^
+]*decoded a sample update'
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'shell') 'list conversations' "help`nexit`n"
     Write-Host 'Native smoke checks passed with the portable native files and no Java environment or Java on PATH.'
 } finally {

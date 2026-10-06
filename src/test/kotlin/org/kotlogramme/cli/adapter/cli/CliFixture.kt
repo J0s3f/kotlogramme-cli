@@ -6,8 +6,6 @@ import org.kotlogramme.TelegramException
 import org.kotlogramme.cli.KotlogrammeCommand
 import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.adapter.format.UploadProgressBar
-import org.kotlogramme.cli.adapter.telegram.NativeLibraryCheck
-import org.kotlogramme.cli.adapter.telegram.NativeLibraryProbe
 import org.kotlogramme.cli.application.port.api.AccountStatus
 import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
@@ -29,6 +27,7 @@ import org.kotlogramme.cli.application.port.api.Stickers
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.ConfigStore
+import org.kotlogramme.cli.application.port.spi.Diagnostic
 import org.kotlogramme.cli.application.port.spi.Output
 import org.kotlogramme.cli.application.port.spi.UploadProgress
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
@@ -950,7 +949,7 @@ internal fun cliFixture(
     photos: Photos = FakePhotos(),
     configDir: Path = Paths.get("config"),
     environment: Map<String, String> = emptyMap(),
-    nativeLibraryProbe: NativeLibraryProbe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) },
+    diagnostics: List<Diagnostic> = emptyList(),
     sendFileCommand: SendFileCommand = SendFileCommand(),
     sendCommand: SendCommand = SendCommand(),
     interactiveTerminal: Boolean = false,
@@ -985,7 +984,7 @@ internal fun cliFixture(
             LoginCommand(),
             LogoutCommand(),
             WhoamiCommand(),
-            DoctorCommand(nativeLibraryProbe),
+            DoctorCommand { diagnostics },
             DialogsCommand(),
             HistoryCommand(),
             sendCommand,

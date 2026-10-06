@@ -206,12 +206,19 @@ trace.
 
 ## Diagnostics (Phase 8)
 
-- `doctor` — checks that the bundled native library can be loaded on this machine. It builds the
-  facade client once through the same factory the real commands use (which loads the library) and
-  closes it immediately, so it never contacts Telegram. It prints the API id, the session path, the
-  library status and where the facade classes came from (which is the fat jar when run from
-  `kotlogramme-all.jar`). A missing or incompatible library is reported as a one-line error, never
-  as an `UnsatisfiedLinkError` stack trace.
+- `doctor` — checks the installation and its environment, one row per check, and needs no
+  credentials. Always run: **Runtime** (version, Java, platform, JVM or native image), **Native
+  library** (builds the facade client with placeholder credentials against a scratch session, so the
+  user's session is never touched and Telegram is never contacted), **Telegram schema** (loads the
+  bundled schema and decodes a sample update, which is what `listen --all` relies on), **Terminal**
+  (opens JLine and Mordant and reports the output encoding), **Temporary directory** (where the
+  native library is extracted), **Configuration** (readable and writable), **Credentials** (set,
+  and shaped like what `my.telegram.org` issues; the hash is never shown), **Session** (the file on
+  disk) and **Network** (a TCP connection to telegram.org and a data centre). With credentials set,
+  **Account** also asks Telegram who the session belongs to; without them it is listed as skipped.
+  Every check is reported even when another fails. A warning (no credentials yet, no session, offline)
+  or a skipped check is not a failure; the command exits with an error only when a check failed.
+  A missing library is a one-line finding, never an `UnsatisfiedLinkError` stack trace.
 
 ## Authentication (Phase 1)
 

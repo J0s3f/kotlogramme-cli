@@ -55,8 +55,9 @@ the working directory; missing parent directories are created and an existing fi
 The command prints the path and the byte count, so a script can read either.
 
 Every command renders as a table by default and can be switched to `--format plain` or `--format
-json` (via `config set --format`) for scripting. `kotlogramme doctor` checks the installation,
-including that the bundled native library loads.
+json` (via `config set --format`) for scripting. `kotlogramme doctor` checks the installation:
+the native library, the Telegram schema, the terminal libraries, the configuration and the network,
+without needing API credentials, and the account too when they are set.
 
 ## Upload progress
 
