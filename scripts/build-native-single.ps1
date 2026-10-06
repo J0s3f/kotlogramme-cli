@@ -17,11 +17,6 @@ if (-not ($payloadFiles | Where-Object Name -EQ $nativeName)) {
 $extension = if ($Platform.StartsWith('windows-')) { '.exe' } else { '' }
 $outputPath = Join-Path $OutputDirectory "kotlogramme-$Version-$Platform$extension"
 [IO.Directory]::CreateDirectory($OutputDirectory) | Out-Null
-if ($payloadFiles.Count -eq 1) {
-    Copy-Item -LiteralPath $payloadFiles[0].FullName -Destination $outputPath
-    Write-Host "The native client is already a single executable: $outputPath"
-    return
-}
 $runner = switch ($Platform) {
     'windows-x86_64' { 'x86_64-pc-windows-gnu' }
     'macos-x86_64' { 'x86_64-apple-darwin' }

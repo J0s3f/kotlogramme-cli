@@ -300,7 +300,7 @@ cannot lower the requirements of the already-built facade library.
 release packers for Windows, macOS and Linux x86_64, and compile its native ARM64 Linux runner from
 the pinned Rust crate. Windows payloads also include MSVC redistributable DLLs. Preserve caller
 working directory, console I/O and exit status; suppress packer banners and verify cached files.
-If the native output already consists of one runtime file, copy it directly. Publish only five
+Publish only five
 single-file native executables plus the bundled jar and Java distribution zip.
 
 **Alternatives.** A custom Go extraction runner passed initial Windows tests but would add code for
@@ -316,3 +316,17 @@ parallel CLI commands; cleanup-after-every-run would risk deleting files another
 uses. Unix exec preserves signals directly; Windows console mode waits and returns the native
 exit code. Keeping raw native outputs locally supports diagnosis without exposing multi-file
 native archives in the release.
+
+## 0019 — Always compress the native executable and build the image for size
+
+**Decision.** Wrap every native executable with Wrappe, including those that need no support
+libraries, and pass `-Os` to `native-image`.
+
+**Alternatives.** Keeping the direct copy for single-file outputs. Dropping `java.desktop`, which
+needs a replacement for the image probing that uses ImageIO. UPX on the executable, which is flagged
+by antivirus software and breaks macOS code signing.
+
+**Why.** On macOS GraalVM links `java.desktop` statically, so the payload was one file and v0.4.0
+shipped it uncompressed: 81 MB against 20 MB for Linux and Windows, whose payloads Wrappe compressed.
+Compression is the largest single saving; `-Os` trades a little speed for a smaller code area.
+

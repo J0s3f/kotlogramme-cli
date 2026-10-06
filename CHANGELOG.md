@@ -2,6 +2,13 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## Unreleased
+
+### Changed
+
+- The macOS executables are compressed like the others and every native image is built with `-Os`,
+  so they shrink from about 81 MB.
+
 ## 0.4.0 - 2026-10-06
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

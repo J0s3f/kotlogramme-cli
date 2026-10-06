@@ -164,6 +164,7 @@ graalvmNative {
             buildArgs.addAll(
                 "--no-fallback",
                 "-march=compatibility",
+                "-Os",
                 "--enable-native-access=ALL-UNNAMED",
                 "--initialize-at-run-time=org.kotlogramme.NativeLibraryLoader,org.jline.nativ.NativeLibraryLoader",
                 "-Dfile.encoding=UTF-8",
