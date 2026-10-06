@@ -47,6 +47,7 @@ function Invoke-NativeCheck([string[]]$Arguments, [string]$Expected, [string]$In
     }
     Write-Host "PASS: $Arguments"
     $process.Dispose()
+    return $output
 }
 try {
     $configDirectory = Join-Path $testDirectory 'config-ü'
@@ -63,8 +64,16 @@ try {
     $bareDirectory = Join-Path $testDirectory 'config-bare'
     $extractionDirectories = { @(Get-ChildItem ([IO.Path]::GetTempPath()) -Directory -Filter 'kotlogramme-native-*').Count }
     $extractedBefore = & $extractionDirectories
-    $expected = '(?s)Native library[^\r\n]*loaded from [^\r\n]*kotlogramme.*Telegram schema[^\r\n]*decoded a sample update'
-    Invoke-NativeCheck @('--config-dir', $bareDirectory, 'doctor') $expected
+    # Read the result as JSON so polishing the wording of a check cannot break this test.
+    Invoke-NativeCheck @('--config-dir', $bareDirectory, 'config', 'set', '--format', 'json') 'format' | Out-Null
+    $doctor = Invoke-NativeCheck @('--config-dir', $bareDirectory, 'doctor') '"check"' | ConvertFrom-Json
+    foreach ($name in @('Native library', 'Telegram schema')) {
+        $row = $doctor | Where-Object { $_.check -eq $name }
+        if ($row.status -ne 'ok') { throw "doctor reports '$name' as '$($row.status)': $($row.detail)" }
+    }
+    if (($doctor | Where-Object { $_.check -eq 'Native library' }).detail -match 'bundled') {
+        throw 'The native library was not loaded from the file beside the executable.'
+    }
     if ((& $extractionDirectories) -ne $extractedBefore) { throw 'The native library was extracted to a temporary directory.' }
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'shell') 'list conversations' "help`nexit`n"
     Write-Host 'Native smoke checks passed with the portable native files and no Java environment or Java on PATH.'

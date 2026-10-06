@@ -13,10 +13,33 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  # A branch is pushed and then fast-forwarded into main, which is the same tree: do not test it twice.
+  changed:
+    runs-on: ubuntu-24.04
+    outputs:
+      tested: ${{ steps.tested.outputs.value }}
+    steps:
+      - id: tested
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci --commit "$GITHUB_SHA" --status success --json databaseId --jq length)"
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "${passed:-0}" -gt 0 ]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
+    needs: changed
+    if: needs.changed.outputs.tested != 'true'
     uses: ./.github/workflows/test.yml
 
   native:
+    needs: changed
+    if: needs.changed.outputs.tested != 'true'
     uses: ./.github/workflows/native.yml

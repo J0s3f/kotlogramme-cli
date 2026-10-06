@@ -25,10 +25,16 @@ jobs:
         id: version
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           version="${REQUESTED_VERSION:-${GITHUB_REF_NAME#v}}"
           test -n "$version"
+          # Moving a tag that already has a release would rebuild everything only to fail at the end.
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "::error::Release v$version already exists; delete it first to publish it again."
+            exit 1
+          fi
           bash scripts/test-version.sh
           bash scripts/version.sh check "$version"
           echo "value=$version" >> "$GITHUB_OUTPUT"

@@ -28,6 +28,9 @@ jobs:
       - name: Test release version updates
         shell: bash
         run: bash scripts/test-version.sh
+      - name: Check the documentation encoding
+        shell: bash
+        run: bash scripts/check-encoding.sh
       - name: Build and test
         shell: bash
         run: ./gradlew --no-daemon clean test
@@ -58,6 +61,9 @@ jobs:
       - name: Test release version updates
         shell: bash
         run: bash scripts/test-version.sh
+      - name: Check the documentation encoding
+        shell: bash
+        run: bash scripts/check-encoding.sh
       - name: Build and test the Windows ARM64 JVM distribution
         shell: pwsh
         run: .\gradlew.bat --no-daemon clean test shadowJar
