@@ -46,4 +46,36 @@ class NetworkDiagnosticTest {
 
         assertTrue(finding.detail.contains("IOException"), finding.detail)
     }
+
+    @Test
+    fun `a name that does not resolve falls back to the next host of the endpoint`() {
+        val endpoint = Endpoint("DC2", "dc2.example.org", 443, fallbackHosts = listOf("192.0.2.1"))
+
+        val finding = NetworkDiagnostic(listOf(endpoint)) { host, _ ->
+            if (host == "192.0.2.1") Duration.ofMillis(12) else throw IOException("unknown host")
+        }.run()
+
+        assertEquals(DiagnosticStatus.OK, finding.status)
+        assertEquals("DC2 12 ms", finding.detail)
+    }
+
+    @Test
+    fun `an endpoint whose every host fails reports the first reason`() {
+        val endpoint = Endpoint("DC2", "dc2.example.org", 443, fallbackHosts = listOf("192.0.2.1"))
+
+        val finding = NetworkDiagnostic(listOf(endpoint)) { host, _ -> throw IOException("no route to $host") }.run()
+
+        assertEquals(DiagnosticStatus.WARNING, finding.status)
+        assertEquals("DC2: no route to dc2.example.org", finding.detail)
+    }
+
+    @Test
+    fun `the first host that answers is the only one tried`() {
+        val tried = mutableListOf<String>()
+        val endpoint = Endpoint("DC2", "dc2.example.org", 443, fallbackHosts = listOf("192.0.2.1"))
+
+        NetworkDiagnostic(listOf(endpoint)) { host, _ -> tried += host; Duration.ofMillis(1) }.run()
+
+        assertEquals(listOf("dc2.example.org"), tried)
+    }
 }

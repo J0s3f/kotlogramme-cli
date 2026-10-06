@@ -6,8 +6,13 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.time.Duration
 
-/** A host and port to try a TCP connection to, with the name it is listed under. */
-data class Endpoint(val name: String, val host: String, val port: Int)
+/**
+ * A host and port to try a TCP connection to, with the name it is listed under.
+ *
+ * A [fallbackHosts] entry is tried only when the one before it fails, so an endpoint can be reached by
+ * name and still be checked from a fixed address when the name does not resolve.
+ */
+data class Endpoint(val name: String, val host: String, val port: Int, val fallbackHosts: List<String> = emptyList())
 
 /**
  * Opens a TCP connection to each endpoint and reports how long it took.
@@ -22,10 +27,21 @@ class NetworkDiagnostic(
     override val name = "Network"
 
     override fun run(): Finding {
-        val outcomes = endpoints.map { endpoint -> endpoint to runCatching { connect(endpoint.host, endpoint.port) } }
+        val outcomes = endpoints.map { endpoint -> endpoint to reach(endpoint) }
         val unreachable = outcomes.filter { it.second.isFailure }
         val detail = outcomes.joinToString("; ") { (endpoint, outcome) -> describe(endpoint, outcome) }
         return if (unreachable.isEmpty()) Finding.ok(detail) else Finding.warning(detail)
+    }
+
+    /** The first host to answer, or the first host's failure when none does. */
+    private fun reach(endpoint: Endpoint): Result<Duration> {
+        val failures = mutableListOf<Result<Duration>>()
+        for (host in listOf(endpoint.host) + endpoint.fallbackHosts) {
+            val attempt = runCatching { connect(host, endpoint.port) }
+            if (attempt.isSuccess) return attempt
+            failures += attempt
+        }
+        return failures.first()
     }
 
     private fun describe(endpoint: Endpoint, outcome: Result<Duration>): String =

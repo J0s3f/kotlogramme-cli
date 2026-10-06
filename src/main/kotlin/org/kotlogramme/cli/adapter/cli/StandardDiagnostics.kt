@@ -40,8 +40,11 @@ internal fun standardDiagnostics(appContext: AppContext): List<Diagnostic> {
     )
 }
 
-/** The website, which needs DNS, and a production data centre address, which needs only a route. */
+/**
+ * The website, and a production data centre by its name, then by its address when the name does not
+ * resolve, so a machine with a route but no DNS still reaches it. Telegram can move the address.
+ */
 private val TELEGRAM_ENDPOINTS = listOf(
     Endpoint("telegram.org", "telegram.org", 443),
-    Endpoint("DC2", "149.154.167.51", 443),
+    Endpoint("DC2", "venus.web.telegram.org", 443, fallbackHosts = listOf("149.154.167.51")),
 )
