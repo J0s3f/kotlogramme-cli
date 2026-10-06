@@ -17,10 +17,25 @@ permissions:
 jobs:
   version:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
     outputs:
       value: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v7
+      - name: Require a passing ci run for this commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The ci workflow does not run for tags, so a tag on a commit that never passed it would
+          # skip the Windows, macOS and ARM64 test jobs. Refuse to release such a commit.
+          passed="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci --commit "$GITHUB_SHA"             --status success --json databaseId --jq length)"
+          if [ "$passed" -eq 0 ]; then
+            echo "No successful ci run for $GITHUB_SHA. Push the commit to a branch and let ci pass first." >&2
+            exit 1
+          fi
       - name: Determine and validate the release version
         id: version
         shell: bash

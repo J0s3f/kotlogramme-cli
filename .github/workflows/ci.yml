@@ -2,6 +2,9 @@ name: ci
 
 on:
   push:
+    # A release tag is built and tested again by the release workflow, which also requires this
+    # workflow to have passed on the same commit, so running it for the tag would only repeat it.
+    branches: ['**']
   pull_request:
   workflow_dispatch:
 
