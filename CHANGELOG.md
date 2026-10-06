@@ -7,7 +7,8 @@ All notable changes to `kotlogramme-cli` are recorded here.
 ### Changed
 
 - The macOS executables are compressed like the others and every native image is built with `-Os`,
-  so they shrink from about 81 MB.
+  so they shrink from about 81 MB. The JNA terminal backend is excluded, which removes the JDK AWT
+  libraries from every native image.
 
 ## 0.4.0 - 2026-10-06
 

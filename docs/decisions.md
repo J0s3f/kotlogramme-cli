@@ -322,11 +322,16 @@ native archives in the release.
 **Decision.** Wrap every native executable with Wrappe, including those that need no support
 libraries, and pass `-Os` to `native-image`.
 
-**Alternatives.** Keeping the direct copy for single-file outputs. Dropping `java.desktop`, which no source code uses;
-finding what keeps it reachable is a separate investigation. UPX on the executable, which is flagged
+**Alternatives.** Keeping the direct copy for single-file outputs. Keeping the JNA terminal backend, which is what reached `java.desktop`. UPX on the executable, which is flagged
 by antivirus software and breaks macOS code signing.
 
 **Why.** On macOS GraalVM links `java.desktop` statically, so the payload was one file and v0.4.0
 shipped it uncompressed: 81 MB against 20 MB for Linux and Windows, whose payloads Wrappe compressed.
 Compression is the largest single saving; `-Os` trades a little speed for a smaller code area.
+
+The AWT libraries were not needed: no source uses ImageIO. The call-tree report (`-H:+PrintAnalysisCallTree`)
+showed `java.awt` reachable through JNA, which Mordant's JNA terminal backend pulls in. Excluding
+`mordant-jvm-jna` and `net.java.dev.jna` removes `java.desktop` from the image (40.9 MB to 39.4 MB
+raw on Windows, and no `awt.dll`) while Mordant keeps its FFM and GraalVM backends. The native smoke
+test now fails if an AWT library reappears.
 

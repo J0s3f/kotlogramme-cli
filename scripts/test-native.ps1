@@ -6,6 +6,10 @@ $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) {
     throw "Native executable is missing: $Executable. Run nativeCompile first."
 }
+$awtLibraries = Get-ChildItem -LiteralPath (Split-Path -Parent $Executable) -File -Filter '*awt*'
+if ($awtLibraries) {
+    throw "The image must not need the JDK AWT libraries: $($awtLibraries.Name -join ', ')"
+}
 $testDirectory = Join-Path ([IO.Path]::GetTempPath()) ('kotlogramme-native-test-' + [guid]::NewGuid())
 [IO.Directory]::CreateDirectory($testDirectory) | Out-Null
 $isolatedExecutable = Join-Path $testDirectory ([IO.Path]::GetFileName($Executable))

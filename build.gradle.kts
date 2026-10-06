@@ -36,6 +36,13 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+// Mordant ships JNA, FFM and GraalVM terminal backends. JNA references java.awt, which drags the JDK
+// AWT libraries into the native image, and the FFM and GraalVM backends already cover every platform.
+configurations.configureEach {
+    exclude(group = "com.github.ajalt.mordant", module = "mordant-jvm-jna")
+    exclude(group = "net.java.dev.jna")
+}
+
 application {
     applicationName = "kotlogramme"
     mainClass.set("org.kotlogramme.cli.MainKt")
@@ -186,7 +193,7 @@ tasks.register<Exec>("nativeSmokeTest") {
     commandLine("pwsh", "-NoProfile", "-File", file("scripts/test-native.ps1").absolutePath)
 }
 
-// Keep the image's AWT support libraries alongside the executable: image probing uses ImageIO.
+// Keep any JDK support libraries the image still needs alongside the executable.
 val nativeDistributionFiles = fileTree(layout.buildDirectory.dir("native/nativeCompile")) {
     include(nativeExecutableName, "*.dll", "*.so", "*.so.*", "*.dylib")
 }
