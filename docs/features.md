@@ -220,3 +220,12 @@ trace.
 Credentials are read from the config first and fall back to the `TG_API_ID` / `TG_API_HASH`
 environment variables. Without either, commands that need Telegram explain how to provide them
 instead of failing with a stack trace.
+
+## Standalone single-file executables
+
+Windows x86_64 and Linux/macOS x86_64 and ARM64 have portable single-file executables requiring no
+JRE, JDK or installer. GraalVM/NIK compiles the application; Wrappe embeds the generated support
+libraries. CI checks both the native files and the packed executable with Java removed from their
+environment. Releases include only the five single-file executables, bundled jar and Java zip with
+launch scripts. `nativeSingle` builds the host's executable; Windows has a helper for the supplied
+GraalVM installation. Windows ARM64 uses the JVM distribution. See [native-image.md](native-image.md).

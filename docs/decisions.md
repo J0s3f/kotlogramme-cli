@@ -261,3 +261,58 @@ facade build it was tested against, and Maven Central stays first in the list so
 published there is unaffected. The cost is a slower first resolve while JitPack builds the tag and a
 dependency on JitPack's availability, both acceptable next to blocking every client release on Maven
 Central's publication schedule.
+
+## 0017 — Standalone packages use GraalVM Native Image and Liberica NIK in CI
+
+**Decision.** Add the official GraalVM Native Build Tools Gradle plugin as an opt-in build path,
+for Windows x86_64 and Linux/macOS x86_64 and ARM64. The executable embeds the host Telegram library; the loader
+extracts it at runtime. Derive serializer reflection metadata from the resolved facade jar and keep
+native smoke checks offline. The standard JVM build and fast test task remain independent of native
+compilation. GRAALVM_HOME selects the native toolchain, and the Windows helper defaults to the
+installation supplied for development rather than baking a machine path into Gradle.
+
+**Alternatives.** Bundling a JVM with jpackage would remove the install prerequisite but still ship
+a runtime directory. Rewriting with Kotlin/Native would replace the JVM facade and terminal stack.
+A manually curated serializer list would drift with facade upgrades; collecting it through a live
+tracing-agent session would require credentials and incomplete command coverage.
+
+**Why.** The requested distribution runs with no JRE or JDK. The package includes the generated AWT libraries.
+The existing JNI boundary and embedded DLL loader make Native Image a smaller change than a rewrite.
+Generating registrations from the bounded protocol/raw packages keeps coverage aligned with the
+selected facade version. No fallback image is permitted because that would reintroduce Java. Native
+compilation costs extra time and needs MSVC, so it is an explicit distribution step, not part of every
+ordinary build. Runtime smoke checks copy the portable native files and remove Java from the environment.
+
+CI uses Liberica NIK 25 on all five native targets to avoid mixing distributions and to keep Intel
+macOS supported with an up-to-date JDK 25. Oracle/GraalVM CE discontinued Intel macOS binaries after
+25.0.1; pinning that older compiler lost to NIK's maintained target. The local Windows helper still
+uses the explicitly supplied Oracle installation. Windows ARM64 has no GraalVM/NIK Native Image
+compiler, so its CI job uses an ARM64 Liberica JVM instead. Native release builds share a reusable
+workflow with CI; all five must succeed before the release is created. Unix packages use tar.gz to
+preserve executable permissions, Windows uses zip, and both include the image's support libraries.
+Linux x86_64 builds use Ubuntu 22.04 for a broader glibc baseline. ARM64 uses Ubuntu 24.04 because
+the facade's ARM64 ELF library has a strong GLIBC_2.39 requirement. The x86_64 library's reference to
+that version is weak, so it loads on the older runner. Compiling the image on an older ARM64 runner
+cannot lower the requirements of the already-built facade library.
+## 0018 — Wrappe supplies the single-file runner on every native platform
+
+**Decision.** Pack the GraalVM executable and support libraries with Wrappe 1.0.6. Use verified
+release packers for Windows, macOS and Linux x86_64, and compile its native ARM64 Linux runner from
+the pinned Rust crate. Windows payloads also include MSVC redistributable DLLs. Preserve caller
+working directory, console I/O and exit status; suppress packer banners and verify cached files.
+If the native output already consists of one runtime file, copy it directly. Publish only five
+single-file native executables plus the bundled jar and Java distribution zip.
+
+**Alternatives.** A custom Go extraction runner passed initial Windows tests but would add code for
+signals, cleanup and caching that an existing packer already provides. PyInstaller is established
+but would add a Python runtime to a native application. Wrappe explicitly supports both Mac CPU
+architectures and Windows. AppImage is a conventional Linux option with ready ARM64 tooling, but
+the user chose Wrappe after comparing the two to keep one format across platforms. MSI and native
+archives with separate DLLs/shared libraries were excluded by the user's distribution preference.
+
+**Why.** The user wants one downloadable program without Java or an installer. Reusing a maintained
+open-source packer avoids a bespoke launcher. The versioned extraction cache supports repeated and
+parallel CLI commands; cleanup-after-every-run would risk deleting files another process still
+uses. Unix exec preserves signals directly; Windows console mode waits and returns the native
+exit code. Keeping raw native outputs locally supports diagnosis without exposing multi-file
+native archives in the release.

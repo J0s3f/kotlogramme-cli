@@ -56,6 +56,21 @@ The primary development machine is Windows; use PowerShell. CI runs on Linux.
 - Capture full command output to a temp file when you pipe it (`... | Tee-Object -FilePath $env:TEMP\x.log | Select-Object -Last 40`),
   so diagnosing a failure later does not require a rerun.
 
+### Native distributions
+
+- Native CI builds use **Liberica NIK 25** on every native target, including Intel macOS. Keep one
+  distribution across the matrix. Windows ARM64 has no NIK/GraalVM native compiler and uses JVM CI.
+- Set `JAVA_HOME` and `GRAALVM_HOME` to a Native Image JDK, then run `clean test nativeSingle`.
+  `scripts/build-native-windows.ps1` defaults to the supplied local Oracle GraalVM installation,
+  `C:\Tools\graalvm-jdk-25.0.4+7.1`; `-GraalVmHome` accepts NIK too.
+- `nativeSingle` uses Wrappe 1.0.6 to embed the native executable and support libraries in one file.
+  Reuse an existing packer; do not maintain a custom extraction launcher. Build its Linux ARM64
+  runner from source when needed. Run native smoke checks offline; never trace live Telegram tests.
+- Release only the bundled jar, Java zip with launch scripts, and five single-file native executables.
+  Do not attach multi-file native archives, MSI installers or AppImages.
+- The reusable native workflow supplies both CI artifacts and release packages. All native targets
+  must pass before release creation; do not mark an unsupported architecture as a native build.
+
 ### Tests and secrets
 
 - **Never** run live Telegram tests as part of the normal loop. Anything that would contact

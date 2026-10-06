@@ -1,10 +1,13 @@
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.bundling.Compression
+import java.util.zip.ZipFile
 
 plugins {
     kotlin("jvm") version "2.4.20"
     kotlin("plugin.serialization") version "2.4.20"
     application
     id("com.gradleup.shadow") version "9.6.1"
+    id("org.graalvm.buildtools.native") version "1.1.14"
 }
 
 group = "io.github.j0s3f"
@@ -96,4 +99,145 @@ tasks.shadowJar {
 // distribution from the `jar` task and the runtime classpath, which still works.
 tasks.named("assemble") {
     dependsOn(tasks.shadowJar)
+}
+
+// The facade resolves generic protocol serializers reflectively. Deriving the registrations from
+// the resolved jar keeps them complete when -PkotlogrammeVersion changes, without tracing Telegram.
+val nativeOs = when {
+    System.getProperty("os.name").startsWith("Windows", ignoreCase = true) -> "windows"
+    System.getProperty("os.name").startsWith("Mac", ignoreCase = true) -> "macos"
+    else -> "linux"
+}
+val nativeArchitecture = when (val architecture = System.getProperty("os.arch")) {
+    "amd64", "x86_64" -> "x86_64"
+    "aarch64", "arm64" -> "aarch64"
+    else -> architecture
+}
+val nativePlatform = "$nativeOs-$nativeArchitecture"
+val nativeExecutableName = if (nativeOs == "windows") "kotlogramme.exe" else "kotlogramme"
+val nativeLibraryName = when (nativeOs) {
+    "windows" -> "kotlogramme.dll"
+    "macos" -> "libkotlogramme.dylib"
+    else -> "libkotlogramme.so"
+}
+val nativeMetadataDir = layout.buildDirectory.dir("generated/native-metadata")
+val generateNativeMetadata = tasks.register("generateNativeMetadata") {
+    val runtimeClasspath = configurations.runtimeClasspath
+    inputs.files(runtimeClasspath)
+    inputs.property("platform", nativePlatform)
+    outputs.dir(nativeMetadataDir)
+    doLast {
+        val facadeJar = runtimeClasspath.get().single { it.name.startsWith("kotlogram-") }
+        val registrations = ZipFile(facadeJar).use { archive ->
+            archive.entries().asSequence()
+                .map { it.name }
+                .filter { it.endsWith(".class") }
+                .filter { it.startsWith("org/kotlogramme/protocol/") || it.startsWith("org/kotlogramme/raw/") }
+                .map { it.removeSuffix(".class").replace('/', '.') }
+                .sorted()
+                .map { name ->
+                    """{"name":"$name","allDeclaredFields":true,"allDeclaredMethods":true,""" +
+                        """"allDeclaredConstructors":true,"allDeclaredClasses":true}"""
+                }
+                .toList()
+        }
+        nativeMetadataDir.get().file("resource-config.json").asFile.apply {
+            parentFile.mkdirs()
+            writeText(
+                """{"resources":{"includes":[{"pattern":"native/$nativePlatform/$nativeLibraryName"}]}}""",
+            )
+        }
+        nativeMetadataDir.get().file("reflect-config.json").asFile.apply {
+            parentFile.mkdirs()
+            writeText(registrations.joinToString(",\n", "[\n", "\n]\n"))
+        }
+    }
+}
+
+graalvmNative {
+    // GRAALVM_HOME selects the installation independently of the JVM running Gradle.
+    toolchainDetection.set(false)
+    binaries {
+        named("main") {
+            imageName.set("kotlogramme")
+            configurationFileDirectories.from(nativeMetadataDir)
+            buildArgs.addAll(
+                "--no-fallback",
+                "-march=compatibility",
+                "--enable-native-access=ALL-UNNAMED",
+                "--initialize-at-run-time=org.kotlogramme.NativeLibraryLoader,org.jline.nativ.NativeLibraryLoader",
+                "-Dfile.encoding=UTF-8",
+                "-Dstdout.encoding=UTF-8",
+                "-Dstderr.encoding=UTF-8",
+            )
+        }
+    }
+}
+
+tasks.named("nativeCompile") {
+    dependsOn(generateNativeMetadata)
+}
+
+tasks.register<Exec>("nativeSmokeTest") {
+    group = "verification"
+    description = "Checks the native distribution offline with Java removed from its environment."
+    dependsOn(tasks.named("nativeCompile"))
+    commandLine("pwsh", "-NoProfile", "-File", file("scripts/test-native.ps1").absolutePath)
+}
+
+// Keep the image's AWT support libraries alongside the executable: image probing uses ImageIO.
+val nativeDistributionFiles = fileTree(layout.buildDirectory.dir("native/nativeCompile")) {
+    include(nativeExecutableName, "*.dll", "*.so", "*.so.*", "*.dylib")
+}
+
+tasks.register<Zip>("nativeDistZip") {
+    group = "distribution"
+    description = "Packages the native executable, support libraries and license notices as a zip."
+    dependsOn(tasks.named("nativeSmokeTest"))
+    archiveFileName.set("kotlogramme-$version-$nativePlatform.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    from(nativeDistributionFiles)
+    from("LICENSE", "NOTICE")
+    filesMatching(nativeExecutableName) {
+        permissions { unix("755") }
+    }
+}
+
+tasks.register<Tar>("nativeDistTar") {
+    group = "distribution"
+    description = "Packages the native executable, support libraries and license notices as a tarball."
+    dependsOn(tasks.named("nativeSmokeTest"))
+    compression = Compression.GZIP
+    archiveFileName.set("kotlogramme-$version-$nativePlatform.tar.gz")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    from(nativeDistributionFiles)
+    from("LICENSE", "NOTICE")
+    filesMatching(nativeExecutableName) {
+        permissions { unix("755") }
+    }
+}
+
+tasks.register("nativeDist") {
+    group = "distribution"
+    description = "Builds and verifies the native package for the host platform."
+    dependsOn(if (nativeOs == "windows") "nativeDistZip" else "nativeDistTar")
+}
+tasks.register<Exec>("nativePackagingTest") {
+    group = "verification"
+    description = "Checks that single-file selection ignores licenses and includes every native library."
+    commandLine("pwsh", "-NoProfile", "-File", file("scripts/test-native-packaging.ps1").absolutePath)
+}
+
+tasks.register<Exec>("nativeSingle") {
+    group = "distribution"
+    description = "Creates and tests one portable executable with Wrappe when native libraries are needed."
+    dependsOn(tasks.named("nativeSmokeTest"), tasks.named("nativePackagingTest"))
+    commandLine(
+        "pwsh", "-NoProfile", "-File", file("scripts/build-native-single.ps1").absolutePath,
+        "-NativeDirectory", layout.buildDirectory.dir("native/nativeCompile").get().asFile.absolutePath,
+        "-OutputDirectory", layout.buildDirectory.dir("distributions").get().asFile.absolutePath,
+        "-Platform", nativePlatform,
+        "-Version", version.toString(),
+    )
+    providers.environmentVariable("WRAPPE_BIN").orNull?.let { args("-Wrappe", it) }
 }

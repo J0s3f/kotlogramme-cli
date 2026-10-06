@@ -43,7 +43,10 @@ facade="v${facade#v}"
 cli_files=(README.md)
 facade_files=(README.md AGENTS.md docs/decisions.md docs/plan.md build.gradle.kts)
 
-cli_family="$(printf '%s' "${cli}" | sed -E 's/\.[0-9]+$//')"
+# Match the version family currently advertised, so `set 0.4.0` can replace the old 0.3.x
+# release without touching unrelated dependency versions in README.md.
+advertised_cli="$(grep -oE 'kotlogramme-cli/releases/tag/v[0-9]+\.[0-9]+\.[0-9]+' README.md | head -n1 | sed 's#.*/v##')"
+cli_family="$(printf '%s' "${advertised_cli}" | sed -E 's/\.[0-9]+$//')"
 cli_pattern="$(printf '%s' "${cli_family}" | sed -E 's/\./\\./g')\.[0-9]+"
 # Family-specific, so the facade pattern cannot match the client's own v0.3.x tag.
 facade_family="$(printf '%s' "${facade}" | sed -E 's/\.[0-9]+$//')"
@@ -51,7 +54,10 @@ facade_pattern="$(printf '%s' "${facade_family}" | sed -E 's/\./\\./g')\.[0-9]+"
 
 replace() {
   local pattern="$1" value="$2" file="$3"
-  sed -i -E "s/${pattern}/${value}/g" "${file}"
+  local absolute_file="$PWD/$file"
+  local temporary_file="${absolute_file}.version-tmp"
+  sed -E "s/${pattern}/${value}/g" "${absolute_file}" > "${temporary_file}"
+  mv "${temporary_file}" "${absolute_file}"
 }
 
 stale_in() {

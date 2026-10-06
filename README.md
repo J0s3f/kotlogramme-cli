@@ -10,7 +10,7 @@ application.
 > **Status: usable.** Phases 1-9 are implemented: authentication, configuration, dialogs, history,
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline. The current release is
-> [`v0.3.4`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.4), carrying the fat jar and
+> [`v0.4.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.4.0), carrying the fat jar and
 > the distribution; it builds on the `kotlogram` `v0.9.11` tag from JitPack. Later additions beyond
 > the original phases:
 > `download-media`, `list-files` with a server-side media-kind filter, and an upload progress bar for
@@ -82,21 +82,25 @@ still streams in chunks rather than holding the whole file in the heap.
 
 ## Getting the client
 
-The current release is [`v0.3.4`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.3.4). Its
-GitHub Release carries two assets, both with every dependency and all six native libraries bundled,
-so nothing else has to be downloaded:
+The current release is [`v0.4.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.4.0). Its
+GitHub Release carries the JVM artifacts below and five single-file native executables:
 
 - **`kotlogramme-all.jar`** - a single runnable fat jar. Run it with JDK 25:
   ```bash
   java -jar kotlogramme-all.jar --help
   ```
-- **`kotlogramme-0.3.4.zip`** - the `distZip` distribution. Unpack it and run
-  `kotlogramme-0.3.4/bin/kotlogramme` (or `kotlogramme-0.3.4\bin\kotlogramme.bat` on Windows); the
+- **`kotlogramme-0.4.0.zip`** - the `distZip` distribution. Unpack it and run
+  `kotlogramme-0.4.0/bin/kotlogramme` (or `kotlogramme-0.4.0\bin\kotlogramme.bat` on Windows); the
   jar and its dependencies live in `lib/`.
+
+- **Single-file native executables** — `kotlogramme-0.4.0-windows-x86_64.exe` and
+  `kotlogramme-0.4.0-{linux,macos}-{x86_64,aarch64}`. Run the downloaded file directly; on
+  Linux/macOS first use `chmod +x`. These require no JRE, JDK or installer. Support libraries are
+  embedded by Wrappe and extracted into a temporary cache. See [native requirements](docs/native-image.md).
 
 ## Requirements
 
-- **JDK 25** to run the client (it targets the newest LTS). Nothing else has to be installed: every
+- **JDK 25** to run the JVM distributions; native executables require no Java. Every
   library below, and the native Telegram library for the host, are bundled into the distribution.
   Gradle can fetch the JDK automatically via the toolchain resolver when building.
 - **Telegram API credentials**: an `api_id` and `api_hash` from <https://my.telegram.org>, set with
@@ -130,11 +134,18 @@ build/install/kotlogramme/bin/kotlogramme --help
 
 On Windows, use `gradlew.bat` and the generated `build\install\kotlogramme\bin\kotlogramme.bat`.
 
-A GraalVM `native-image` build that would drop the JDK requirement is assessed in
-[`docs/native-image.md`](docs/native-image.md): **viable with caveats**. No GraalVM was available on
-the machine that wrote it, so nothing was built or run; the facade resolves its serializers
-reflectively, so every `@Serializable` payload would need registering; and the exe would land near
-the 39.4 MB fat jar, the real win being startup and no JVM.
+Standalone GraalVM builds packed with Wrappe run without a JRE or JDK on Windows x86_64 and Linux/macOS x86_64 and ARM64:
+
+```powershell
+.\scripts\build-native-windows.ps1
+build\distributions\kotlogramme-0.1.0-SNAPSHOT-windows-x86_64.exe --help
+```
+
+The script uses `C:\Tools\graalvm-jdk-25.0.4+7.1` by default. Building also needs the MSVC C++ tools
+and Windows SDK. It compiles the native client and uses Wrappe to create and test one portable
+executable. CI uses Liberica NIK 25 on all five native targets; releases contain their single-file
+executables alongside the bundled jar and Java zip. Windows ARM64 uses the JVM distribution.
+See [`docs/native-image.md`](docs/native-image.md) for setup, platform requirements and verification.
 
 ## Picking the facade version
 
@@ -151,7 +162,7 @@ it explicitly - any published facade tag works:
 - [`docs/architecture.md`](docs/architecture.md) — how the code is organised, and why.
 - [`docs/decisions.md`](docs/decisions.md) — design decisions and their rationale.
 - [`docs/features.md`](docs/features.md) — user-facing features that actually ship.
-- [`docs/native-image.md`](docs/native-image.md) — assessment of a GraalVM native build.
+- [`docs/native-image.md`](docs/native-image.md) — building and verifying standalone native packages.
 - [`AGENTS.md`](AGENTS.md) — engineering rules for humans and agents.
 
 ## License
