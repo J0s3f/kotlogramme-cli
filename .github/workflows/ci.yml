@@ -40,10 +40,6 @@ jobs:
         run: ./gradlew --no-daemon shadowJar
       - name: Verify the fat jar
         shell: bash
-        env:
-          # Any values work: doctor must not reach Telegram, it only loads the native library.
-          TG_API_ID: '1'
-          TG_API_HASH: '0'
         run: |
           java -jar build/libs/kotlogramme-all.jar --version
           java -jar build/libs/kotlogramme-all.jar doctor
@@ -74,9 +70,6 @@ jobs:
         run: .\gradlew.bat --no-daemon clean test shadowJar
       - name: Verify the Windows ARM64 native facade loads
         shell: pwsh
-        env:
-          TG_API_ID: '1'
-          TG_API_HASH: '0'
         run: |
           java -jar build/libs/kotlogramme-all.jar doctor
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
