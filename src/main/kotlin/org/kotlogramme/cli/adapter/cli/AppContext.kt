@@ -352,10 +352,16 @@ private fun defaultAdminRights(config: AppConfig): AdminRights {
     )
 }
 
-private fun defaultListen(config: AppConfig): Listen =
-    clientFor(config).let { client ->
-        ListenService(KotlogramUpdateLoop(client, UserNameCache(KotlogramUserOperations(client), SystemClock())))
-    }
+private fun defaultListen(config: AppConfig): Listen {
+    val client = clientFor(config)
+    val accounts = KotlogramAccountGateway(KotlogramAccountOperations(client))
+    // A session belongs to one account for as long as it lasts, so its id is read once; a failed
+    // read is not remembered and is tried again on the next update.
+    val accountId = lazy(LazyThreadSafetyMode.PUBLICATION) { accounts.currentAccount().id }
+    val userNames = UserNameCache(KotlogramUserOperations(client), SystemClock())
+    val selfId = { runCatching { accountId.value }.getOrNull() }
+    return ListenService(KotlogramUpdateLoop(client, userNames, selfId))
+}
 
 private fun defaultListFolders(config: AppConfig): ListFolders =
     ListFoldersService(KotlogramFolderGateway(KotlogramFolderOperations(clientFor(config))))

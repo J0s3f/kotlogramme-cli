@@ -13,9 +13,12 @@ import java.time.format.DateTimeFormatter
  *
  * A live update is one event, so it is projected to a single row: the table and plain formats show
  * that row, and [renderUpdateJson] emits one JSON object per line for JSON Lines scripting. The row
- * is the shared projection, so every format carries the same fields.
+ * is the shared projection, so every format carries the same fields. Names are for reading; the
+ * `chat_id` and `sender_id` columns are what a script passes back to address the chat or the person,
+ * because names are neither unique nor stable.
  */
-internal val UPDATE_HEADERS = listOf("kind", "chat", "message_id", "from", "time", "text")
+internal val UPDATE_HEADERS =
+    listOf("kind", "chat", "message_id", "from", "time", "text", "chat_id", "sender_id")
 
 /** Prints one update as the configured output format. */
 fun Output.renderUpdate(update: IncomingUpdate, styler: MessageStyler = MessageStyler.PLAIN) {
@@ -28,7 +31,10 @@ fun Output.renderUpdateJson(update: IncomingUpdate) {
 }
 
 /** The row for one [update]; pure so it can be snapshot-tested without an [Output]. */
-internal fun updateRow(update: IncomingUpdate, styler: MessageStyler = MessageStyler.PLAIN): List<String> = when (update) {
+internal fun updateRow(
+    update: IncomingUpdate,
+    styler: MessageStyler = MessageStyler.PLAIN,
+): List<String> = when (update) {
     is IncomingUpdate.NewMessage -> listOf(
         NEW_MESSAGE_KIND,
         update.chat?.title.orEmpty(),
@@ -36,8 +42,10 @@ internal fun updateRow(update: IncomingUpdate, styler: MessageStyler = MessageSt
         update.message.senderName,
         DateTimeFormatter.ISO_INSTANT.format(update.message.sentAt),
         styler.style(update.message.text, update.message.entities),
+        update.chat?.id?.toString().orEmpty(),
+        update.message.senderId?.toString().orEmpty(),
     )
-    is IncomingUpdate.Other -> listOf(update.kind, "", "", "", "", update.data)
+    is IncomingUpdate.Other -> listOf(update.kind, "", "", "", "", update.data, "", update.userId?.toString().orEmpty())
 }
 
 /** [update] as one JSON object keyed by [UPDATE_HEADERS]; pure, for tests and JSON Lines. */

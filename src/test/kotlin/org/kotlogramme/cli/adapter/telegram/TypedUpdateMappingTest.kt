@@ -124,6 +124,130 @@ class TypedUpdateMappingTest {
         assertEquals("Bob", update.message.senderName)
     }
 
+    private fun newMessage(
+        update: TypedUpdate,
+        names: (Long) -> String? = { null },
+        selfId: () -> Long? = { null },
+    ) = update.toIncomingUpdate(names, selfId) as IncomingUpdate.NewMessage
+
+    @Test
+    fun `a message you sent that names no sender is from you`() {
+        val facadeMessage = message(id = 9, text = "hi", outgoing = true, peer = peer(id = 7, name = "Ada"))
+
+        val update = newMessage(
+            TypedUpdate(kind = "newMessage", message = facadeMessage),
+            names = { id -> "Joe".takeIf { id == 815L } },
+            selfId = { 815 },
+        )
+
+        assertEquals("Joe", update.message.senderName)
+        assertEquals(815L, update.message.senderId)
+    }
+
+    @Test
+    fun `a message you sent shows your id when your name cannot be resolved`() {
+        val facadeMessage = message(id = 9, outgoing = true, peer = peer(id = 7, name = "Ada"))
+
+        val update = newMessage(TypedUpdate(kind = "newMessage", message = facadeMessage), selfId = { 815 })
+
+        assertEquals("815", update.message.senderName)
+    }
+
+    @Test
+    fun `a message you sent stays unattributed while your id is unknown`() {
+        val facadeMessage = message(id = 9, outgoing = true, peer = peer(id = 7, name = "Ada"))
+
+        val update = newMessage(TypedUpdate(kind = "newMessage", message = facadeMessage), selfId = { null })
+
+        assertEquals("", update.message.senderName)
+        assertNull(update.message.senderId)
+    }
+
+    @Test
+    fun `an incoming message never asks who you are`() {
+        val facadeMessage = message(id = 9, peer = peer(id = 7, name = "Ada"))
+
+        val update = newMessage(
+            TypedUpdate(kind = "newMessage", message = facadeMessage),
+            selfId = { error("asked for the account of an incoming message") },
+        )
+
+        assertEquals("Ada", update.message.senderName)
+    }
+
+    @Test
+    fun `a message whose sender is named does not ask who you are`() {
+        val facadeMessage = message(id = 9, outgoing = true, sender = user(id = 815, firstName = "Joe"))
+
+        val update = newMessage(
+            TypedUpdate(kind = "newMessage", message = facadeMessage),
+            selfId = { error("asked although the update names the sender") },
+        )
+
+        assertEquals("Joe", update.message.senderName)
+    }
+
+    @Test
+    fun `an incoming message in a private chat is from the person the chat is with`() {
+        val facadeMessage = message(id = 9, text = "hi", peer = peer(id = 7, name = "Ada"))
+
+        val update = newMessage(TypedUpdate(kind = "newMessage", message = facadeMessage))
+
+        assertEquals("Ada", update.message.senderName)
+        assertEquals(7L, update.message.senderId)
+    }
+
+    @Test
+    fun `a chat known only by id still names the person who wrote in it`() {
+        val facadeMessage = message(id = 9, text = "hi", peerId = 4711)
+
+        val update = newMessage(TypedUpdate(kind = "newMessage", message = facadeMessage), names = { "Ada Lovelace" })
+
+        assertEquals("Ada Lovelace", update.chat?.title)
+        assertEquals("Ada Lovelace", update.message.senderName)
+    }
+
+    @Test
+    fun `one person has one name within their private chat`() {
+        val partner = peer(id = 7, name = "Beatrix")
+        val profile = user(id = 7, firstName = "Beatrix", lastName = "Masser")
+        val facadeMessage = message(id = 9, peer = partner, sender = profile)
+
+        val update = newMessage(TypedUpdate(kind = "newMessage", message = facadeMessage))
+
+        assertEquals("Beatrix", update.chat?.title)
+        assertEquals("Beatrix", update.message.senderName)
+    }
+
+    @Test
+    fun `a member of a group keeps their own name`() {
+        val group = peer(id = 9, kind = "chat", name = "Club")
+        val facadeMessage = message(id = 9, peer = group, sender = user(id = 3, firstName = "Bob"))
+
+        val update = newMessage(TypedUpdate(kind = "newMessage", message = facadeMessage))
+
+        assertEquals("Bob", update.message.senderName)
+        assertEquals(3L, update.message.senderId)
+    }
+
+    @Test
+    fun `a message you sent in a private chat is not from the person you wrote to`() {
+        val facadeMessage = message(id = 9, outgoing = true, peer = peer(id = 7, name = "Ada"), senderId = 815)
+
+        val update = newMessage(TypedUpdate(kind = "newMessage", message = facadeMessage), names = { "Joe" })
+
+        assertEquals("Joe", update.message.senderName)
+        assertEquals(815L, update.message.senderId)
+    }
+
+    @Test
+    fun `an update about a user carries the id of that user`() {
+        val payload = java.util.HexFormat.of().parseHex("def8bde5b50f5911000000004939b9edec07c56a")
+        val status = TypedUpdate(kind = "raw", rawUpdate = RawUpdate("updateUserStatus", payload))
+
+        assertEquals(291049397L, (status.toIncomingUpdate() as IncomingUpdate.Other).userId)
+    }
+
     @Test
     fun `falls back to the peer id when the update carries no peer`() {
         val facadeMessage = message(id = 9, text = "hi", peerId = 4711)

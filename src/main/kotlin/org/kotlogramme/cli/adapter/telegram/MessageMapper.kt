@@ -21,6 +21,7 @@ import java.time.Instant
 internal fun FacadeMessage.toMessage(): Message = Message(
     id = id,
     senderName = senderName(),
+    senderId = senderId ?: sender?.id,
     text = text,
     sentAt = Instant.ofEpochMilli(date),
     outgoing = outgoing,
@@ -67,7 +68,7 @@ private fun FacadeMedia.toMediaInfo(): MediaInfo = MediaInfo(
 private fun FacadeMessage.senderName(): String =
     sender?.displayName()
         ?: postAuthor?.takeIf(String::isNotBlank)
-        ?: peer?.name?.takeIf(String::isNotBlank)
+        ?: peer?.takeUnless { outgoing }?.name?.takeIf(String::isNotBlank)
         ?: senderId?.toString()
         ?: ""
 

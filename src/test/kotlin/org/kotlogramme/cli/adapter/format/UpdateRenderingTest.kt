@@ -43,11 +43,11 @@ class UpdateRenderingTest {
         val rendered = render(OutputFormat.TABLE) { renderUpdate(newMessage) }
 
         val expected = listOf(
-            "+---------+------+------------+--------------+----------------------+-------+",
-            "| kind    | chat | message_id | from         | time                 | text  |",
-            "+---------+------+------------+--------------+----------------------+-------+",
-            "| message | Ada  | 7          | Ada Lovelace | 2026-01-01T12:30:00Z | hello |",
-            "+---------+------+------------+--------------+----------------------+-------+",
+            "+---------+------+------------+--------------+----------------------+-------+---------+-----------+",
+            "| kind    | chat | message_id | from         | time                 | text  | chat_id | sender_id |",
+            "+---------+------+------------+--------------+----------------------+-------+---------+-----------+",
+            "| message | Ada  | 7          | Ada Lovelace | 2026-01-01T12:30:00Z | hello | 1       |           |",
+            "+---------+------+------------+--------------+----------------------+-------+---------+-----------+",
         ).joinToString("\n")
         assertEquals(expected, rendered)
     }
@@ -58,8 +58,8 @@ class UpdateRenderingTest {
 
         assertEquals(
             listOf(
-                "kind\tchat\tmessage_id\tfrom\ttime\ttext",
-                "message\tAda\t7\tAda Lovelace\t2026-01-01T12:30:00Z\thello",
+                "kind\tchat\tmessage_id\tfrom\ttime\ttext\tchat_id\tsender_id",
+                "message\tAda\t7\tAda Lovelace\t2026-01-01T12:30:00Z\thello\t1",
             ),
             rendered.lines(),
         )
@@ -67,14 +67,44 @@ class UpdateRenderingTest {
 
     @Test
     fun `an update named by kind only carries that kind`() {
-        assertEquals(listOf("typing", "", "", "", "", ""), updateRow(other))
+        assertEquals(listOf("typing", "", "", "", "", "", "", ""), updateRow(other))
+    }
+
+    @Test
+    fun `a message row ends with the ids of its chat and sender`() {
+        val withSender = newMessage.copy(message = newMessage.message.copy(senderId = 5))
+
+        assertEquals(listOf("1", "5"), updateRow(withSender).takeLast(2))
+    }
+
+    @Test
+    fun `a message whose chat is unknown has no chat id`() {
+        val noChat = newMessage.copy(chat = null)
+
+        assertEquals(listOf("", ""), updateRow(noChat).takeLast(2))
+    }
+
+    @Test
+    fun `an update about a user carries that user as the sender id`() {
+        val typing = IncomingUpdate.Other("updateUserTyping", userId = 1886794212)
+
+        assertEquals(listOf("", "1886794212"), updateRow(typing).takeLast(2))
+    }
+
+    @Test
+    fun `the json line carries the ids as strings next to the names`() {
+        val withSender = newMessage.copy(message = newMessage.message.copy(senderId = 5))
+
+        val rendered = render(OutputFormat.PLAIN) { renderUpdateJson(withSender) }
+
+        assertEquals(true, rendered.contains(""""chat_id":"1","sender_id":"5""""), rendered)
     }
 
     @Test
     fun `an update shows its data in the text column`() {
         val status = IncomingUpdate.Other("updateUserStatus", """{"user_id":5}""")
 
-        assertEquals(listOf("updateUserStatus", "", "", "", "", """{"user_id":5}"""), updateRow(status))
+        assertEquals(listOf("updateUserStatus", "", "", "", "", """{"user_id":5}""", "", ""), updateRow(status))
     }
 
     @Test
@@ -85,6 +115,7 @@ class UpdateRenderingTest {
 
         assertEquals(
             """{"kind":"updateUserStatus","chat":"","message_id":"","from":"","time":"","text":"",""" +
+                    """"chat_id":"","sender_id":"",""" +
                 """"data":{"user_id":5}}""",
             rendered,
         )
@@ -96,7 +127,7 @@ class UpdateRenderingTest {
 
         assertEquals(
             """[{"kind":"message","chat":"Ada","message_id":"7","from":"Ada Lovelace",""" +
-                """"time":"2026-01-01T12:30:00Z","text":"hello"}]""",
+                """"time":"2026-01-01T12:30:00Z","text":"hello","chat_id":"1","sender_id":""}]""",
             rendered,
         )
     }
@@ -107,7 +138,7 @@ class UpdateRenderingTest {
 
         assertEquals(
             """{"kind":"message","chat":"Ada","message_id":"7","from":"Ada Lovelace",""" +
-                """"time":"2026-01-01T12:30:00Z","text":"hello"}""",
+                """"time":"2026-01-01T12:30:00Z","text":"hello","chat_id":"1","sender_id":""}""",
             rendered,
         )
     }

@@ -2,6 +2,21 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.5.1 - 2026-10-06
+
+Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.
+
+### Features
+
+- `listen` output carries `chat_id` and `sender_id` columns, and an update about a user (typing,
+  status) carries that user as `sender_id`. Names are not unique and can change; the ids are what a
+  script passes back to `send` and the other commands.
+
+### Fixed
+
+- An incoming message in a private chat is from the person the chat is with, so `from` is no longer
+  empty, and that person has the same name in `chat` and `from` instead of two spellings.
+
 ## 0.5.0 - 2026-10-06
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

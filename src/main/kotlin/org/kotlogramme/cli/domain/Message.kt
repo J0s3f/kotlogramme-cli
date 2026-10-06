@@ -33,4 +33,9 @@ data class Message(
      * text, so they are `null` here too and the renderer shows no quote rather than an empty one.
      */
     val quote: MessageQuote? = null,
+    /**
+     * The id of whoever wrote the message, which a script can pass back to address them, or `null`
+     * when nothing in the update names the sender. Names are not unique and can change; this is.
+     */
+    val senderId: Long? = null,
 )

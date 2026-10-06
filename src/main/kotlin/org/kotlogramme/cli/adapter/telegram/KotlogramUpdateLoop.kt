@@ -20,11 +20,12 @@ import org.kotlogramme.cli.domain.Message as DomainMessage
 internal class KotlogramUpdateLoop(
     private val updates: UpdatesApi,
     private val userNames: UserNameCache,
+    private val selfId: () -> Long?,
 ) : UpdateLoop {
     override fun start(onUpdate: (IncomingUpdate) -> Unit): Boolean =
         updates.startUpdateLoop(callback = { _, update ->
             update.renamedUserId()?.let(userNames::forget)
-            onUpdate(update.toIncomingUpdate(userNames::nameOf))
+            onUpdate(update.toIncomingUpdate(userNames::nameOf, selfId))
         })
 
     override fun stop() = updates.stopUpdateLoop()
@@ -38,15 +39,21 @@ internal class KotlogramUpdateLoop(
  * A message update becomes [IncomingUpdate.NewMessage], with the chat from the message's peer and
  * `null` when it carries none; every other kind becomes [IncomingUpdate.Other].
  */
-internal fun TypedUpdate.toIncomingUpdate(names: (Long) -> String? = { null }): IncomingUpdate {
+internal fun TypedUpdate.toIncomingUpdate(
+    names: (Long) -> String? = { null },
+    selfId: () -> Long? = { null },
+): IncomingUpdate {
     val message = message ?: return otherUpdate()
-    return IncomingUpdate.NewMessage(message.chat(names), message.toMessage().named(message, names))
+    val chat = message.chat(names)
+    val domain = message.toMessage().named(message, names, selfId).fromPartnerOf(chat)
+    return IncomingUpdate.NewMessage(chat, domain)
 }
 
 /** A raw update is named after the Telegram update it carries, and its payload is decoded to JSON. */
 private fun TypedUpdate.otherUpdate(): IncomingUpdate.Other = IncomingUpdate.Other(
     kind = rawUpdate?.name ?: kind,
     data = rawUpdate?.toJson().orEmpty(),
+    userId = rawUpdate?.userId(),
 )
 
 /**
@@ -65,10 +72,14 @@ private fun Message.chat(names: (Long) -> String?): Chat? = peer?.toChat() ?: pe
     )
 }
 
-/** The sender of an update that carries only a sender id is looked up; the id stays when it fails. */
-private fun DomainMessage.named(source: Message, names: (Long) -> String?): DomainMessage {
-    val unresolvedId = source.senderId?.takeIf { source.sender == null }
-    return unresolvedId?.let(names)?.let { copy(senderName = it) } ?: this
+/**
+ * The sender of an update that names none, or only by id, is looked up; the id stays when it fails.
+ * A message you sent from another client names nobody, and its sender is you, so [selfId] fills it in.
+ */
+private fun DomainMessage.named(source: Message, names: (Long) -> String?, selfId: () -> Long?): DomainMessage {
+    if (source.sender != null) return this
+    val id = source.senderId ?: selfId.takeIf { source.outgoing }?.invoke() ?: return this
+    return copy(senderId = id, senderName = names(id) ?: senderName.ifBlank { id.toString() })
 }
 
 /**
@@ -82,3 +93,13 @@ internal fun TypedUpdate.renamedUserId(): Long? =
 
 private val USER_CHANGE_UPDATES = setOf("updateUserName", "updateUser")
 
+/**
+ * An incoming message in a private chat is from the person the chat is with, and that person has one
+ * name there: the chat's. The update often names only the chat, and a name built from the sender's
+ * own profile can differ from the chat title, so both are made to agree.
+ */
+private fun DomainMessage.fromPartnerOf(chat: Chat?): DomainMessage {
+    val isFromPartner = chat != null && chat.kind == ChatKind.PRIVATE && !outgoing &&
+        (senderId == null || senderId == chat.id)
+    return if (isFromPartner) copy(senderName = chat.title, senderId = chat.id) else this
+}

@@ -8,7 +8,8 @@ sealed interface IncomingUpdate {
     /**
      * Any other update, identified by its facade kind or, for an update the facade does not type, by
      * the name of the Telegram update it carries. [data] is its payload as JSON text, empty when
-     * the facade attaches none.
+     * the facade attaches none. [userId] is the user the update is about, such as the one typing or
+     * changing status, or `null` when the update concerns nobody in particular.
      */
-    data class Other(val kind: String, val data: String = "") : IncomingUpdate
+    data class Other(val kind: String, val data: String = "", val userId: Long? = null) : IncomingUpdate
 }

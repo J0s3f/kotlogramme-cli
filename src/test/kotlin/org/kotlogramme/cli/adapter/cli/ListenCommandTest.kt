@@ -39,8 +39,8 @@ class ListenCommandTest {
         assertEquals(0, result.statusCode)
         assertEquals(
             listOf(
-                "kind\tchat\tmessage_id\tfrom\ttime\ttext",
-                "message\tAda\t7\tAda Lovelace\t2026-01-01T12:30:00Z\thello",
+                "kind\tchat\tmessage_id\tfrom\ttime\ttext\tchat_id\tsender_id",
+                "message\tAda\t7\tAda Lovelace\t2026-01-01T12:30:00Z\thello\t1\t",
             ),
             fixture.output.lines,
         )
@@ -54,8 +54,8 @@ class ListenCommandTest {
 
         assertEquals(
             listOf(
-                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text",
-                "message\u0009Ada\u00097\u0009Ada Lovelace\u00092026-01-01T12:30:00Z\u0009hello",
+                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text\u0009chat_id\u0009sender_id",
+                "message\u0009Ada\u00097\u0009Ada Lovelace\u00092026-01-01T12:30:00Z\u0009hello\u00091\u0009",
             ),
             fixture.output.lines,
         )
@@ -69,8 +69,8 @@ class ListenCommandTest {
 
         assertEquals(
             listOf(
-                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text",
-                "updateUserStatus\u0009\u0009\u0009\u0009\u0009ab12",
+                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text\u0009chat_id\u0009sender_id",
+                "updateUserStatus\u0009\u0009\u0009\u0009\u0009ab12\u0009\u0009",
             ),
             fixture.output.lines,
         )
@@ -95,6 +95,7 @@ class ListenCommandTest {
         assertEquals(
             listOf(
                 """{"kind":"updateUserStatus","chat":"","message_id":"","from":"","time":"","text":"",""" +
+                    """"chat_id":"","sender_id":"",""" +
                     """"data":{"user_id":5}}""",
             ),
             fixture.output.lines,
@@ -118,8 +119,8 @@ class ListenCommandTest {
 
         assertEquals(
             listOf(
-                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text",
-                "message\u0009Ada\u00097\u0009Ada Lovelace\u00092026-01-01T12:30:00Z\u0009hello",
+                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text\u0009chat_id\u0009sender_id",
+                "message\u0009Ada\u00097\u0009Ada Lovelace\u00092026-01-01T12:30:00Z\u0009hello\u00091\u0009",
             ),
             fixture.output.lines,
         )
@@ -135,7 +136,7 @@ class ListenCommandTest {
         assertEquals(
             listOf(
                 """{"kind":"message","chat":"Ada","message_id":"7","from":"Ada Lovelace",""" +
-                    """"time":"2026-01-01T12:30:00Z","text":"hello"}""",
+                    """"time":"2026-01-01T12:30:00Z","text":"hello","chat_id":"1","sender_id":""}""",
             ),
             fixture.output.lines,
         )

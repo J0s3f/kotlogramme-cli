@@ -113,12 +113,38 @@ class MessageMapperTest {
     }
 
     @Test
+    fun `a message you sent is not from the peer it was sent to`() {
+        val mapped = message(id = 1, outgoing = true, peer = peer(id = 7, name = "Ada")).toMessage()
+
+        assertEquals("", mapped.senderName)
+    }
+
+    @Test
     fun `falls back to the sender username when the names are blank`() {
         val sender = User(id = 1, username = "ada", firstName = "", lastName = "")
 
         val mapped = message(id = 1, text = "x", sender = sender).toMessage()
 
         assertEquals("ada", mapped.senderName)
+    }
+
+    @Test
+    fun `carries the id of the resolved sender`() {
+        val mapped = message(id = 1, sender = user(id = 3, firstName = "Ada")).toMessage()
+
+        assertEquals(3L, mapped.senderId)
+    }
+
+    @Test
+    fun `carries the sender id when the message names no sender`() {
+        val mapped = message(id = 1, senderId = 815).toMessage()
+
+        assertEquals(815L, mapped.senderId)
+    }
+
+    @Test
+    fun `has no sender id when nothing names the sender`() {
+        assertNull(message(id = 1).toMessage().senderId)
     }
 
     @Test

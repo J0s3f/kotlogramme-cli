@@ -185,7 +185,11 @@ trace.
 - `listen [--once] [--all] [--json]` — follows the live update stream, printing each message as it
   arrives. Updates that carry no message, such as read receipts and contact status changes, are
   hidden unless `--all` is given; each then shows its Telegram update name and its content decoded
-  to JSON (nested under `data` with `--json`). A message whose update carries only a chat or
+  to JSON (nested under `data` with `--json`). Every row ends with `chat_id` and
+  `sender_id` (and `--json` has them as strings), the ids a script passes back to address the chat or
+  the person; an update about a user, such as typing, carries that user as `sender_id`. An incoming
+  message in a private chat is from the person the chat is with, under the chat's name. A message
+  whose update carries only a chat or
   sender id, such as one you send to a contact from another client, is shown under that user's
   name, looked up once, kept for three hours and refreshed when Telegram reports a rename; an id
   that cannot be resolved is shown as the number. `--once` stops after the first shown update, which is
