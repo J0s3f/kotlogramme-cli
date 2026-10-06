@@ -30,9 +30,9 @@ class TerminalDiagnostic(
         val output = encoding()
         val detail = listOf(
             jline.getOrElse { "JLine unavailable: ${it.message ?: it::class.simpleName}" },
-            ffm.getOrElse { "JLine FFM provider unavailable: ${rootCause(it)}" },
+            ffm.getOrElse { "FFM unavailable: ${rootCause(it)}" },
             mordant.getOrElse { "Mordant unavailable: ${it.message ?: it::class.simpleName}" },
-            "output encoding $output",
+            "$output output",
         ).joinToString("; ")
         val healthy = jline.isSuccess && ffm.isSuccess && mordant.isSuccess && output.isUtf8()
         return if (healthy) Finding.ok(detail) else Finding.warning(detail)
@@ -45,12 +45,12 @@ class TerminalDiagnostic(
      */
     private fun checkFfmProvider(): String {
         loadProvider(FFM_PROVIDER).isSystemStream(SystemStream.Output)
-        return "JLine FFM provider ok"
+        return "FFM ok"
     }
 
     private fun describeMordant(): String {
         val terminal = MordantTerminal()
-        return "Mordant ${terminal.terminalInfo.ansiLevel.name.lowercase()} colour, ${terminal.size.width} columns"
+        return "Mordant ${terminal.terminalInfo.ansiLevel.name.lowercase()}, ${terminal.size.width} columns"
     }
 
     private fun String.isUtf8(): Boolean = equals("UTF-8", ignoreCase = true)

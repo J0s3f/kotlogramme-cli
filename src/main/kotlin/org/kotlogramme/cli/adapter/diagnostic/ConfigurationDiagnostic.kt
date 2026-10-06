@@ -18,7 +18,7 @@ class ConfigurationDiagnostic(
             return Finding.failed("the configuration cannot be read: ${error.message ?: error}")
         }
         return runCatching { probeWritable() }.fold(
-            onSuccess = { Finding.ok("$configDir is writable and the configuration is valid") },
+            onSuccess = { Finding.ok("$configDir (writable, config valid)") },
             onFailure = { error -> Finding.failed("$configDir is not writable: ${error.message ?: error}") },
         )
     }

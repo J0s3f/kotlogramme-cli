@@ -24,10 +24,10 @@ class TelegramSchemaDiagnostic(
         val decoded = runCatching { decodeUpdate(sample) }.getOrElse { error ->
             return Finding.failed("schema loaded but could not decode a sample update: ${error.message ?: error}")
         }
-        val fields = (decoded as? JsonObject)?.keys?.joinToString(", ").orEmpty()
+        check(decoded is JsonObject) { "the sample decoded to ${decoded::class.simpleName}, not an object" }
         return Finding.ok(
             "layer ${schema.layer}, ${schema.constructors.size} constructors, ${schema.functions.size} methods; " +
-                "decoded a sample update ($fields)",
+                "decoded a sample update",
         )
     }
 

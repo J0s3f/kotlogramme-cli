@@ -27,7 +27,7 @@ class NativeLibraryDiagnostic(
         val scratch = Files.createTempDirectory(SCRATCH_PREFIX)
         try {
             return when (val check = probe.check(PLACEHOLDER_CREDENTIALS, scratch.resolve(SESSION_FILE))) {
-                is NativeLibraryCheck.Loaded -> Finding.ok(loadedDetail(check))
+                is NativeLibraryCheck.Loaded -> Finding.ok(loadedDetail())
                 is NativeLibraryCheck.Unavailable -> Finding.failed(unavailableDetail(check))
             }
         } finally {
@@ -35,11 +35,8 @@ class NativeLibraryDiagnostic(
         }
     }
 
-    private fun loadedDetail(check: NativeLibraryCheck.Loaded): String {
-        val origin = check.facadeOrigin?.let { ", facade classes from $it" }.orEmpty()
-        val source = loadedFrom()?.let { "from $it" } ?: "from the bundled copy"
-        return "loaded $source; client created and closed without contacting Telegram$origin"
-    }
+    /** Kept to one short phrase: the table this is shown in grows to fit its longest cell. */
+    private fun loadedDetail(): String = "loaded from ${loadedFrom() ?: "the bundled copy"}"
 
     private fun unavailableDetail(check: NativeLibraryCheck.Unavailable): String =
         "could not be loaded: ${check.reason}. The jar may not contain a build for this platform, " +

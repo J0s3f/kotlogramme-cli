@@ -2,6 +2,21 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.6.2 - 2026-10-07
+
+Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.
+
+### Fixed
+
+- The `doctor` table is no longer wider than a terminal: the native library, terminal and
+  configuration rows say what matters in one short phrase instead of full paths and several facts,
+  so the longest line drops from about 280 to about 100 characters.
+
+### Changed
+
+- Tests run with `--enable-native-access=ALL-UNNAMED` like the application, and a compiler warning in
+  the Windows console test is gone.
+
 ## 0.6.1 - 2026-10-07
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

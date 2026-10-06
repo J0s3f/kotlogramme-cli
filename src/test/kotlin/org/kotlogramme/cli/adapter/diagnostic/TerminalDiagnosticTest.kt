@@ -52,7 +52,7 @@ class TerminalDiagnosticTest {
 
         val finding = TerminalDiagnostic(loadProvider = { provider }).run()
 
-        assertTrue(finding.detail.contains("JLine FFM provider ok"), finding.detail)
+        assertTrue(finding.detail.contains("FFM ok"), finding.detail)
     }
 
     @Test
@@ -60,7 +60,14 @@ class TerminalDiagnosticTest {
         val finding = TerminalDiagnostic(loadProvider = { error("no ffm in this image") }).run()
 
         assertEquals(DiagnosticStatus.WARNING, finding.status)
-        assertTrue(finding.detail.contains("FFM provider unavailable: no ffm in this image"), finding.detail)
+        assertTrue(finding.detail.contains("FFM unavailable: no ffm in this image"), finding.detail)
+    }
+
+    @Test
+    fun `stays short enough for a table`() {
+        val finding = TerminalDiagnostic(encoding = { "UTF-8" }).run()
+
+        assertTrue(finding.detail.length <= 110, "${finding.detail.length} characters: ${finding.detail}")
     }
 
     @Test

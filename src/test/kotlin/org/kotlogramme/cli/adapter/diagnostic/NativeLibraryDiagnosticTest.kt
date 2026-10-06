@@ -14,14 +14,23 @@ import kotlin.test.assertTrue
 
 class NativeLibraryDiagnosticTest {
     @Test
-    fun `reports a loaded library with where the facade came from`() {
+    fun `reports a loaded library`() {
         val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded("build/libs/kotlogramme-all.jar") }
 
         val finding = NativeLibraryDiagnostic(probe).run()
 
         assertEquals(DiagnosticStatus.OK, finding.status)
         assertTrue(finding.detail.contains("loaded"), finding.detail)
-        assertTrue(finding.detail.contains("build/libs/kotlogramme-all.jar"), finding.detail)
+    }
+
+    @Test
+    fun `stays short enough for a table even with a long library path`() {
+        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded("file:/C:/some/long/path/kotlogramme.exe") }
+        val path = "C:/Users/someone/AppData/Local/Temp/kotlogramme-windows-x86_64/4saFP4W9/kotlogramme.dll"
+
+        val finding = NativeLibraryDiagnostic(probe, loadedFrom = { path }).run()
+
+        assertTrue(finding.detail.length <= 110, "${finding.detail.length} characters: ${finding.detail}")
     }
 
     @Test
