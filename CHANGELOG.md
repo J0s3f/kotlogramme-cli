@@ -2,6 +2,26 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.5.0 - 2026-10-06
+
+Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.
+
+### Changed
+
+- `listen` no longer prints a blank `raw` row for every update that carries no message (read
+  receipts, contact status, typing). They are hidden unless `--all` is given.
+
+### Features
+
+- `listen --all` names each such update after the Telegram update it is (`updateUserStatus`,
+  `updateReadHistoryInbox`, ...) and prints its content decoded to JSON, nested under `data` with
+  `--json`. A payload the schema cannot decode is kept as `{"undecoded":"<hex>"}`.
+
+### Fixed
+
+- `listen` shows the numeric peer or sender id instead of an empty chat or sender for a message
+  whose update does not carry the name, such as one you send to a contact from another client.
+
 ## 0.4.1 - 2026-10-06
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

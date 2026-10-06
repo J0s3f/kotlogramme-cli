@@ -10,7 +10,7 @@ application.
 > **Status: usable.** Phases 1-9 are implemented: authentication, configuration, dialogs, history,
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline. The current release is
-> [`v0.4.1`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.4.1), carrying the fat jar and
+> [`v0.5.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.5.0), carrying the fat jar and
 > the distribution; it builds on the `kotlogram` `v0.9.11` tag from JitPack. Later additions beyond
 > the original phases:
 > `download-media`, `list-files` with a server-side media-kind filter, and an upload progress bar for
@@ -37,8 +37,10 @@ kotlogramme listen                                         # follow new messages
 kotlogramme shell                                          # interactive REPL
 ```
 
-`listen [--once] [--json]` follows the live update stream. `--once` stops after the first update,
-`--json` prints one object per line, and Ctrl-C ends the command cleanly. The stream is followed on
+`listen [--once] [--all] [--json]` follows the live update stream. Read receipts, contact status and
+other updates without a message are hidden unless `--all` is given, and then print their content as
+JSON. `--once` stops after the first shown update, `--json` prints one object per line, and Ctrl-C
+ends the command cleanly. The stream is followed on
 the library's own background update loop, which polls in short waits and joins its thread on stop, so
 a stop costs at most one of those short polls rather than the library's 30 s one.
 
@@ -82,19 +84,19 @@ still streams in chunks rather than holding the whole file in the heap.
 
 ## Getting the client
 
-The current release is [`v0.4.1`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.4.1). Its
+The current release is [`v0.5.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.5.0). Its
 GitHub Release carries the JVM artifacts below and five single-file native executables:
 
 - **`kotlogramme-all.jar`** - a single runnable fat jar. Run it with JDK 25:
   ```bash
   java -jar kotlogramme-all.jar --help
   ```
-- **`kotlogramme-0.4.1.zip`** - the `distZip` distribution. Unpack it and run
-  `kotlogramme-0.4.1/bin/kotlogramme` (or `kotlogramme-0.4.1\bin\kotlogramme.bat` on Windows); the
+- **`kotlogramme-0.5.0.zip`** - the `distZip` distribution. Unpack it and run
+  `kotlogramme-0.5.0/bin/kotlogramme` (or `kotlogramme-0.5.0\bin\kotlogramme.bat` on Windows); the
   jar and its dependencies live in `lib/`.
 
-- **Single-file native executables** — `kotlogramme-0.4.1-windows-x86_64.exe` and
-  `kotlogramme-0.4.1-{linux,macos}-{x86_64,aarch64}`. Run the downloaded file directly; on
+- **Single-file native executables** — `kotlogramme-0.5.0-windows-x86_64.exe` and
+  `kotlogramme-0.5.0-{linux,macos}-{x86_64,aarch64}`. Run the downloaded file directly; on
   Linux/macOS first use `chmod +x`. These require no JRE, JDK or installer. Support libraries are
   embedded by Wrappe and extracted into a temporary cache. See [native requirements](docs/native-image.md).
 
