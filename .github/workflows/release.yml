@@ -31,7 +31,8 @@ jobs:
         run: |
           # The ci workflow does not run for tags, so a tag on a commit that never passed it would
           # skip the Windows, macOS and ARM64 test jobs. Refuse to release such a commit.
-          passed="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci --commit "$GITHUB_SHA"             --status success --json databaseId --jq length)"
+          passed="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci --commit "$GITHUB_SHA" \
+            --status success --json databaseId --jq length)"
           if [ "$passed" -eq 0 ]; then
             echo "No successful ci run for $GITHUB_SHA. Push the commit to a branch and let ci pass first." >&2
             exit 1
