@@ -76,6 +76,55 @@ class TypedUpdateMappingTest {
     }
 
     @Test
+    fun `names the chat of an update that carries only a peer id`() {
+        val facadeMessage = message(id = 9, text = "hi", peerId = 4711)
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage)
+            .toIncomingUpdate(names = { id -> "Ada".takeIf { id == 4711L } })
+
+        assertEquals("Ada", (update as IncomingUpdate.NewMessage).chat?.title)
+    }
+
+    @Test
+    fun `names the sender of an update that carries only a sender id`() {
+        val facadeMessage = message(id = 9, text = "hi", senderId = 815)
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage)
+            .toIncomingUpdate(names = { id -> "Joe".takeIf { id == 815L } })
+
+        assertEquals("Joe", (update as IncomingUpdate.NewMessage).message.senderName)
+    }
+
+    @Test
+    fun `keeps the id when the name cannot be resolved`() {
+        val facadeMessage = message(id = 9, text = "hi", peerId = 4711, senderId = 815)
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage)
+            .toIncomingUpdate(names = { null }) as IncomingUpdate.NewMessage
+
+        assertEquals("4711", update.chat?.title)
+        assertEquals("815", update.message.senderName)
+    }
+
+    @Test
+    fun `does not look up a name the update already carries`() {
+        val facadeMessage = message(
+            id = 9,
+            text = "hi",
+            peer = peer(id = 7, name = "Ada"),
+            peerId = 7,
+            sender = user(id = 3, firstName = "Bob"),
+            senderId = 3,
+        )
+
+        val update = TypedUpdate(kind = "newMessage", message = facadeMessage)
+            .toIncomingUpdate(names = { error("looked up $it") }) as IncomingUpdate.NewMessage
+
+        assertEquals("Ada", update.chat?.title)
+        assertEquals("Bob", update.message.senderName)
+    }
+
+    @Test
     fun `falls back to the peer id when the update carries no peer`() {
         val facadeMessage = message(id = 9, text = "hi", peerId = 4711)
 

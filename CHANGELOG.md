@@ -19,8 +19,11 @@ Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.
 
 ### Fixed
 
-- `listen` shows the numeric peer or sender id instead of an empty chat or sender for a message
-  whose update does not carry the name, such as one you send to a contact from another client.
+- `listen` shows the name of the chat and sender instead of an empty field for a message whose
+  update carries only ids, such as one you send to a contact from another client. Names are looked
+  up once and kept for three hours, and dropped as soon as Telegram reports that the user changed
+  (`updateUserName`, `updateUser`). An id Telegram cannot resolve, such as a group, shows as the
+  numeric id.
 
 ## 0.4.1 - 2026-10-06
 

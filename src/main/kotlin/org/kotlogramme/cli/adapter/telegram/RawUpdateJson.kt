@@ -1,10 +1,14 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.RawUpdate
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import org.kotlogramme.raw.RawTelegramApi
 import org.kotlogramme.raw.RawValue
 import java.util.HexFormat
@@ -21,6 +25,11 @@ internal fun RawUpdate.toJson(): String {
     val undecoded = JsonObject(mapOf("undecoded" to JsonPrimitive(hex(data))))
     return (runCatching { decode(data) }.getOrNull() ?: undecoded).toString()
 }
+
+/** The `user_id` field of the payload, or `null` when it has none or cannot be decoded. */
+internal fun RawUpdate.userId(): Long? = runCatching {
+    Json.parseToJsonElement(toJson()).jsonObject["user_id"]?.jsonPrimitive?.long
+}.getOrNull()
 
 private fun decode(payload: ByteArray): JsonElement {
     val wrapped = UPDATE_SHORT_ID + payload + UPDATE_SHORT_DATE

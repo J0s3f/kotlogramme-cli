@@ -317,7 +317,7 @@ uses. Unix exec preserves signals directly; Windows console mode waits and retur
 exit code. Keeping raw native outputs locally supports diagnosis without exposing multi-file
 native archives in the release.
 
-## 0019 � Always compress the native executable and build the image for size
+## 0019 — Always compress the native executable and build the image for size
 
 **Decision.** Wrap every native executable with Wrappe, including those that need no support
 libraries, and pass `-Os` to `native-image`.
@@ -334,4 +334,21 @@ showed `java.awt` reachable through JNA, which Mordant's JNA terminal backend pu
 `mordant-jvm-jna` and `net.java.dev.jna` removes `java.desktop` from the image (40.9 MB to 39.4 MB
 raw on Windows, and no `awt.dll`) while Mordant keeps its FFM and GraalVM backends. The native smoke
 test now fails if an AWT library reappears.
+
+## 0020 — Resolved names expire, and time comes from a Clock port
+
+**Decision.** `listen` resolves the name of a peer or sender that an update carries only as an id,
+and keeps each resolved name for three hours. The expiry reads the time from a `Clock` outbound port
+with a system-time adapter. No cache in the client lives for the whole process unless its value can
+never change.
+
+**Alternatives.** Keeping names for the process lifetime, which shows a renamed contact under the
+old name for as long as `listen` runs. aedile (a Kotlin wrapper over Caffeine), which would add two
+dependencies and likely native-image reflection configuration for one small map. Reading
+`java.time.Clock` directly, which makes expiry testable only with a custom `Clock` subclass.
+
+**Why.** A name is not guaranteed to be stable, so it must expire. A map of timestamps does the job
+in a few lines without a dependency, and a port that tests move by hand keeps the expiry tests
+instant and deterministic. A failed or empty lookup is never cached, so a transient failure heals on
+the next update.
 

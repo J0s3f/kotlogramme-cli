@@ -9,6 +9,7 @@ import org.kotlogramme.cli.adapter.format.UploadProgressBar
 import org.kotlogramme.cli.adapter.format.colorEnabled
 import org.kotlogramme.cli.adapter.format.messageStylerFor
 import org.kotlogramme.cli.adapter.media.FileMediaProbe
+import org.kotlogramme.cli.adapter.system.SystemClock
 import org.kotlogramme.cli.adapter.telegram.ChatReferenceResolver
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramAccountOperations
@@ -40,6 +41,7 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramStickerGateway
 import org.kotlogramme.cli.adapter.telegram.KotlogramStickerOperations
 import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateLoop
 import org.kotlogramme.cli.adapter.telegram.KotlogramUserGateway
+import org.kotlogramme.cli.adapter.telegram.UserNameCache
 import org.kotlogramme.cli.adapter.telegram.KotlogramUserOperations
 import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
 import org.kotlogramme.cli.application.port.api.AdminRights
@@ -351,7 +353,9 @@ private fun defaultAdminRights(config: AppConfig): AdminRights {
 }
 
 private fun defaultListen(config: AppConfig): Listen =
-    ListenService(KotlogramUpdateLoop(clientFor(config)))
+    clientFor(config).let { client ->
+        ListenService(KotlogramUpdateLoop(client, UserNameCache(KotlogramUserOperations(client), SystemClock())))
+    }
 
 private fun defaultListFolders(config: AppConfig): ListFolders =
     ListFoldersService(KotlogramFolderGateway(KotlogramFolderOperations(clientFor(config))))
