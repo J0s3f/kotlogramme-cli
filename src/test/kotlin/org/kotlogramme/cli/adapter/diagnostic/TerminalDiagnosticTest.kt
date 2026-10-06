@@ -30,7 +30,7 @@ class TerminalDiagnosticTest {
     }
 
     @Test
-    fun `names the terminal implementation JLine chose`() {
+    fun `names the terminal implementation JLine chose on any platform`() {
         val open = {
             TerminalBuilder.builder()
                 .system(false)
@@ -41,7 +41,7 @@ class TerminalDiagnosticTest {
 
         val finding = TerminalDiagnostic(openJline = open).run()
 
-        assertTrue(finding.detail.contains("JLine ansi (ExternalTerminal)"), finding.detail)
+        assertTrue(Regex("""JLine ansi \(\w+\)""").containsMatchIn(finding.detail), finding.detail)
     }
 
     @Test
