@@ -12,15 +12,12 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 
-/** Reads and writes [baseDir]/config.json, creating it on first use. */
+/** Reads and writes [baseDir]/config.json; the directory is created by the first save, not by a read. */
 class JsonConfigStore(private val baseDir: Path) : ConfigStore {
 
     override fun load(): AppConfig {
         val file = configFile()
-        if (Files.notExists(file)) {
-            Files.createDirectories(baseDir)
-            return defaultConfig()
-        }
+        if (Files.notExists(file)) return defaultConfig()
         val model = decode(Files.readString(file), file)
         return model.toAppConfig(baseDir.resolve(DEFAULT_SESSION_FILE))
     }

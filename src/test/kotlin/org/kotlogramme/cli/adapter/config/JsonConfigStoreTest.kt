@@ -18,7 +18,7 @@ class JsonConfigStoreTest {
     private lateinit var tempDir: Path
 
     @Test
-    fun `first load creates the directory and returns defaults`() {
+    fun `first load returns defaults without writing anything`() {
         val baseDir = tempDir.resolve("kotlogramme")
         val store = JsonConfigStore(baseDir)
 
@@ -27,7 +27,7 @@ class JsonConfigStoreTest {
         assertNull(config.credentials)
         assertEquals(baseDir.resolve("session.sqlite"), config.sessionPath)
         assertEquals(OutputFormat.TABLE, config.outputFormat)
-        assertTrue(Files.isDirectory(baseDir))
+        assertTrue(Files.notExists(baseDir))
     }
 
     @Test
