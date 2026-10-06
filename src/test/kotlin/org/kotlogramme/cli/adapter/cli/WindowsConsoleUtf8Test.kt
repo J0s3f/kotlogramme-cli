@@ -146,7 +146,7 @@ class WindowsConsoleUtf8Test {
         assertTrue(restore != null, "a console change must always pair with a restore")
 
         // The restore puts back the values that were read, not an assumed default.
-        restore!!.invoke()
+        restore.invoke()
         assertEquals(
             listOf("setOutput(65001)", "setInput(65001)", "setOutput(850)", "setInput(850)"),
             codePage.writes,

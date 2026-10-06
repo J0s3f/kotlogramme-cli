@@ -60,6 +60,9 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    // The terminal checks load JLine's FFM provider, which makes restricted calls; the application is
+    // launched with this flag too, and without it every test run prints a warning.
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
     testLogging {
         events("passed", "skipped", "failed")
     }
