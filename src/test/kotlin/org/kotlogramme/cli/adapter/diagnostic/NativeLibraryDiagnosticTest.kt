@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 class NativeLibraryDiagnosticTest {
     @Test
     fun `reports a loaded library`() {
-        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded("build/libs/kotlogramme-all.jar") }
+        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded }
 
         val finding = NativeLibraryDiagnostic(probe).run()
 
@@ -25,7 +25,7 @@ class NativeLibraryDiagnosticTest {
 
     @Test
     fun `stays short enough for a table even with a long library path`() {
-        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded("file:/C:/some/long/path/kotlogramme.exe") }
+        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded }
         val path = "C:/Users/someone/AppData/Local/Temp/kotlogramme-windows-x86_64/4saFP4W9/kotlogramme.dll"
 
         val finding = NativeLibraryDiagnostic(probe, loadedFrom = { path }).run()
@@ -35,7 +35,7 @@ class NativeLibraryDiagnosticTest {
 
     @Test
     fun `says the library was loaded from beside the executable when it was`() {
-        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) }
+        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded }
 
         val finding = NativeLibraryDiagnostic(probe, loadedFrom = { "C:/cache/kotlogramme.dll" }).run()
 
@@ -44,7 +44,7 @@ class NativeLibraryDiagnosticTest {
 
     @Test
     fun `says the library was loaded from the bundled copy when no path was set`() {
-        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) }
+        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded }
 
         val finding = NativeLibraryDiagnostic(probe, loadedFrom = { null }).run()
 
@@ -68,7 +68,7 @@ class NativeLibraryDiagnosticTest {
         val probe = NativeLibraryProbe { credentials, session ->
             seenCredentials = credentials
             seenSession = session
-            NativeLibraryCheck.Loaded(null)
+            NativeLibraryCheck.Loaded
         }
 
         NativeLibraryDiagnostic(probe).run()
@@ -83,7 +83,7 @@ class NativeLibraryDiagnosticTest {
         val probe = NativeLibraryProbe { _, path ->
             session = path
             Files.writeString(path, "x")
-            NativeLibraryCheck.Loaded(null)
+            NativeLibraryCheck.Loaded
         }
 
         NativeLibraryDiagnostic(probe).run()
