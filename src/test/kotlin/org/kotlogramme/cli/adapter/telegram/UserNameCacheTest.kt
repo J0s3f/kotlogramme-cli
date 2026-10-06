@@ -186,4 +186,17 @@ class UserNameCacheTest {
 
         assertEquals("Ada", cache.nameOf(7))
     }
+
+    @Test
+    fun `drops expired names when a new one is cached`() {
+        val users = FakeUsers(listOf(user(id = 1, firstName = "A"), user(id = 2, firstName = "B"), user(id = 3, firstName = "C")))
+        val cache = cacheOf(users)
+        cache.nameOf(1)
+        cache.nameOf(2)
+
+        clock.advance(lifetime)
+        cache.nameOf(3)
+
+        assertEquals(1, cache.size)
+    }
 }

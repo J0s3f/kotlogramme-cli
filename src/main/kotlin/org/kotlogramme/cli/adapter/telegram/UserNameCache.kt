@@ -25,8 +25,22 @@ internal class UserNameCache(
 
     private val names = ConcurrentHashMap<Long, ResolvedName>()
 
-    fun nameOf(id: Long): String? = names[id]?.takeIf { it.expiresAt.isAfter(clock.now()) }?.name
-        ?: lookUp(id)?.also { names[id] = ResolvedName(it, clock.now().plus(lifetime)) }
+    val size: Int get() = names.size
+
+    fun nameOf(id: Long): String? = names[id]?.takeIf { it.isValid() }?.name
+        ?: lookUp(id)?.also { remember(id, it) }
+
+    private fun ResolvedName.isValid() = expiresAt.isAfter(clock.now())
+
+    private fun remember(id: Long, name: String) {
+        forgetExpired()
+        names[id] = ResolvedName(name, clock.now().plus(lifetime))
+    }
+
+    /** Without this a long `listen` keeps every name it ever saw: only asking for the same id again replaces one. */
+    private fun forgetExpired() {
+        names.values.removeIf { !it.isValid() }
+    }
 
     /** Drops a cached name because Telegram reported that the user changed. */
     fun forget(id: Long) {
