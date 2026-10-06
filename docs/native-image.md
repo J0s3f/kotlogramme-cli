@@ -13,7 +13,7 @@ CI uses **Liberica Native Image Kit 25** (a GraalVM-based distribution) consiste
 | Package platform | GitHub runner | Archive |
 | --- | --- | --- |
 | `linux-x86_64` | `ubuntu-22.04` | `.tar.gz` |
-| `linux-aarch64` | `ubuntu-22.04-arm` | `.tar.gz` |
+| `linux-aarch64` | `ubuntu-24.04-arm` | `.tar.gz` |
 | `macos-x86_64` | `macos-15-intel` | `.tar.gz` |
 | `macos-aarch64` | `macos-15` | `.tar.gz` |
 | `windows-x86_64` | `windows-2025` | `.zip` |
@@ -30,8 +30,9 @@ bundled facade DLL. The JVM release remains available for it; there is no archiv
 Windows ARM64 native build. NIK retains Intel macOS support after Oracle/GraalVM CE stopped shipping
 it in newer JDK 25 releases.
 
-Linux packages target the Ubuntu 22.04 runner's glibc environment and require compatible system
-libraries; these are not musl/static Alpine builds. macOS packages are built on macOS 15. Windows
+Linux x86_64 packages target Ubuntu 22.04 (glibc 2.35); ARM64 packages target Ubuntu 24.04
+(glibc 2.39), required by the facade's ARM64 library. They need compatible system libraries and
+are not musl/static Alpine builds. macOS packages are built on macOS 15. Windows
 requires the Microsoft Visual C++ runtime used by the facade DLL (`VCRUNTIME140.dll`); the local
 machine and hosted runner already supply it. None of these requirements involves installing Java.
 
@@ -79,8 +80,8 @@ the test never signs in or sends/receives messages. Temporary config and session
 Locally verified on Windows x86_64 with Oracle GraalVM 25.0.4+7.1 and Liberica NIK 25.0.4.1-1:
 `clean test nativeDist` succeeds,
 all 714 JVM tests pass, and all six native smoke checks pass without Java on PATH. Actionlint validates
-the CI, reusable native workflow and release workflow. Linux, macOS, ARM64 and hosted builds
-still require execution on their CI runners; local Windows checks do not establish their results.
+the CI, reusable native workflow and release workflow. Cross-platform results come from execution
+on the respective CI runners; local Windows checks do not establish their results.
 Authenticated Telegram operations and an interactive console are not covered by the native smoke
 checks. No live Telegram tests belong in the default build loop.
 

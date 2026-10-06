@@ -290,3 +290,7 @@ uses the explicitly supplied Oracle installation. Windows ARM64 has no GraalVM/N
 compiler, so its CI job uses an ARM64 Liberica JVM instead. Native release builds share a reusable
 workflow with CI; all five must succeed before the release is created. Unix packages use tar.gz to
 preserve executable permissions, Windows uses zip, and both include the image's support libraries.
+Linux x86_64 builds use Ubuntu 22.04 for a broader glibc baseline. ARM64 uses Ubuntu 24.04 because
+the facade's ARM64 ELF library has a strong GLIBC_2.39 requirement. The x86_64 library's reference to
+that version is weak, so it loads on the older runner. Compiling the image on an older ARM64 runner
+cannot lower the requirements of the already-built facade library.

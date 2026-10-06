@@ -54,7 +54,10 @@ facade_pattern="$(printf '%s' "${facade_family}" | sed -E 's/\./\\./g')\.[0-9]+"
 
 replace() {
   local pattern="$1" value="$2" file="$3"
-  sed -i -E "s/${pattern}/${value}/g" "${file}"
+  local absolute_file="$PWD/$file"
+  local temporary_file="${absolute_file}.version-tmp"
+  sed -E "s/${pattern}/${value}/g" "${absolute_file}" > "${temporary_file}"
+  mv "${temporary_file}" "${absolute_file}"
 }
 
 stale_in() {
