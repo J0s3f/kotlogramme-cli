@@ -1,12 +1,118 @@
 {
   "resources": [
-    { "glob": "kotlogramme-version.properties" },
-    { "glob": "raw/telegram-layer-*.json" }
+    {
+      "glob": "kotlogramme-version.properties"
+    },
+    {
+      "glob": "raw/telegram-layer-*.json"
+    }
   ],
   "foreign": {
     "downcalls": [
-      { "returnType": "int", "parameterTypes": [] },
-      { "returnType": "int", "parameterTypes": ["int"] }
+      {
+        "returnType": "int",
+        "parameterTypes": []
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "int"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "int"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "int"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "int",
+          "void*",
+          "int",
+          "int",
+          "void*",
+          "int",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "short"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "wchar_t",
+          "int",
+          "int",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "short",
+          "int",
+          "int",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "int",
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "int",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "int",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*",
+          "int",
+          "void*"
+        ]
+      }
     ]
   }
 }

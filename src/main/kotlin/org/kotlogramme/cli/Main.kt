@@ -58,6 +58,7 @@ import org.kotlogramme.cli.adapter.cli.UnblockCommand
 import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
+import org.kotlogramme.cli.adapter.telegram.SidecarNativeLibrary
 import org.kotlogramme.TelegramException
 import java.nio.file.Path
 import kotlin.system.exitProcess
@@ -96,6 +97,8 @@ class KotlogrammeCommand(
 }
 
 fun main(args: Array<String>) {
+    // Must run before anything creates a Telegram client, which is what loads the native library.
+    SidecarNativeLibrary().register()
     try {
         KotlogrammeCommand()
             .versionOption(VERSION)

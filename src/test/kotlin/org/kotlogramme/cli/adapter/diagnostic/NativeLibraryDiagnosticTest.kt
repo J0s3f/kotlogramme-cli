@@ -25,6 +25,24 @@ class NativeLibraryDiagnosticTest {
     }
 
     @Test
+    fun `says the library was loaded from beside the executable when it was`() {
+        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) }
+
+        val finding = NativeLibraryDiagnostic(probe, loadedFrom = { "C:/cache/kotlogramme.dll" }).run()
+
+        assertTrue(finding.detail.contains("from C:/cache/kotlogramme.dll"), finding.detail)
+    }
+
+    @Test
+    fun `says the library was loaded from the bundled copy when no path was set`() {
+        val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Loaded(null) }
+
+        val finding = NativeLibraryDiagnostic(probe, loadedFrom = { null }).run()
+
+        assertTrue(finding.detail.contains("bundled copy"), finding.detail)
+    }
+
+    @Test
     fun `reports a library that cannot be loaded as failed with the reason`() {
         val probe = NativeLibraryProbe { _, _ -> NativeLibraryCheck.Unavailable("no native build for this platform") }
 

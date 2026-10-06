@@ -1,6 +1,11 @@
 package org.kotlogramme.cli.adapter.diagnostic
 
+import org.jline.terminal.TerminalBuilder
+import org.jline.terminal.spi.SystemStream
+import org.jline.terminal.spi.TerminalProvider
 import org.kotlogramme.cli.domain.DiagnosticStatus
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -22,6 +27,40 @@ class TerminalDiagnosticTest {
 
         assertEquals(DiagnosticStatus.WARNING, finding.status)
         assertTrue(finding.detail.contains("no terminal provider"), finding.detail)
+    }
+
+    @Test
+    fun `names the terminal implementation JLine chose`() {
+        val open = {
+            TerminalBuilder.builder()
+                .system(false)
+                .type("ansi")
+                .streams(ByteArrayInputStream(ByteArray(0)), ByteArrayOutputStream())
+                .build()
+        }
+
+        val finding = TerminalDiagnostic(openJline = open).run()
+
+        assertTrue(finding.detail.contains("JLine ansi (ExternalTerminal)"), finding.detail)
+    }
+
+    @Test
+    fun `reports that the FFM provider works when it can ask the operating system`() {
+        val provider = object : TerminalProvider by TerminalProvider.load("dumb") {
+            override fun isSystemStream(stream: SystemStream) = false
+        }
+
+        val finding = TerminalDiagnostic(loadProvider = { provider }).run()
+
+        assertTrue(finding.detail.contains("JLine FFM provider ok"), finding.detail)
+    }
+
+    @Test
+    fun `an FFM provider that cannot be loaded is a warning because the shell would fall back`() {
+        val finding = TerminalDiagnostic(loadProvider = { error("no ffm in this image") }).run()
+
+        assertEquals(DiagnosticStatus.WARNING, finding.status)
+        assertTrue(finding.detail.contains("FFM provider unavailable: no ffm in this image"), finding.detail)
     }
 
     @Test

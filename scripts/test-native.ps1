@@ -57,10 +57,15 @@ try {
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'config') '12345'
     # Doctor needs no credentials: it loads the native library, the Telegram schema and the terminal
     # libraries, and skips the checks that would talk to Telegram. A failed check exits non-zero.
+    # The native library must come from the file beside the executable. The facade's fallback copies
+    # it into a new temporary directory on every start, and Windows cannot delete a loaded DLL, so
+    # those directories pile up: none may be created.
     $bareDirectory = Join-Path $testDirectory 'config-bare'
-    Invoke-NativeCheck @('--config-dir', $bareDirectory, 'doctor') '(?s)Native library[^
-]*loaded.*Telegram schema[^
-]*decoded a sample update'
+    $extractionDirectories = { @(Get-ChildItem ([IO.Path]::GetTempPath()) -Directory -Filter 'kotlogramme-native-*').Count }
+    $extractedBefore = & $extractionDirectories
+    $expected = '(?s)Native library[^\r\n]*loaded from [^\r\n]*client created.*Telegram schema[^\r\n]*decoded a sample update'
+    Invoke-NativeCheck @('--config-dir', $bareDirectory, 'doctor') $expected
+    if ((& $extractionDirectories) -ne $extractedBefore) { throw 'The native library was extracted to a temporary directory.' }
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'shell') 'list conversations' "help`nexit`n"
     Write-Host 'Native smoke checks passed with the portable native files and no Java environment or Java on PATH.'
 } finally {

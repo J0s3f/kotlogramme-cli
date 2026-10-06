@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.diagnostic
 import org.kotlogramme.cli.adapter.telegram.FacadeNativeLibraryProbe
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryCheck
 import org.kotlogramme.cli.adapter.telegram.NativeLibraryProbe
+import org.kotlogramme.cli.adapter.telegram.SidecarNativeLibrary
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.Diagnostic
 import org.kotlogramme.cli.domain.Finding
@@ -18,6 +19,7 @@ import java.nio.file.Files
  */
 class NativeLibraryDiagnostic(
     private val probe: NativeLibraryProbe = FacadeNativeLibraryProbe(),
+    private val loadedFrom: () -> String? = { System.getProperty(SidecarNativeLibrary.PATH_PROPERTY) },
 ) : Diagnostic {
     override val name = "Native library"
 
@@ -35,7 +37,8 @@ class NativeLibraryDiagnostic(
 
     private fun loadedDetail(check: NativeLibraryCheck.Loaded): String {
         val origin = check.facadeOrigin?.let { ", facade classes from $it" }.orEmpty()
-        return "loaded; client created and closed without contacting Telegram$origin"
+        val source = loadedFrom()?.let { "from $it" } ?: "from the bundled copy"
+        return "loaded $source; client created and closed without contacting Telegram$origin"
     }
 
     private fun unavailableDetail(check: NativeLibraryCheck.Unavailable): String =

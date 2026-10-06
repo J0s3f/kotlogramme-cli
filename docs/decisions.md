@@ -370,3 +370,24 @@ a missing library, an unwritable directory, no terminal, no network. Showing all
 what a doctor is for, and a port per check lets each be tested with a fake or a temporary directory.
 Treating no credentials, no session and being offline as warnings keeps the exit code meaningful.
 
+## 0022 — The native library ships beside the executable, and JLine uses FFM
+
+**Decision.** The facade's native library is not embedded in the native executable. The build copies
+it beside the executable, the single-file packaging unpacks it once, and `SidecarNativeLibrary` points
+the facade at it with `kotlogramme.native.path` before any client is created. The JVM build keeps
+using the copy bundled in the jar. The `kernel32` downcalls JLine's FFM provider makes are registered
+in the image's reachability metadata so that provider works. JLine's JNI helper libraries (about
+600 KB for all platforms) stay embedded as the fallback.
+
+**Alternatives.** Leaving the library embedded: the facade then extracts it to a new temporary
+directory on every start, 9.5 MB each time, and on Windows those can never be deleted because the DLL
+is still loaded when the process exits. Fixing only the facade, which is its own release and still
+extracts once per machine. Excluding JLine's JNI libraries so the executable holds no library at all:
+tried, and it left the interactive shell on a dumb terminal, because FFM did not work in the image yet
+and nothing else was left. It is not worth removing a fallback that cannot be tested on every system.
+
+**Why.** The single-file packaging already unpacks a payload once into a versioned cache, so placing the
+library there costs nothing and removes both the per-start copy and the leak, and it makes the
+executable 9 MB smaller. The smoke test asserts that the library is loaded from beside the executable
+and that no extraction directory is created. FFM is verified at run time by `doctor`; JLine's own
+metadata covers the Unix calls but not the Windows ones.

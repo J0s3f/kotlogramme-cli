@@ -2,6 +2,23 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.6.1 - 2026-10-07
+
+Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.
+
+### Fixed
+
+- The native executables no longer embed the facade's 9 MB native library and copy it into a new
+  temporary directory on every start. It ships beside the executable, where the single-file
+  packaging unpacks it once, and the client loads it from there. On Windows the per-start copies
+  could not be deleted and piled up in `%TEMP%` (3 GB after a few days of use).
+- JLine's FFM terminal provider now works in the native executables on Windows: its `kernel32`
+  calls are registered with the image. JLine's JNI helper libraries stay embedded as the fallback.
+
+### Changed
+
+- `doctor` says where the native library was loaded from, and whether JLine's FFM provider works.
+
 ## 0.6.0 - 2026-10-06
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

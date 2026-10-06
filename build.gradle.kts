@@ -46,8 +46,9 @@ configurations.configureEach {
 application {
     applicationName = "kotlogramme"
     mainClass.set("org.kotlogramme.cli.MainKt")
-    // JLine reaches its native terminal support through JNA; JDK 24+ warns unless native access is
-    // enabled, and a future release blocks it outright.
+    // JLine's FFM terminal provider, the Windows console fix and the facade's System.load of its native
+    // library are all restricted operations; JDK 24+ warns unless native access is enabled, and a future
+    // release blocks them outright.
     applicationDefaultJvmArgs = listOf(
         "--enable-native-access=ALL-UNNAMED",
         // Windows defaults stdout/stderr to the ANSI code page, which turns every non-ASCII
@@ -134,6 +135,8 @@ val generateNativeMetadata = tasks.register("generateNativeMetadata") {
     inputs.property("platform", nativePlatform)
     outputs.dir(nativeMetadataDir)
     doLast {
+        // Files from an earlier build, such as a resource list that no longer exists, must not linger.
+        nativeMetadataDir.get().asFile.deleteRecursively()
         val facadeJar = runtimeClasspath.get().single { it.name.startsWith("kotlogram-") }
         val registrations = ZipFile(facadeJar).use { archive ->
             archive.entries().asSequence()
@@ -147,12 +150,6 @@ val generateNativeMetadata = tasks.register("generateNativeMetadata") {
                         """"allDeclaredConstructors":true,"allDeclaredClasses":true}"""
                 }
                 .toList()
-        }
-        nativeMetadataDir.get().file("resource-config.json").asFile.apply {
-            parentFile.mkdirs()
-            writeText(
-                """{"resources":{"includes":[{"pattern":"native/$nativePlatform/$nativeLibraryName"}]}}""",
-            )
         }
         nativeMetadataDir.get().file("reflect-config.json").asFile.apply {
             parentFile.mkdirs()
@@ -186,14 +183,31 @@ tasks.named("nativeCompile") {
     dependsOn(generateNativeMetadata)
 }
 
+// The executable does not embed the facade's native library. It sits beside the executable, where
+// the single-file packaging unpacks it once and keeps it, and the client loads it from there (see
+// SidecarNativeLibrary) instead of copying it into a new temporary directory on every start.
+val extractNativeLibrary = tasks.register<Copy>("extractNativeLibrary") {
+    description = "Places the facade's native library beside the native executable."
+    dependsOn(tasks.named("nativeCompile"))
+    val facadeJar = configurations.runtimeClasspath.map { classpath ->
+        classpath.single { it.name.startsWith("kotlogram-") }
+    }
+    from(facadeJar.map { zipTree(it) }) {
+        include("native/$nativePlatform/$nativeLibraryName")
+        eachFile { path = name }
+        includeEmptyDirs = false
+    }
+    into(layout.buildDirectory.dir("native/nativeCompile"))
+}
+
 tasks.register<Exec>("nativeSmokeTest") {
     group = "verification"
     description = "Checks the native distribution offline with Java removed from its environment."
-    dependsOn(tasks.named("nativeCompile"))
+    dependsOn(extractNativeLibrary)
     commandLine("pwsh", "-NoProfile", "-File", file("scripts/test-native.ps1").absolutePath)
 }
 
-// Keep any JDK support libraries the image still needs alongside the executable.
+// The native library, and any JDK support libraries the image still needs, go beside the executable.
 val nativeDistributionFiles = fileTree(layout.buildDirectory.dir("native/nativeCompile")) {
     include(nativeExecutableName, "*.dll", "*.so", "*.so.*", "*.dylib")
 }
