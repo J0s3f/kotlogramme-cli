@@ -63,7 +63,7 @@ try {
     $bareDirectory = Join-Path $testDirectory 'config-bare'
     $extractionDirectories = { @(Get-ChildItem ([IO.Path]::GetTempPath()) -Directory -Filter 'kotlogramme-native-*').Count }
     $extractedBefore = & $extractionDirectories
-    $expected = '(?s)Native library[^\r\n]*loaded from [^\r\n]*client created.*Telegram schema[^\r\n]*decoded a sample update'
+    $expected = '(?s)Native library[^\r\n]*loaded from [^\r\n]*kotlogramme.*Telegram schema[^\r\n]*decoded a sample update'
     Invoke-NativeCheck @('--config-dir', $bareDirectory, 'doctor') $expected
     if ((& $extractionDirectories) -ne $extractedBefore) { throw 'The native library was extracted to a temporary directory.' }
     Invoke-NativeCheck @('--config-dir', $configDirectory, 'shell') 'list conversations' "help`nexit`n"
