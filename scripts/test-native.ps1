@@ -67,6 +67,7 @@ try {
     # Read the result as JSON so polishing the wording of a check cannot break this test.
     Invoke-NativeCheck @('--config-dir', $bareDirectory, 'config', 'set', '--format', 'json') 'format' | Out-Null
     $doctor = Invoke-NativeCheck @('--config-dir', $bareDirectory, 'doctor') '"check"' | ConvertFrom-Json
+    $doctor | ForEach-Object { Write-Host ("doctor: {0} [{1}] {2}" -f $_.check, $_.status, $_.detail) }
     foreach ($name in @('Native library', 'Telegram schema')) {
         $row = $doctor | Where-Object { $_.check -eq $name }
         if ($row.status -ne 'ok') { throw "doctor reports '$name' as '$($row.status)': $($row.detail)" }
