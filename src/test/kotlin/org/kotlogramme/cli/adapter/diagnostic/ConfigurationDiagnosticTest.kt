@@ -49,4 +49,23 @@ class ConfigurationDiagnosticTest {
         assertEquals(DiagnosticStatus.FAILED, finding.status)
         assertTrue(finding.detail.contains("not writable"), finding.detail)
     }
+
+    @Test
+    fun `a directory that does not exist yet is fine when it can be created`() {
+        val dir = tempDirectory().resolve("nested").resolve("kotlogramme")
+
+        val finding = ConfigurationDiagnostic(dir) { config }.run()
+
+        assertEquals(DiagnosticStatus.OK, finding.status, finding.detail)
+        assertTrue(finding.detail.contains("created on first use"), finding.detail)
+    }
+
+    @Test
+    fun `checking a directory that does not exist yet does not create it`() {
+        val dir = tempDirectory().resolve("kotlogramme")
+
+        ConfigurationDiagnostic(dir) { config }.run()
+
+        assertTrue(Files.notExists(dir))
+    }
 }
