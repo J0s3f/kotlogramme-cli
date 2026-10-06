@@ -50,11 +50,14 @@ internal fun TypedUpdate.toIncomingUpdate(
 }
 
 /** A raw update is named after the Telegram update it carries, and its payload is decoded to JSON. */
-private fun TypedUpdate.otherUpdate(): IncomingUpdate.Other = IncomingUpdate.Other(
-    kind = rawUpdate?.name ?: kind,
-    data = rawUpdate?.toJson().orEmpty(),
-    userId = rawUpdate?.userId(),
-)
+private fun TypedUpdate.otherUpdate(): IncomingUpdate.Other {
+    val payload = rawUpdate?.decoded()
+    return IncomingUpdate.Other(
+        kind = rawUpdate?.name ?: kind,
+        data = payload?.toString().orEmpty(),
+        userId = payload?.userId(),
+    )
+}
 
 /**
  * The chat a message arrived in. An update that names only a peer id, such as a message you sent

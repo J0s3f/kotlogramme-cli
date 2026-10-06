@@ -1,14 +1,11 @@
 package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.RawUpdate
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
+import kotlinx.serialization.json.longOrNull
 import org.kotlogramme.raw.RawTelegramApi
 import org.kotlogramme.raw.RawValue
 import java.util.HexFormat
@@ -21,15 +18,18 @@ import java.util.HexFormat
  * result of a method that returns `Updates`; the wrapper is dropped again. A payload the schema
  * cannot decode is kept as `{"undecoded":"<hex>"}`, so the data is never lost.
  */
-internal fun RawUpdate.toJson(): String {
-    val undecoded = JsonObject(mapOf("undecoded" to JsonPrimitive(hex(data))))
-    return (runCatching { decodeUpdate(data) }.getOrNull() ?: undecoded).toString()
-}
+internal fun RawUpdate.toJson(): String = decoded().toString()
+
+/** The payload as a JSON element, decoded once so a caller that needs its text and a field does not decode twice. */
+internal fun RawUpdate.decoded(): JsonElement =
+    runCatching { decodeUpdate(data) }.getOrNull() ?: JsonObject(mapOf("undecoded" to JsonPrimitive(hex(data))))
+
+/** The `user_id` field of a decoded payload, or `null` when it has none. */
+internal fun JsonElement.userId(): Long? =
+    (this as? JsonObject)?.get("user_id")?.let { (it as? JsonPrimitive)?.longOrNull }
 
 /** The `user_id` field of the payload, or `null` when it has none or cannot be decoded. */
-internal fun RawUpdate.userId(): Long? = runCatching {
-    Json.parseToJsonElement(toJson()).jsonObject["user_id"]?.jsonPrimitive?.long
-}.getOrNull()
+internal fun RawUpdate.userId(): Long? = decoded().userId()
 
 /** Decodes [payload], an `Update` in TL form, into JSON; throws when the schema cannot read it. */
 internal fun decodeUpdate(payload: ByteArray): JsonElement {
