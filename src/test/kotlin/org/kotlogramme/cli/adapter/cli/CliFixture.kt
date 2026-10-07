@@ -900,7 +900,8 @@ internal class CliFixture(
     val authenticate: FakeAuthenticate,
     private val root: KotlogrammeCommand,
 ) {
-    fun run(vararg args: String, stdin: String = "") = root.test(args.toList(), stdin)
+    fun run(vararg args: String, stdin: String = "", interactive: Boolean = false) =
+        root.test(args.toList(), stdin, inputInteractive = interactive)
 }
 
 /**

@@ -126,4 +126,29 @@ class LoginCommandTest {
         assertTrue(result.stderr.contains("terminal is not interactive"), result.stderr)
         assertTrue(authenticate.startedLogins.isEmpty())
     }
+
+    @Test
+    fun `an interactive login asks for what was not given`() {
+        val authenticate = FakeAuthenticate(
+            codeStep = LoginStep.PasswordRequired(hint = null),
+            passwordStep = LoginStep.SignedIn(testAccount),
+        )
+        val fixture = cliFixture(authenticate = authenticate)
+
+        val answers = listOf(testPhone, "12345", "s3cret").joinToString(separator = "\n")
+        val result = fixture.run("login", stdin = answers, interactive = true)
+
+        assertEquals(0, result.statusCode, result.stderr)
+        assertEquals(listOf(testPhone), authenticate.startedLogins)
+        assertEquals(listOf(testPhone to "12345"), authenticate.submittedCodes)
+        assertEquals(listOf("s3cret"), authenticate.submittedPasswords)
+    }
+
+    @Test
+    fun `an interactive login that runs out of answers says which one was missing`() {
+        val result = cliFixture().run("login", stdin = "", interactive = true)
+
+        assertNotEquals(0, result.statusCode)
+        assertTrue(result.stderr.contains("No input was provided for 'Login code'"), result.stderr)
+    }
 }

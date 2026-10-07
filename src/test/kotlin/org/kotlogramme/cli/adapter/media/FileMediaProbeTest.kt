@@ -2,6 +2,8 @@ package org.kotlogramme.cli.adapter.media
 
 import org.junit.jupiter.api.io.TempDir
 import org.kotlogramme.cli.application.port.spi.MediaKindHint
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
@@ -192,4 +194,43 @@ class FileMediaProbeTest {
     }
 
     private fun emptyFile(name: String): Path = Files.write(tempDir.resolve(name), ByteArray(0))
+
+    @Test
+    fun `reads a version one movie header, which keeps its duration in 64 bits`() {
+        val movie = isoBox(
+            "moov",
+            isoBox("mvhd", isoMvhd(timescale = 1000, duration = 5_000_000_000L, version = 1)) +
+                isoBox("trak", isoBox("tkhd", isoTkhd(width = 640, height = 360))),
+        )
+        val file = Files.write(tempDir.resolve("long.mp4"), isoBox("ftyp", "isom".toByteArray()) + movie)
+
+        val result = probe.probe(file)
+
+        assertEquals(5_000_000.0, result.durationSeconds)
+        assertEquals(640, result.width)
+    }
+
+    @Test
+    fun `reads a box that states its size in 64 bits`() {
+        val movie = isoBox(
+            "moov",
+            isoBox("mvhd", isoMvhd(timescale = 1000, duration = 2_000L)) +
+                isoBox("trak", isoBox("tkhd", isoTkhd(width = 320, height = 240))),
+        )
+        val extended = ByteBuffer.allocate(16 + 8).order(ByteOrder.BIG_ENDIAN)
+            .putInt(1).put("free".toByteArray()).putLong(24L).putLong(0L).array()
+        val file = Files.write(tempDir.resolve("wide.mp4"), isoBox("ftyp", "isom".toByteArray()) + extended + movie)
+
+        val result = probe.probe(file)
+
+        assertEquals(2.0, result.durationSeconds)
+        assertEquals(320, result.width)
+    }
+
+    @Test
+    fun `a Matroska timecode scale of zero gives no duration instead of dividing by it`() {
+        val file = Files.write(tempDir.resolve("zero.mkv"), mkvFileBytes(timecodeScale = 0L))
+
+        assertNull(probe.probe(file).durationSeconds)
+    }
 }
