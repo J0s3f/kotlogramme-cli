@@ -413,3 +413,16 @@ when the terminal reports one, keeps piped output byte-identical to before. An e
 because a person sometimes wants a wrapped table in a file, or on a screen whose size the terminal
 cannot know.
 
+
+## 0024 — Coverage is measured with JaCoCo, on demand
+
+**Decision.** The Gradle `jacoco` plugin is applied, and `./gradlew jacocoTestReport` runs the tests
+and writes an XML and an HTML report under `build/reports/jacoco/test`. Nothing else changes: the
+default `test` task is still the one CI runs, and no coverage threshold is enforced.
+
+**Alternatives.** Kover, which understands Kotlin better but is another plugin to keep in step with
+the Kotlin version; it was not needed to find the untested code. A threshold that fails the build,
+which would push people to write tests that raise a number instead of tests that check behaviour.
+
+**Why.** JaCoCo ships with Gradle, so it adds no dependency to resolve. Measured this way, 87% of
+lines were covered when it was added; the report is how the untested ones were listed.

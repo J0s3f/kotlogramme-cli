@@ -6,6 +6,7 @@ plugins {
     kotlin("jvm") version "2.4.20"
     kotlin("plugin.serialization") version "2.4.20"
     application
+    jacoco
     id("com.gradleup.shadow") version "9.6.1"
     id("org.graalvm.buildtools.native") version "1.1.14"
 }
@@ -56,6 +57,19 @@ application {
         "-Dstdout.encoding=UTF-8",
         "-Dstderr.encoding=UTF-8",
     )
+}
+
+// Coverage is measured on demand with `jacocoTestReport`; the default `test` task stays as fast as before.
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 tasks.test {
