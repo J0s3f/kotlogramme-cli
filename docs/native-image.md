@@ -3,8 +3,7 @@
 GraalVM Native Image compiles this Kotlin/JVM client without requiring a JRE or JDK on the user's
 machine. The image includes the host's Telegram library and generates native support libraries.
 [Wrappe](https://github.com/Systemcluster/wrappe) 1.0.6 packs those files into one portable executable.
-No installer is needed. When a native build truly needs only one file, the packager copies that
-executable directly rather than adding a launcher.
+No installer is needed.
 
 ## Targets and release assets
 
