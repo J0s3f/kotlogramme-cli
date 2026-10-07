@@ -24,8 +24,9 @@ internal class KotlogramUpdateLoop(
 ) : UpdateLoop {
     override fun start(onUpdate: (IncomingUpdate) -> Unit): Boolean =
         updates.startUpdateLoop(callback = { _, update ->
-            update.renamedUserId()?.let(userNames::forget)
-            onUpdate(update.toIncomingUpdate(userNames::nameOf, selfId))
+            val payload = update.rawUpdate?.let(::DecodedRawUpdate)
+            update.renamedUserId(payload)?.let(userNames::forget)
+            onUpdate(update.toIncomingUpdate(userNames::nameOf, selfId, payload))
         })
 
     override fun stop() = updates.stopUpdateLoop()
@@ -37,27 +38,36 @@ internal class KotlogramUpdateLoop(
  * Maps an update off the facade's background loop to a domain one.
  *
  * A message update becomes [IncomingUpdate.NewMessage], with the chat from the message's peer and
- * `null` when it carries none; every other kind becomes [IncomingUpdate.Other].
+ * `null` when it carries none; every other kind becomes [IncomingUpdate.Other], named after the
+ * Telegram update it carries with its payload as JSON. Pass the same [payload] that
+ * [renamedUserId] was given and the payload is decoded once for both.
  */
 internal fun TypedUpdate.toIncomingUpdate(
     names: (Long) -> String? = { null },
     selfId: () -> Long? = { null },
+    payload: DecodedRawUpdate? = rawUpdate?.let(::DecodedRawUpdate),
 ): IncomingUpdate {
-    val message = message ?: return otherUpdate()
+    val message = message ?: return otherUpdate(payload)
     val chat = message.chat(names)
     val domain = message.toMessage().named(message, names, selfId).fromPartnerOf(chat)
     return IncomingUpdate.NewMessage(chat, domain)
 }
 
-/** A raw update is named after the Telegram update it carries, and its payload is decoded to JSON. */
-private fun TypedUpdate.otherUpdate(): IncomingUpdate.Other {
-    val payload = rawUpdate?.decoded()
-    return IncomingUpdate.Other(
-        kind = rawUpdate?.name ?: kind,
-        data = payload?.toString().orEmpty(),
-        userId = payload?.userId(),
-    )
-}
+private fun TypedUpdate.otherUpdate(payload: DecodedRawUpdate?) = IncomingUpdate.Other(
+    kind = payload?.name ?: kind,
+    data = payload?.json?.toString().orEmpty(),
+    userId = payload?.userId,
+)
+
+/**
+ * The user Telegram reports as changed, or `null` for any other update.
+ *
+ * `updateUserName` carries the new name and `updateUser` only says the user changed, so either one
+ * means a cached name for that user is out of date and has to be asked for again. Any other update
+ * is not decoded to find out.
+ */
+internal fun TypedUpdate.renamedUserId(payload: DecodedRawUpdate? = rawUpdate?.let(::DecodedRawUpdate)): Long? =
+    payload?.takeIf { it.name in USER_CHANGE_UPDATES }?.userId
 
 /**
  * The chat a message arrived in. An update that names only a peer id, such as a message you sent
@@ -84,15 +94,6 @@ private fun DomainMessage.named(source: Message, names: (Long) -> String?, selfI
     val id = source.senderId ?: selfId.takeIf { source.outgoing }?.invoke() ?: return this
     return copy(senderId = id, senderName = names(id) ?: senderName.ifBlank { id.toString() })
 }
-
-/**
- * The user Telegram reports as changed, or `null` for any other update.
- *
- * `updateUserName` carries the new name and `updateUser` only says the user changed, so either one
- * means a cached name for that user is out of date and has to be asked for again.
- */
-internal fun TypedUpdate.renamedUserId(): Long? =
-    rawUpdate?.takeIf { it.name in USER_CHANGE_UPDATES }?.userId()
 
 private val USER_CHANGE_UPDATES = setOf("updateUserName", "updateUser")
 

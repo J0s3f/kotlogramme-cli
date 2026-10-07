@@ -18,18 +18,33 @@ import java.util.HexFormat
  * result of a method that returns `Updates`; the wrapper is dropped again. A payload the schema
  * cannot decode is kept as `{"undecoded":"<hex>"}`, so the data is never lost.
  */
-internal fun RawUpdate.toJson(): String = decoded().toString()
+internal fun RawUpdate.toJson(): String = DecodedRawUpdate(this).json.toString()
 
-/** The payload as a JSON element, decoded once so a caller that needs its text and a field does not decode twice. */
-internal fun RawUpdate.decoded(): JsonElement =
-    runCatching { decodeUpdate(data) }.getOrNull() ?: JsonObject(mapOf("undecoded" to JsonPrimitive(hex(data))))
+/**
+ * A raw update whose payload is decoded the first time it is read and kept after that.
+ *
+ * The update loop asks two things of one update, who changed and what to report, and each needs the
+ * payload. Decoding runs the whole TL schema, so both ask the same instance and the schema runs once.
+ */
+internal class DecodedRawUpdate(
+    private val raw: RawUpdate,
+    private val decode: (RawUpdate) -> JsonElement = ::decodeOrKeepHex,
+) {
+    val name: String get() = raw.name
+
+    val json: JsonElement by lazy { decode(raw) }
+
+    val userId: Long? by lazy { json.userId() }
+}
+
+/** The payload as a JSON element, or `{"undecoded": <hex>}` when the schema cannot read it. */
+private fun decodeOrKeepHex(raw: RawUpdate): JsonElement =
+    runCatching { decodeUpdate(raw.data) }.getOrNull()
+        ?: JsonObject(mapOf("undecoded" to JsonPrimitive(hex(raw.data))))
 
 /** The `user_id` field of a decoded payload, or `null` when it has none. */
 internal fun JsonElement.userId(): Long? =
     (this as? JsonObject)?.get("user_id")?.let { (it as? JsonPrimitive)?.longOrNull }
-
-/** The `user_id` field of the payload, or `null` when it has none or cannot be decoded. */
-internal fun RawUpdate.userId(): Long? = decoded().userId()
 
 /** Decodes [payload], an `Update` in TL form, into JSON; throws when the schema cannot read it. */
 internal fun decodeUpdate(payload: ByteArray): JsonElement {
