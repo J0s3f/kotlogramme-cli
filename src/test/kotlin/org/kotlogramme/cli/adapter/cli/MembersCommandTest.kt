@@ -93,4 +93,16 @@ class MembersCommandTest {
         assertEquals(listOf("@team" to "@ada"), fake.kicks)
         assertEquals(listOf("Kicked @ada from @team."), fixture.output.lines)
     }
+
+    @Test
+    fun `invite adds the member and says so`() {
+        val fake = FakeChatMembers()
+        val fixture = cliFixture(chatMembers = fake)
+
+        val result = fixture.run("invite", "@team", "@ada")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(listOf("@team" to "@ada"), fake.invites)
+        assertEquals(listOf("Invited @ada to @team."), fixture.output.lines)
+    }
 }
