@@ -2,6 +2,7 @@ package org.kotlogramme.cli.adapter.telegram
 
 import com.github.badoualy.telegram.api.RawUpdate
 import kotlinx.serialization.json.Json
+import org.kotlogramme.raw.RawValue
 import java.util.HexFormat
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -57,5 +58,23 @@ class RawUpdateJsonTest {
         val unknown = rawUpdate("01020304")
 
         assertEquals(json("""{"undecoded":"01020304"}"""), json(unknown.toJson()))
+    }
+
+
+    @Test
+    fun `every kind of TL value becomes its JSON counterpart`() {
+        assertEquals(json("true"), RawValue.BooleanValue(true).toJson())
+        assertEquals(json("7"), RawValue.IntValue(7).toJson())
+        assertEquals(json("9000000000"), RawValue.LongValue(9_000_000_000L).toJson())
+        assertEquals(json("1.5"), RawValue.DoubleValue(1.5).toJson())
+        assertEquals(json("\"text\""), RawValue.StringValue("text").toJson())
+        assertEquals(json("\"0aff\""), RawValue.BytesValue(byteArrayOf(0x0a, 0xff.toByte())).toJson())
+    }
+
+    @Test
+    fun `a vector becomes an array and an object keeps its constructor name`() {
+        val vector = RawValue.VectorValue(listOf(RawValue.IntValue(1), RawValue.IntValue(2)))
+
+        assertEquals(json("[1,2]"), vector.toJson())
     }
 }

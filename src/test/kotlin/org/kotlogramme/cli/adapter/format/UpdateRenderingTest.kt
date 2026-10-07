@@ -10,6 +10,7 @@ import java.io.PrintStream
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class UpdateRenderingTest {
     private val newMessage = IncomingUpdate.NewMessage(
@@ -141,5 +142,13 @@ class UpdateRenderingTest {
                 """"time":"2026-01-01T12:30:00Z","text":"hello","chat_id":"1","sender_id":""}""",
             rendered,
         )
+    }
+
+
+    @Test
+    fun `an update with no data has no data field in its json`() {
+        val rendered = render(OutputFormat.PLAIN) { renderUpdateJson(other) }
+
+        assertFalse(rendered.contains("\"data\""), rendered)
     }
 }

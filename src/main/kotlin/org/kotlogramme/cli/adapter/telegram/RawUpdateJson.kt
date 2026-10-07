@@ -54,7 +54,7 @@ internal fun decodeUpdate(payload: ByteArray): JsonElement {
     return update.fields.mapValues { (_, value) -> value.toJson() }.let(::JsonObject)
 }
 
-private fun RawValue.toJson(): JsonElement = when (this) {
+internal fun RawValue.toJson(): JsonElement = when (this) {
     is RawValue.Object -> {
         val named = mapOf("constructor" to JsonPrimitive(constructorName))
         JsonObject(named + fields.mapValues { it.value.toJson() })

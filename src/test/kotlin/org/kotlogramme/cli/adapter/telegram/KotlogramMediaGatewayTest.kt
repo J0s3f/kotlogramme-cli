@@ -9,6 +9,7 @@ import com.github.badoualy.telegram.api.UploadedFile
 import org.kotlogramme.cli.application.port.spi.UploadProgress
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
+import org.kotlogramme.cli.domain.AlbumItem
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
@@ -31,6 +32,7 @@ private class WatchedSlot : UploadProgressSlot {
     override fun current(): UploadProgress? = null
 
     override fun close() = Unit
+
 }
 
 class KotlogramMediaGatewayTest {
@@ -236,6 +238,24 @@ class KotlogramMediaGatewayTest {
             operations,
             ChatReferenceResolver(FakeChatOperations().apply { resolvedPeer = ada }),
         )
+
+    @Test
+    fun `sendAlbum resolves the reference and maps each item to an outgoing media`() {
+        val operations = FakeMediaOperations().apply { copied = message(id = 9, text = "album") }
+        val first = Path.of("media", "a.png")
+        val second = Path.of("media", "b.txt")
+
+        val sent = gatewayWith(operations).sendAlbum(
+            "@ada",
+            listOf(AlbumItem(first, "trip", true), AlbumItem(second, "", false)),
+        )
+
+        assertEquals(
+            listOf(AlbumCall(ada, listOf(OutgoingMedia(first, "trip", true), OutgoingMedia(second, "", false)))),
+            operations.albums,
+        )
+        assertEquals(listOf(9), sent.map { it.id })
+    }
 }
 
 internal data class SendFileCall(

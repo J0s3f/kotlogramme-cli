@@ -6,6 +6,7 @@ import com.github.badoualy.telegram.api.TelegramPeer
 import org.kotlogramme.cli.domain.MediaFileKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class KotlogramMessageSearchGatewayTest {
     private val ada = peer(id = 7, kind = "user", username = "ada", name = "Ada")
@@ -125,6 +126,12 @@ class KotlogramMessageSearchGatewayTest {
             operations,
             ChatReferenceResolver(FakeChatOperations().apply { resolvedPeer = ada }),
         )
+
+
+    @Test
+    fun `the all kind names no filter so the gateway refuses it`() {
+        assertFailsWith<IllegalStateException> { gatewayWith(FakeSearchOperations()).files("@ada", MediaFileKind.ALL, 10, null) }
+    }
 }
 
 internal data class PeerSearchCall(val peer: TelegramPeer, val query: String, val limit: Int)

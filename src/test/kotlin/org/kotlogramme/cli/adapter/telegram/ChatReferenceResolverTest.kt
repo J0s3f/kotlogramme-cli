@@ -91,4 +91,35 @@ class ChatReferenceResolverTest {
         assertEquals(listOf("mel"), operations.resolvedUsernames)
         assertEquals(0, operations.selfResolutions)
     }
+
+
+    @Test
+    fun `an invite link that cannot be joined is refused with a message naming it`() {
+        val operations = FakeChatOperations().apply { inviteHash = "abc" }
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            ChatReferenceResolver(operations).resolve("https://t.me/+abc")
+        }
+
+        assertTrue(error.message!!.contains("Could not join"), error.message)
+        assertTrue(error.message!!.contains("https://t.me/+abc"), error.message)
+    }
+
+    @Test
+    fun `a link with no host is refused as not a username or invite link`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            ChatReferenceResolver(FakeChatOperations()).resolve("https://")
+        }
+
+        assertTrue(error.message!!.contains("Not a Telegram username or invite link"), error.message)
+    }
+
+    @Test
+    fun `text that is neither a username nor a link nor an id says what is expected`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            ChatReferenceResolver(FakeChatOperations()).resolve("not a chat")
+        }
+
+        assertTrue(error.message!!.contains("expected me, @username, a numeric id"), error.message)
+    }
 }
