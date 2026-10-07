@@ -1,5 +1,8 @@
 package org.kotlogramme.cli.adapter.cli.shell
 
+import org.jline.reader.Candidate
+import org.jline.reader.LineReader
+import org.jline.reader.impl.DefaultParser
 import org.kotlogramme.cli.adapter.cli.FakeChatMembers
 import org.kotlogramme.cli.adapter.cli.FakeContacts
 import org.kotlogramme.cli.adapter.cli.FakeDownloadMedia
@@ -13,6 +16,7 @@ import org.kotlogramme.cli.adapter.cli.FakeSendMedia
 import org.kotlogramme.cli.adapter.cli.FakeSessions
 import org.kotlogramme.cli.adapter.cli.FakeStickers
 import org.kotlogramme.cli.adapter.cli.RecordingOutput
+import java.lang.reflect.Proxy
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -92,4 +96,26 @@ class ShellCompleterTest {
         { FakeSearchMessages() }, { FakeChatMembers() }, { FakeListFolders() }, { FakeStickers() },
         { FakeInlineBots() }, { FakeSendMedia() }, { FakeDownloadMedia() }, { FakeSessions() },
     )
+
+    private fun completed(completer: ShellCompleter, line: String): List<String> {
+        val reader = Proxy.newProxyInstance(
+            LineReader::class.java.classLoader,
+            arrayOf(LineReader::class.java),
+        ) { _, _, _ -> error("the completer does not use the reader") } as LineReader
+        val candidates = mutableListOf<Candidate>()
+
+        completer.complete(reader, DefaultParser().parse(line, line.length), candidates)
+
+        return candidates.map(Candidate::value)
+    }
+
+    @Test
+    fun `a typed command prefix is offered as candidates to the reader`() {
+        assertEquals(listOf("help"), completed(ShellCompleter { emptyList() }, "he"))
+    }
+
+    @Test
+    fun `a typed peer prefix after open is offered as candidates to the reader`() {
+        assertEquals(listOf("@ada"), completed(ShellCompleter { listOf("@ada", "@bob") }, "open @a"))
+    }
 }

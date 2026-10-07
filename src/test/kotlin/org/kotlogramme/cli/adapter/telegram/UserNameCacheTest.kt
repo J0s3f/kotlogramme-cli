@@ -199,4 +199,19 @@ class UserNameCacheTest {
 
         assertEquals(1, cache.size)
     }
+
+    @Test
+    fun `a cache built without a lifetime keeps a name for three hours`() {
+        val users = FakeUsers(listOf(user(id = 7, firstName = "Ada")))
+        val cache = UserNameCache(users, clock)
+
+        cache.nameOf(7)
+        clock.advance(Duration.ofHours(3).minusNanos(1))
+        cache.nameOf(7)
+        assertEquals(1, users.lookups)
+
+        clock.advance(Duration.ofNanos(1))
+        cache.nameOf(7)
+        assertEquals(2, users.lookups)
+    }
 }
