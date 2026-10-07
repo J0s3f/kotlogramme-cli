@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.telegram
 
+import com.github.badoualy.telegram.api.TelegramClient
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import java.nio.file.Path
 
@@ -18,7 +19,8 @@ sealed interface NativeLibraryCheck {
 }
 
 /**
- * Loads the native library by building the real facade client through [TelegramClientFactory].
+ * Loads the native library by building the real facade client, through [TelegramClientFactory] unless
+ * [createClient] says otherwise.
  *
  * The facade extracts `native/<platform>/...` from its own classpath and `System.load`s it, so a
  * successful construction is the proof that the library is present and loadable. A [LinkageError]
@@ -26,10 +28,10 @@ sealed interface NativeLibraryCheck {
  * command can explain the problem instead of printing a stack trace.
  */
 internal class FacadeNativeLibraryProbe(
-    private val factory: TelegramClientFactory = TelegramClientFactory(),
+    private val createClient: (ApiCredentials, Path) -> TelegramClient = TelegramClientFactory()::create,
 ) : NativeLibraryProbe {
     override fun check(credentials: ApiCredentials, sessionPath: Path): NativeLibraryCheck = try {
-        val client = factory.create(credentials, sessionPath)
+        val client = createClient(credentials, sessionPath)
         try {
             NativeLibraryCheck.Loaded
         } finally {
