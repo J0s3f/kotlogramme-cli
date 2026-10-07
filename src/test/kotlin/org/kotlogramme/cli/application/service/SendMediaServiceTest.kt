@@ -373,6 +373,70 @@ class SendMediaServiceTest {
         assertEquals(64L, reporter.slot.reading()?.bytesSent)
         assertEquals(64L, reporter.slot.reading()?.totalBytes)
     }
+
+    @Test
+    fun `sendAlbum passes the items through unchanged`() {
+        val gateway = FakeMediaGateway()
+        val items = listOf(
+            AlbumItem(Files.createFile(tempDir.resolve("a.png")), caption = "first", asPhoto = true),
+            AlbumItem(Files.createFile(tempDir.resolve("b.txt")), caption = "", asPhoto = false),
+        )
+
+        val sent = SendMediaService(gateway).sendAlbum("@ada", items)
+
+        assertEquals(items, gateway.albums.single().items)
+        assertEquals(listOf(gateway.sent), sent)
+    }
+
+    @Test
+    fun `sendAlbum rejects an album with no items`() {
+        val gateway = FakeMediaGateway()
+
+        assertFailsWith<IllegalArgumentException> { SendMediaService(gateway).sendAlbum("@ada", emptyList()) }
+
+        assertTrue(gateway.albums.isEmpty())
+    }
+
+    @Test
+    fun `sendAlbum rejects more items than Telegram allows`() {
+        val file = Files.createFile(tempDir.resolve("a.png"))
+        val items = List(11) { AlbumItem(file, caption = "", asPhoto = true) }
+
+        val error = assertFailsWith<IllegalArgumentException> { SendMediaService(FakeMediaGateway()).sendAlbum("@ada", items) }
+
+        assertTrue(error.message.orEmpty().contains("at most 10"), error.message)
+    }
+
+    @Test
+    fun `sendAlbum accepts exactly the most Telegram allows`() {
+        val file = Files.createFile(tempDir.resolve("a.png"))
+        val items = List(10) { AlbumItem(file, caption = "", asPhoto = true) }
+
+        SendMediaService(FakeMediaGateway()).sendAlbum("@ada", items)
+    }
+
+    @Test
+    fun `sendAlbum rejects an item whose file is missing before sending any`() {
+        val gateway = FakeMediaGateway()
+        val items = listOf(
+            AlbumItem(Files.createFile(tempDir.resolve("a.png")), caption = "", asPhoto = true),
+            AlbumItem(tempDir.resolve("gone.png"), caption = "", asPhoto = true),
+        )
+
+        val error = assertFailsWith<IllegalArgumentException> { SendMediaService(gateway).sendAlbum("@ada", items) }
+
+        assertTrue(error.message.orEmpty().contains("file does not exist"), error.message)
+        assertTrue(gateway.albums.isEmpty())
+    }
+
+    @Test
+    fun `sendAlbum rejects an item that is a directory`() {
+        val items = listOf(AlbumItem(Files.createDirectory(tempDir.resolve("dir")), caption = "", asPhoto = false))
+
+        val error = assertFailsWith<IllegalArgumentException> { SendMediaService(FakeMediaGateway()).sendAlbum("@ada", items) }
+
+        assertTrue(error.message.orEmpty().contains("not a regular file"), error.message)
+    }
 }
 
 /** A slot that records when it was closed, which is how cleanup is asserted. */

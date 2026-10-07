@@ -5,6 +5,7 @@ import org.kotlogramme.cli.adapter.format.UploadProgressBar
 import org.kotlogramme.cli.adapter.media.SpoolFile
 import org.kotlogramme.cli.adapter.media.isoVideoBytes
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
+import org.kotlogramme.cli.domain.AlbumItem
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.PrintStream
@@ -13,6 +14,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class MediaCommandsTest {
@@ -691,6 +693,49 @@ class MediaCommandsTest {
         return Files.list(temp).use { files ->
             files.filter { it.fileName.toString().startsWith(SpoolFile.PREFIX) }.toList()
         }
+    }
+
+    @Test
+    fun `send-album sends every file and captions only the first`() {
+        val media = FakeSendMedia()
+        val first = Files.createFile(tempDir.resolve("a.png"))
+        val second = Files.createFile(tempDir.resolve("b.png"))
+
+        val result = cliFixture(sendMedia = media)
+            .run("send-album", "@ada", first.toString(), second.toString(), "--caption", "trip", "--photo")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(
+            SendAlbumCall("@ada", listOf(AlbumItem(first, "trip", true), AlbumItem(second, "", true))),
+            media.albums.single(),
+        )
+    }
+
+    @Test
+    fun `send-album sends a file that is not an image as a document`() {
+        val media = FakeSendMedia()
+        val notes = Files.writeString(tempDir.resolve("notes.txt"), "just text")
+
+        cliFixture(sendMedia = media).run("send-album", "@ada", notes.toString())
+
+        assertEquals(listOf(AlbumItem(notes, "", false)), media.albums.single().items)
+    }
+
+    @Test
+    fun `send-album needs at least one file`() {
+        val result = cliFixture().run("send-album", "@ada")
+
+        assertNotEquals(0, result.statusCode)
+    }
+
+    @Test
+    fun `send-album reports a missing file as a usage error`() {
+        val media = FakeSendMedia(rejection = IllegalArgumentException("file does not exist"))
+
+        val result = cliFixture(sendMedia = media).run("send-album", "@ada", tempDir.resolve("gone.png").toString(), "--photo")
+
+        assertNotEquals(0, result.statusCode)
+        assertTrue(result.stderr.contains("file does not exist"), result.stderr)
     }
 }
 
