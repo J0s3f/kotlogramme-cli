@@ -11,7 +11,7 @@ application.
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline. The current release is
 > [`v0.7.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.7.0), carrying the fat jar and
-> the distribution; it builds on the `kotlogram` `v0.9.12` tag from JitPack. Later additions beyond
+> the distribution; it builds on the `kotlogram` `v0.9.15` tag from JitPack. Later additions beyond
 > the original phases:
 > `download-media`, `list-files` with a server-side media-kind filter, and an upload progress bar for
 > `send-file`. Received messages render their formatting, and a message's inline bot is
@@ -153,7 +153,7 @@ See [`docs/native-image.md`](docs/native-image.md) for setup, platform requireme
 
 ## Picking the facade version
 
-The client depends on the facade's `v0.9.12` tag, resolved from JitPack. To pin a different one, pass
+The client depends on the facade's `v0.9.15` tag, resolved from JitPack. To pin a different one, pass
 it explicitly - any published facade tag works:
 
 ```bash
