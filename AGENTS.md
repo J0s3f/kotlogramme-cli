@@ -47,7 +47,7 @@ The primary development machine is Windows; use PowerShell. CI runs on Linux.
   `settings.gradle.kts` can fetch it on a machine that lacks it.
 - Run the client locally with `.\gradlew.bat run --args="..."` or `./gradlew installDist` and the
   generated `build/install/kotlogramme/bin/kotlogramme`.
-- The dependency is JitPack's `com.github.J0s3f:kotlogram` (default tag `v0.9.11`, which reaches
+- The dependency is JitPack's `com.github.J0s3f:kotlogram` (default tag `v0.9.12`, which reaches
   JitPack before Maven Central catches up). Override with `-PkotlogrammeVersion=...` to test a
   different tag.
 - The versions the docs advertise are set and checked by `scripts/version.sh`: `set <cli-version>
