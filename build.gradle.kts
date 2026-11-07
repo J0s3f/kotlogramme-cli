@@ -42,6 +42,9 @@ dependencies {
 configurations.configureEach {
     exclude(group = "com.github.ajalt.mordant", module = "mordant-jvm-jna")
     exclude(group = "net.java.dev.jna")
+    // The facade's JitPack root artifact lists its Android AAR next to the JVM module. This client runs on
+    // the JVM only, and shadowJar refuses to merge an AAR.
+    exclude(group = "com.github.J0s3f.kotlogram", module = "kotlogram-android")
 }
 
 application {

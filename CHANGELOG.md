@@ -2,6 +2,16 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.8.1 - 2026-11-07
+
+Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
+
+### Fixes
+
+- The fat jar builds again: the facade's JitPack root artifact lists its Android AAR, which
+  `shadowJar` cannot merge, so the JVM-only client now excludes it. `v0.8.0` was tagged but never
+  released because of this; its `listen --chat` feature ships in `0.8.1`.
+
 ## 0.8.0 - 2026-11-07
 
 Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
