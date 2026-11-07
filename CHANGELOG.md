@@ -2,6 +2,16 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.8.3 - 2026-11-07
+
+Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
+
+### Fixes
+
+- The release workflow tests on `macos-15`: GitHub no longer provides the `macos-14` runner, which
+  cancelled the test job and so blocked every release. `0.8.0` to `0.8.2` were tagged but never
+  released; their changes ship in `0.8.3`.
+
 ## 0.8.2 - 2026-11-07
 
 Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
