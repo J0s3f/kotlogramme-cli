@@ -152,7 +152,7 @@ class Shell(
         }
         currentChat = chat
         transcript.clear()
-        output.line("Opened ${chat.title}.")
+        output.message("Opened ${chat.title}.")
     }
 
     private fun read(arguments: List<String>) {
@@ -169,7 +169,7 @@ class Shell(
         remember(page)
         output.renderMessages(orderedTranscript(), messageStyler)
         if (page.size == limit) {
-            output.line("# next: --after ${page.last().id}")
+            output.nextPage((page.last().id).toString())
         }
     }
 
@@ -222,7 +222,7 @@ class Shell(
         }
         val deleted = useCases.messageWriter().delete(chat.reference, listOf(messageId))
         transcript.removeAll { it.id == messageId }
-        output.line("Deleted $deleted message(s).")
+        output.message("Deleted $deleted message(s).")
     }
 
     /** Forwards a message of the current chat to another peer, the `--to` of the one-shot command. */
@@ -240,7 +240,7 @@ class Shell(
 
     private fun pin(arguments: List<String>) = messageIdVerb(arguments, "pin") { chat, id ->
         useCases.messageWriter().pin(chat, id)
-        output.line("Pinned message $id.")
+        output.message("Pinned message $id.")
     }
 
     /**
@@ -253,7 +253,7 @@ class Shell(
         val chat = requireChat() ?: return
         if (arguments.singleOrNull()?.equals(ALL, ignoreCase = true) == true) {
             useCases.messageWriter().unpinAll(chat.reference)
-            output.line("Unpinned every message in ${chat.title}.")
+            output.message("Unpinned every message in ${chat.title}.")
             return
         }
         val messageId = arguments.firstOrNull()?.toIntOrNull()
@@ -262,7 +262,7 @@ class Shell(
             return
         }
         useCases.messageWriter().unpin(chat.reference, messageId)
-        output.line("Unpinned message $messageId.")
+        output.message("Unpinned message $messageId.")
     }
 
     /** Shows the current chat's pinned message, or says that it has none. */
@@ -270,7 +270,7 @@ class Shell(
         val chat = requireChat() ?: return
         val message = useCases.messageWriter().pinnedMessage(chat.reference)
         if (message == null) {
-            output.line("No pinned message in ${chat.title}.")
+            output.message("No pinned message in ${chat.title}.")
         } else {
             output.renderMessages(listOf(message), messageStyler)
         }
@@ -287,7 +287,7 @@ class Shell(
         val name = arguments.firstOrNull() ?: DEFAULT_CHAT_ACTION
         val activity = chatActivityOf(name)
         useCases.messageWriter().sendChatAction(chat.reference, activity)
-        output.line("Sent the '$name' action to ${chat.title}.")
+        output.message("Sent the '$name' action to ${chat.title}.")
     }
 
     /** Reacts to a message; the emoji is decoded the way the one-shot command decodes it. */
@@ -301,18 +301,18 @@ class Shell(
         }
         val emoji = decodeEmojiArgument(raw)
         useCases.messageWriter().react(chat.reference, messageId, emoji)
-        output.line("Reacted to message $messageId.")
+        output.message("Reacted to message $messageId.")
     }
 
     private fun unreact(arguments: List<String>) = messageIdVerb(arguments, "unreact") { chat, id ->
         useCases.messageWriter().removeReaction(chat, id)
-        output.line("Removed the reaction from message $id.")
+        output.message("Removed the reaction from message $id.")
     }
 
     private fun markRead() {
         val chat = requireChat() ?: return
         useCases.messageWriter().markRead(chat.reference)
-        output.line("Marked ${chat.title} as read.")
+        output.message("Marked ${chat.title} as read.")
     }
 
     private fun invite(arguments: List<String>) {
@@ -323,7 +323,7 @@ class Shell(
             return
         }
         useCases.chatMembers().invite(chat.reference, user)
-        output.line("Invited $user to ${chat.title}.")
+        output.message("Invited $user to ${chat.title}.")
     }
 
     private fun kick(arguments: List<String>) {
@@ -334,7 +334,7 @@ class Shell(
             return
         }
         useCases.chatMembers().kick(chat.reference, user)
-        output.line("Kicked $user from ${chat.title}.")
+        output.message("Kicked $user from ${chat.title}.")
     }
 
     /** Runs a verb that takes one message id in the current chat, reporting its usage when absent. */
@@ -366,7 +366,7 @@ class Shell(
         output.renderBlockedContacts(blocked)
         if (blocked.size == BLOCKED_LIMIT && !all) {
             val startingOffset = after?.toIntOrNull() ?: 0
-            output.line("# next: --after ${startingOffset + blocked.size}")
+            output.nextPage((startingOffset + blocked.size).toString())
         }
     }
 
@@ -382,7 +382,7 @@ class Shell(
         val messages = useCases.searchMessages().search(scope, query, TRANSCRIPT_LIMIT, after)
         output.renderMessages(messages, messageStyler)
         if (messages.size == TRANSCRIPT_LIMIT) {
-            output.line("# next: --after ${messages.last().id}")
+            output.nextPage((messages.last().id).toString())
         }
     }
 
@@ -463,7 +463,7 @@ class Shell(
         output.renderParticipants(members)
         if (members.size == MEMBER_LIMIT) {
             val startingOffset = after?.toIntOrNull() ?: 0
-            output.line("# next: --after ${startingOffset + members.size}")
+            output.nextPage((startingOffset + members.size).toString())
         }
     }
 
@@ -494,7 +494,7 @@ class Shell(
             return
         }
         sessions.terminate(hash)
-        output.line("Terminated session $hash.")
+        output.message("Terminated session $hash.")
     }
 
     /**
@@ -513,7 +513,7 @@ class Shell(
         val files = useCases.searchMessages().files(peer, kind, limit, after)
         output.renderFiles(files)
         if (files.size == limit) {
-            output.line("# next: --after ${files.last().id}")
+            output.nextPage((files.last().id).toString())
         }
     }
 

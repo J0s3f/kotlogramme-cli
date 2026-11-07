@@ -19,7 +19,7 @@ class PinCommand : CliktCommand(name = "pin") {
 
     override fun run() {
         rejectInvalidInput { appContext.messageWriter().pin(peer, messageId) }
-        appContext.output.line("Pinned message $messageId in $peer.")
+        appContext.output.message("Pinned message $messageId in $peer.")
     }
 }
 
@@ -43,13 +43,13 @@ class UnpinCommand : CliktCommand(name = "unpin") {
                 throw UsageError("Give either a message id or --all, not both.")
             all -> {
                 rejectInvalidInput { appContext.messageWriter().unpinAll(peer) }
-                appContext.output.line("Unpinned every message in $peer.")
+                appContext.output.message("Unpinned every message in $peer.")
             }
             id == null ->
                 throw UsageError("Give a message id to unpin, or --all to unpin every message.")
             else -> {
                 rejectInvalidInput { appContext.messageWriter().unpin(peer, id) }
-                appContext.output.line("Unpinned message $id in $peer.")
+                appContext.output.message("Unpinned message $id in $peer.")
             }
         }
     }
@@ -64,7 +64,7 @@ class PinnedCommand : CliktCommand(name = "pinned") {
     override fun run() {
         val pinned = rejectInvalidInput { appContext.messageWriter().pinnedMessage(peer) }
         if (pinned == null) {
-            appContext.output.line("No pinned message in $peer.")
+            appContext.output.message("No pinned message in $peer.")
         } else {
             appContext.output.renderMessages(listOf(pinned), appContext.messageStyler)
         }

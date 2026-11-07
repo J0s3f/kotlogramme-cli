@@ -9,6 +9,6 @@ class LogoutCommand : CliktCommand(name = "logout") {
 
     override fun run() {
         appContext.authenticate().logout()
-        appContext.output.line("Signed out.")
+        appContext.output.message("Signed out.")
     }
 }

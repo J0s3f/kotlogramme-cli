@@ -27,7 +27,7 @@ class DialogsCommand : CliktCommand(name = "dialogs") {
         // the page size or the next cursor, which is built from the last real dialog row.
         val dialogs = chats.filterNot { it.isSelf }
         if (dialogs.size >= limit && !all) {
-            appContext.output.line("# next: --after ${ListingCursor.formatDialogs(dialogs.last())}")
+            appContext.output.nextPage(ListingCursor.formatDialogs(dialogs.last()))
         }
     }
 

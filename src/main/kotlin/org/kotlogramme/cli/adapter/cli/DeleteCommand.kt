@@ -15,6 +15,6 @@ class DeleteCommand : CliktCommand(name = "delete") {
 
     override fun run() {
         val deleted = rejectInvalidInput { appContext.messageWriter().delete(peer, messageIds) }
-        appContext.output.line("Deleted $deleted message(s).")
+        appContext.output.message("Deleted $deleted message(s).")
     }
 }

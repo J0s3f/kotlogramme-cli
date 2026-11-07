@@ -22,7 +22,7 @@ class MembersCommand : CliktCommand(name = "members") {
         appContext.output.renderParticipants(members)
         if (members.size == limit) {
             val startingOffset = after?.let(ListingCursor::parseDecimal) ?: 0
-            appContext.output.line("# next: --after ${startingOffset + members.size}")
+            appContext.output.nextPage((startingOffset + members.size).toString())
         }
     }
 
@@ -40,7 +40,7 @@ class InviteCommand : CliktCommand(name = "invite") {
 
     override fun run() {
         rejectInvalidInput { appContext.chatMembers().invite(peer, user) }
-        appContext.output.line("Invited $user to $peer.")
+        appContext.output.message("Invited $user to $peer.")
     }
 }
 
@@ -53,6 +53,6 @@ class KickCommand : CliktCommand(name = "kick") {
 
     override fun run() {
         rejectInvalidInput { appContext.chatMembers().kick(peer, user) }
-        appContext.output.line("Kicked $user from $peer.")
+        appContext.output.message("Kicked $user from $peer.")
     }
 }

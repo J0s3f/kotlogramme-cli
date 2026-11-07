@@ -21,6 +21,12 @@ dialogs`), overrides the detection: it wraps to `N` columns even when the output
 `--table-width 0` never wraps. In the interactive shell the width follows the terminal when the window
 is resized.
 
+The global `--table`, `--plain` and `--json` options override the configured output format for one run. Every command
+that prints says it in every format: JSON output is one JSON value per line (tables as arrays of objects, statements as
+`{"message": ...}`, counts as `{"count": N}`, a continuation cursor as `{"next_after": ...}`, `config` as one object), and plain
+output is tab separated. `import-contacts --from-json FILE|-` imports a JSON array of contacts, and `listen` honours the global
+`--json` as it does its own.
+
 ## Pagination
 
 Every listing Telegram can return in more than one page takes `--after <cursor>` to continue from a

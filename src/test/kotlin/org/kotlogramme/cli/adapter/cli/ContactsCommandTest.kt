@@ -192,4 +192,69 @@ class ContactsCommandTest {
         assertEquals(listOf("@ada"), fake.deleted)
         assertEquals(listOf("Deleted @ada from contacts. The peer is not blocked."), fixture.output.lines)
     }
+
+    @Test
+    fun `import-contacts --from-json - imports every contact of a JSON array from stdin`() {
+        val fake = FakeContacts(importedContacts = contacts)
+        val json = """[{"phone":"+15550100","first_name":"Ada","last_name":"Lovelace"},{"phone":"+15550101","first_name":"Bob"}]"""
+        val fixture = cliFixture(contacts = fake, importContactsCommand = importContactsWith(json))
+
+        val result = fixture.run("import-contacts", "--from-json", "-")
+
+        assertEquals(0, result.statusCode)
+        assertEquals(
+            listOf(listOf(ContactToImport("+15550100", "Ada", "Lovelace"), ContactToImport("+15550101", "Bob", ""))),
+            fake.imports,
+        )
+        assertEquals(listOf("Imported ${contacts.size} of 2 contact(s)."), fixture.output.lines)
+    }
+
+    @Test
+    fun `import-contacts --from-json reads a file`(@org.junit.jupiter.api.io.TempDir dir: java.nio.file.Path) {
+        val file = dir.resolve("contacts.json")
+        java.nio.file.Files.writeString(file, """[{"phone":"+15550100","first_name":"Ada"}]""")
+        val fake = FakeContacts()
+        val fixture = cliFixture(contacts = fake)
+
+        fixture.run("import-contacts", "--from-json", file.toString())
+
+        assertEquals(listOf(listOf(ContactToImport("+15550100", "Ada", ""))), fake.imports)
+    }
+
+    @Test
+    fun `import-contacts --from-json rejects JSON that is not an array of contacts`() {
+        val fake = FakeContacts()
+        val fixture = cliFixture(contacts = fake, importContactsCommand = importContactsWith("""{"phone":"+1"}"""))
+
+        val result = fixture.run("import-contacts", "--from-json", "-")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("JSON"), "stderr was: ${result.stderr}")
+        assertEquals(emptyList(), fake.imports)
+    }
+
+    @Test
+    fun `import-contacts --from-json rejects an empty array`() {
+        val fixture = cliFixture(importContactsCommand = importContactsWith("[]"))
+
+        val result = fixture.run("import-contacts", "--from-json", "-")
+
+        assertEquals(1, result.statusCode)
+    }
+
+    @Test
+    fun `import-contacts without a phone and without --from-json is a usage error`() {
+        val result = cliFixture().run("import-contacts")
+
+        assertEquals(1, result.statusCode)
+        assertTrue(result.stderr.contains("phone"), "stderr was: ${result.stderr}")
+    }
+
+    @Test
+    fun `import-contacts does not take a phone together with --from-json`() {
+        val result = cliFixture(importContactsCommand = importContactsWith("[]"))
+            .run("import-contacts", "+15550100", "Ada", "--from-json", "-")
+
+        assertEquals(1, result.statusCode)
+    }
 }

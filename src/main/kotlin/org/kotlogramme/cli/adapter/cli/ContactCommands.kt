@@ -1,6 +1,12 @@
 package org.kotlogramme.cli.adapter.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.UsageError
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.optional
@@ -12,6 +18,10 @@ import org.kotlogramme.cli.adapter.format.renderBlockedContacts
 import org.kotlogramme.cli.adapter.format.renderContacts
 import org.kotlogramme.cli.application.ListingCursor
 import org.kotlogramme.cli.domain.ContactToImport
+import java.io.IOException
+import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.Path
 
 /** Searches the account's contacts and the public directory. */
 class SearchContactsCommand : CliktCommand(name = "search-contacts") {
@@ -37,7 +47,7 @@ class BlockCommand : CliktCommand(name = "block") {
 
     override fun run() {
         rejectInvalidInput { appContext.contacts().block(peer) }
-        appContext.output.line("Blocked $peer.")
+        appContext.output.message("Blocked $peer.")
     }
 }
 
@@ -49,7 +59,7 @@ class UnblockCommand : CliktCommand(name = "unblock") {
 
     override fun run() {
         rejectInvalidInput { appContext.contacts().unblock(peer) }
-        appContext.output.line("Unblocked $peer.")
+        appContext.output.message("Unblocked $peer.")
     }
 }
 
@@ -69,7 +79,7 @@ class BlockedCommand : CliktCommand(name = "blocked") {
         appContext.output.renderBlockedContacts(blocked)
         if (blocked.size == limit && !all) {
             val startingOffset = after?.let(ListingCursor::parseDecimal) ?: 0
-            appContext.output.line("# next: --after ${startingOffset + blocked.size}")
+            appContext.output.nextPage((startingOffset + blocked.size).toString())
         }
     }
 
@@ -79,27 +89,78 @@ class BlockedCommand : CliktCommand(name = "blocked") {
 }
 
 /**
- * Imports a phone number as a saved contact.
+ * Imports phone numbers as saved contacts.
  *
- * One contact per call: a name belongs to one person, and naming several at once would guess. The
- * command reports what Telegram actually saved, which for a number with no Telegram account is
- * nothing.
+ * One contact comes from the arguments, because a name belongs to one person and naming several at
+ * once on a command line would guess. Many come from `--from-json`, a JSON array of
+ * `{"phone", "first_name", "last_name"}` objects read from a file or from standard input (`-`), which
+ * is how a program hands over an address book. The command reports what Telegram actually saved, which
+ * for a number with no Telegram account is nothing.
  */
-class ImportContactsCommand : CliktCommand(name = "import-contacts") {
+class ImportContactsCommand(
+    private val stdin: InputStream = System.`in`,
+) : CliktCommand(name = "import-contacts") {
     private val appContext by requireObject<AppContext>()
 
-    private val phone by argument("phone", help = "The phone number to import, in international form")
-    private val firstName by argument("firstName", help = "The first name to save")
+    private val phone by argument("phone", help = "The phone number to import, in international form").optional()
+    private val firstName by argument("firstName", help = "The first name to save").optional()
     private val lastName by argument("lastName", help = "The last name to save").optional()
+    private val fromJson by option(
+        "--from-json",
+        metavar = "FILE",
+        help = "Import every contact of this JSON array instead (- for stdin): " +
+            "[{\"phone\": \"+1555\", \"first_name\": \"Ada\", \"last_name\": \"Lovelace\"}]",
+    )
 
     override fun run() {
-        val summary = rejectInvalidInput {
-            appContext.contacts().import(listOf(ContactToImport(phone, firstName, lastName.orEmpty())))
-        }
-        appContext.output.line("Imported ${summary.imported.size} of 1 contact(s).")
+        val contacts = contactsToImport()
+        val summary = rejectInvalidInput { appContext.contacts().import(contacts) }
+        appContext.output.message("Imported ${summary.imported.size} of ${contacts.size} contact(s).")
         if (summary.retryCount > 0) {
-            appContext.output.line("Telegram asked to retry ${summary.retryCount} contact(s).")
+            appContext.output.message("Telegram asked to retry ${summary.retryCount} contact(s).")
         }
+    }
+
+    private fun contactsToImport(): List<ContactToImport> {
+        val source = fromJson
+        if (source == null) return listOf(contactFromArguments())
+        if (phone != null) throw UsageError("Give either a phone number or --from-json, not both.")
+        return contactsFromJson(source)
+    }
+
+    private fun contactFromArguments(): ContactToImport {
+        val number = phone ?: throw UsageError("Missing argument 'phone' (or give --from-json).")
+        val first = firstName ?: throw UsageError("Missing argument 'firstName'.")
+        return ContactToImport(number, first, lastName.orEmpty())
+    }
+
+    private fun contactsFromJson(source: String): List<ContactToImport> {
+        val text = if (source == STDIN) String(stdin.readAllBytes(), Charsets.UTF_8) else readFile(source)
+        val contacts = try {
+            Json.decodeFromString<List<ContactJson>>(text)
+        } catch (error: SerializationException) {
+            throw UsageError("Expected a JSON array of {phone, first_name, last_name} objects: ${error.message}")
+        }
+        if (contacts.isEmpty()) throw UsageError("The JSON array holds no contacts.")
+        return contacts.map { ContactToImport(it.phone, it.firstName, it.lastName) }
+    }
+
+    private fun readFile(path: String): String =
+        try {
+            Files.readString(Path.of(path))
+        } catch (error: IOException) {
+            throw UsageError("Cannot read $path: ${error.message}")
+        }
+
+    @Serializable
+    private data class ContactJson(
+        val phone: String,
+        @SerialName("first_name") val firstName: String,
+        @SerialName("last_name") val lastName: String = "",
+    )
+
+    private companion object {
+        const val STDIN = "-"
     }
 }
 
@@ -116,6 +177,6 @@ class DeleteContactCommand : CliktCommand(name = "delete-contact") {
 
     override fun run() {
         rejectInvalidInput { appContext.contacts().delete(peer) }
-        appContext.output.line("Deleted $peer from contacts. The peer is not blocked.")
+        appContext.output.message("Deleted $peer from contacts. The peer is not blocked.")
     }
 }

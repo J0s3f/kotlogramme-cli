@@ -62,6 +62,8 @@ import org.kotlogramme.cli.adapter.cli.UnpinCommand
 import org.kotlogramme.cli.adapter.cli.UnreactCommand
 import org.kotlogramme.cli.adapter.cli.WhoamiCommand
 import org.kotlogramme.cli.adapter.format.TableWidth
+import org.kotlogramme.cli.application.port.spi.OutputFormat
+import com.github.ajalt.clikt.parameters.options.switch
 import org.kotlogramme.cli.adapter.telegram.SidecarNativeLibrary
 import org.kotlogramme.TelegramException
 import java.nio.file.Path
@@ -91,6 +93,15 @@ class KotlogrammeCommand(
         help = "Wrap tables to this many columns instead of the terminal's width; 0 never wraps",
     ).int().restrictTo(min = 0)
 
+    private val format by option(
+        help = "Print this run's output as a table, as tab-separated plain text, or as JSON " +
+            "(one JSON value per line); the last one given wins and none uses the configured format",
+    ).switch(
+        "--table" to OutputFormat.TABLE,
+        "--plain" to OutputFormat.PLAIN,
+        "--json" to OutputFormat.JSON,
+    )
+
     init {
         // A chat reference is `@username`, so `@` must not be read as an argument file.
         context {
@@ -99,7 +110,7 @@ class KotlogrammeCommand(
     }
 
     override fun run() {
-        val options = GlobalOptions(configDir, noColor, color, TableWidth.of(tableWidth))
+        val options = GlobalOptions(configDir, noColor, color, TableWidth.of(tableWidth), format)
         currentContext.obj = appContextFactory(options)
     }
 }

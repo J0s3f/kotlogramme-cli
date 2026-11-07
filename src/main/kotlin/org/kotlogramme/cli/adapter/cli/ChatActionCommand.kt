@@ -23,7 +23,7 @@ class ChatActionCommand : CliktCommand(name = "chat-action") {
     override fun run() {
         val activity = rejectInvalidInput { chatActivityOf(action) }
         rejectInvalidInput { appContext.messageWriter().sendChatAction(peer, activity) }
-        appContext.output.line("Sent the '$action' action to $peer.")
+        appContext.output.message("Sent the '$action' action to $peer.")
     }
 }
 

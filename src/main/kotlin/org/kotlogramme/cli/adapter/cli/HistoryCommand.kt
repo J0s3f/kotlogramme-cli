@@ -24,7 +24,7 @@ class HistoryCommand : CliktCommand(name = "history") {
         val messages = appContext.readHistory().read(peer, limit, before ?: after)
         appContext.output.renderMessages(messages, appContext.messageStyler)
         if (messages.size == limit) {
-            appContext.output.line("# next: --after ${messages.last().id}")
+            appContext.output.nextPage(messages.last().id.toString())
         }
     }
 

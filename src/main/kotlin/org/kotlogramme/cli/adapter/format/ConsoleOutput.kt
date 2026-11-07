@@ -63,6 +63,29 @@ class ConsoleOutput(
         }
     }
 
+    override fun message(text: String) = whenJson({ super.message(text) }) { jsonObject("message" to text) }
+
+    override fun nextPage(cursor: String) = whenJson({ super.nextPage(cursor) }) { jsonObject("next_after" to cursor) }
+
+    override fun count(total: Int) =
+        whenJson({ super.count(total) }) { line(JsonObject(mapOf("count" to JsonPrimitive(total))).toString()) }
+
+    override fun record(fields: List<Pair<String, String>>) =
+        whenJson({ super.record(fields) }) { jsonObject(*fields.toTypedArray()) }
+
+    override fun properties(properties: List<Pair<String, String>>) = when (format) {
+        OutputFormat.TABLE -> super.properties(properties)
+        OutputFormat.PLAIN -> properties.forEach { (label, value) -> line("${label.toKey()}\t$value") }
+        OutputFormat.JSON -> jsonObject(*properties.map { (label, value) -> label.toKey() to value }.toTypedArray())
+    }
+
+    private fun whenJson(text: () -> Unit, json: () -> Unit) = if (format == OutputFormat.JSON) json() else text()
+
+    private fun jsonObject(vararg fields: Pair<String, String>) =
+        line(JsonObject(fields.associate { (key, value) -> key to JsonPrimitive(value) }).toString())
+
+    private fun String.toKey(): String = lowercase().replace(' ', '_')
+
     private fun asciiTable(headers: List<String>, rows: List<List<String>>) {
         val width = runCatching(terminalWidth).getOrNull()?.takeIf { it > 0 }
         renderAsciiTable(headers, rows, width).forEach(::line)

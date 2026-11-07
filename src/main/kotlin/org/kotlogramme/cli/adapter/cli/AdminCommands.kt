@@ -39,7 +39,7 @@ class PromoteCommand : CliktCommand(name = "promote") {
     override fun run() {
         val rights = selectedRights()
         rejectInvalidInput { appContext.adminRights().promote(peer, user, rights) }
-        appContext.output.line("Promoted $user in $peer.")
+        appContext.output.message("Promoted $user in $peer.")
     }
 
     private fun selectedRights(): ChatRights =
@@ -73,7 +73,7 @@ class RestrictCommand : CliktCommand(name = "restrict") {
             )
         }
         rejectInvalidInput { appContext.adminRights().restrict(peer, user, restrictions) }
-        appContext.output.line(summary())
+        appContext.output.message(summary())
     }
 
     private fun expiry(): Instant? = if (forever) null else appContext.clock.now().plus(DEFAULT_BAN)

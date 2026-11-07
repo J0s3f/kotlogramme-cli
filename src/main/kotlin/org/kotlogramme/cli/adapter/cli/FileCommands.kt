@@ -45,7 +45,7 @@ class DownloadMediaCommand : CliktCommand(name = "download-media") {
             // and it reports that as this; the command names what it was trying to do.
             throw UsageError("Could not download the media of message $messageId in $peer: ${error.message}")
         }
-        appContext.output.line("$path\t$size")
+        appContext.output.record(listOf("path" to path.toString(), "size" to size.toString()))
     }
 
     private fun download(): Pair<Path, Long> {
@@ -90,12 +90,12 @@ class ListFilesCommand : CliktCommand(name = "list-files") {
         val search = appContext.searchMessages()
         val files = rejectInvalidInput { mediaFileKindOf(kind) }
         if (total) {
-            appContext.output.line(search.fileTotal(peer, files).toString())
+            appContext.output.count(search.fileTotal(peer, files))
         } else {
             val listed = rejectInvalidInput { search.files(peer, files, limit, after) }
             appContext.output.renderFiles(listed)
             if (listed.size == limit) {
-                appContext.output.line("# next: --after ${listed.last().id}")
+                appContext.output.nextPage(listed.last().id.toString())
             }
         }
     }

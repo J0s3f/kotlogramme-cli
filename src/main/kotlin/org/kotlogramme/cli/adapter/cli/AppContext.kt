@@ -109,7 +109,7 @@ class AppContext(
      * The format [output] renders in. Kept here so a terminal-backed output can be built later, once
      * the shell has a JLine terminal to write through; see [outputOn].
      */
-    private val outputFormat: OutputFormat = OutputFormat.TABLE,
+    val outputFormat: OutputFormat = OutputFormat.TABLE,
     private val authenticateFactory: (AppConfig) -> Authenticate = ::defaultAuthenticate,
     private val listDialogsFactory: (AppConfig) -> ListDialogs = ::defaultListDialogs,
     private val readHistoryFactory: (AppConfig) -> ReadHistory = ::defaultReadHistory,
@@ -264,10 +264,10 @@ class AppContext(
             options: GlobalOptions = GlobalOptions(),
             environment: Map<String, String> = System.getenv(),
         ): AppContext {
-            val (configDir, noColor, color, tableWidth) = options
+            val (configDir, noColor, color, tableWidth, requestedFormat) = options
             val dir = ConfigPaths(configDirOverride = configDir?.toString()).baseDir()
             val configStore = JsonConfigStore(dir)
-            val format = configStore.load().outputFormat
+            val format = requestedFormat ?: configStore.load().outputFormat
             val terminal = System.console()?.isTerminal == true
             // A one-shot command has no JLine terminal, and building one would start a background
             // console reader that would steal stdin from `send-file -`. Instead, fix the process's

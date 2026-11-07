@@ -24,10 +24,14 @@ class ConfigCommand : CliktCommand(name = "config") {
     override fun run() {
         if (currentContext.invokedSubcommand != null) return
         val config = appContext.config()
-        appContext.output.line("Config directory: ${appContext.configDir}")
-        appContext.output.line("Session path: ${config.sessionPath}")
-        appContext.output.line("Credentials: ${describe(appContext.credentials(config))}")
-        appContext.output.line("Output format: ${config.outputFormat.name.lowercase()}")
+        appContext.output.properties(
+            listOf(
+                "Config directory" to appContext.configDir.toString(),
+                "Session path" to config.sessionPath.toString(),
+                "Credentials" to describe(appContext.credentials(config)),
+                "Output format" to config.outputFormat.name.lowercase(),
+            ),
+        )
     }
 
     private fun describe(credentials: ApiCredentials?): String =
@@ -72,7 +76,7 @@ class ConfigSetCommand : CliktCommand(name = "set") {
             if (apiId != null || apiHash != null) add("credentials")
             if (format != null) add("output format")
         }
-        appContext.output.line("Updated ${touched.joinToString()} in ${appContext.configDir}")
+        appContext.output.message("Updated ${touched.joinToString()} in ${appContext.configDir}")
     }
 
     private fun parseFormat(value: String): OutputFormat =

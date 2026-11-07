@@ -1,6 +1,7 @@
 package org.kotlogramme.cli.adapter.cli
 
 import org.kotlogramme.cli.application.port.spi.AppConfig
+import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatKind
 import org.kotlogramme.cli.domain.IncomingUpdate
@@ -217,6 +218,21 @@ class ListenCommandTest {
         val elapsed = measureMillis { fixture.run("listen", "--once") }
 
         assertTrue(elapsed < 2_000, "listen took ${elapsed}ms to stop, which is not prompt")
+    }
+
+    @Test
+    fun `listen prints JSON when the global format is json`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(update)), outputFormat = OutputFormat.JSON)
+
+        fixture.run("listen", "--once")
+
+        assertEquals(
+            listOf(
+                """{"kind":"message","chat":"Ada","message_id":"7","from":"Ada Lovelace",""" +
+                    """"time":"2026-01-01T12:30:00Z","text":"hello","chat_id":"1","sender_id":""}""",
+            ),
+            fixture.output.lines,
+        )
     }
 }
 

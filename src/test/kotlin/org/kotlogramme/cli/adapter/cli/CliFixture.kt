@@ -25,12 +25,14 @@ import org.kotlogramme.cli.application.port.api.SearchMessages
 import org.kotlogramme.cli.application.port.api.SendMedia
 import org.kotlogramme.cli.application.port.api.Sessions
 import org.kotlogramme.cli.application.port.api.Stickers
+import org.kotlogramme.cli.adapter.format.ConsoleOutput
 import org.kotlogramme.cli.application.port.spi.ApiCredentials
 import org.kotlogramme.cli.application.port.spi.AppConfig
 import org.kotlogramme.cli.application.port.spi.Clock
 import org.kotlogramme.cli.application.port.spi.ConfigStore
 import org.kotlogramme.cli.application.port.spi.Diagnostic
 import org.kotlogramme.cli.application.port.spi.Output
+import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.application.port.spi.UploadProgress
 import org.kotlogramme.cli.application.port.spi.UploadProgressReporter
 import org.kotlogramme.cli.application.port.spi.UploadProgressSlot
@@ -59,26 +61,42 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import java.io.StringWriter
 import java.nio.file.Paths
 import java.time.Instant
 
 /** Captures everything a command writes so a test can assert on it. */
-internal class RecordingOutput : Output {
+internal class RecordingOutput(format: OutputFormat? = null) : Output {
     private val recorded = mutableListOf<String>()
+    private val rendered = StringWriter()
+    private val rendering = format?.let { ConsoleOutput(it, rendered) }
 
-    val lines: List<String> get() = recorded
+    val lines: List<String>
+        get() = if (rendering == null) recorded else rendered.toString().lines().dropLastWhile { it.isEmpty() }
 
-    val text: String get() = recorded.joinToString("\n")
+    val text: String get() = lines.joinToString("\n")
 
     override fun line(text: String) {
-        recorded += text
+        rendering?.line(text) ?: run { recorded += text }
     }
 
     override fun table(headers: List<String>, rows: List<List<String>>, title: String?) {
+        if (rendering != null) return rendering.table(headers, rows, title)
         title?.let { recorded += it }
-        recorded += headers.joinToString("\t")
-        rows.forEach { recorded += it.joinToString("\t") }
+        recorded += headers.joinToString("	")
+        rows.forEach { recorded += it.joinToString("	") }
     }
+
+    override fun message(text: String) = rendering?.message(text) ?: super.message(text)
+
+    override fun nextPage(cursor: String) = rendering?.nextPage(cursor) ?: super.nextPage(cursor)
+
+    override fun count(total: Int) = rendering?.count(total) ?: super.count(total)
+
+    override fun record(fields: List<Pair<String, String>>) = rendering?.record(fields) ?: super.record(fields)
+
+    override fun properties(properties: List<Pair<String, String>>) =
+        rendering?.properties(properties) ?: super.properties(properties)
 }
 
 /**
@@ -925,6 +943,10 @@ internal fun sendFileWithText(text: String): SendFileCommand = sendFileWithBytes
  */
 internal fun sendWithBytes(bytes: ByteArray): SendCommand = SendCommand(ByteArrayInputStream(bytes))
 
+/** An `import-contacts` command whose `--from-json -` reads [json] rather than the process's own stdin. */
+internal fun importContactsWith(json: String): ImportContactsCommand =
+    ImportContactsCommand(ByteArrayInputStream(json.toByteArray(Charsets.UTF_8)))
+
 /** [sendWithBytes] for a message written as UTF-8 in the test. */
 internal fun sendWithUtf8(text: String): SendCommand = sendWithBytes(text.toByteArray(Charsets.UTF_8))
 
@@ -956,15 +978,18 @@ internal fun cliFixture(
     diagnostics: List<Diagnostic> = emptyList(),
     sendFileCommand: SendFileCommand = SendFileCommand(),
     sendCommand: SendCommand = SendCommand(),
+    importContactsCommand: ImportContactsCommand = ImportContactsCommand(),
     interactiveTerminal: Boolean = false,
     progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
     clock: Clock = FakeClock(),
+    outputFormat: OutputFormat = OutputFormat.TABLE,
 ): CliFixture {
     val context = AppContext(
         configDir = configDir,
         configStore = configStore,
         output = output,
         environment = environment,
+        outputFormat = outputFormat,
         authenticateFactory = { authenticate },
         listDialogsFactory = { listDialogs },
         readHistoryFactory = { readHistory },
@@ -1016,7 +1041,7 @@ internal fun cliFixture(
             BlockCommand(),
             UnblockCommand(),
             BlockedCommand(),
-            ImportContactsCommand(),
+            importContactsCommand,
             DeleteContactCommand(),
             SearchCommand(),
             MembersCommand(),

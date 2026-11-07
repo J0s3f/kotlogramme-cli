@@ -11,7 +11,7 @@ class WhoamiCommand : CliktCommand(name = "whoami") {
     override fun run() {
         when (val status = appContext.authenticate().status()) {
             is AccountStatus.SignedIn -> appContext.output.printAccount(status.account)
-            is AccountStatus.Anonymous -> appContext.output.line("Not signed in.")
+            is AccountStatus.Anonymous -> appContext.output.message("Not signed in.")
         }
     }
 }

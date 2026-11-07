@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import org.kotlogramme.cli.adapter.format.renderUpdate
 import org.kotlogramme.cli.adapter.format.renderUpdateJson
+import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.domain.IncomingUpdate
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -18,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * mid-print. No worker thread of its own is started - the facade loop is the only reader. Updates
  * that carry no message, such as read receipts and contact status, are hidden unless `--all` is given.
  * `--once` stops after the first shown update, which is what makes the command scriptable; `--json`
- * prints one JSON object per line instead of the human rendering. `--chat` narrows the stream to one
+ * prints one JSON object per line instead of the human rendering, as the global `--json` does. `--chat` narrows the stream to one
  * chat, so `--once --chat X` waits for the next message there; updates without a chat are then hidden.
  */
 class ListenCommand : CliktCommand(name = "listen") {
@@ -60,7 +61,7 @@ class ListenCommand : CliktCommand(name = "listen") {
     }
 
     private fun printUpdate(update: IncomingUpdate) {
-        if (json) {
+        if (json || appContext.outputFormat == OutputFormat.JSON) {
             appContext.output.renderUpdateJson(update)
         } else {
             appContext.output.renderUpdate(update, appContext.messageStyler)

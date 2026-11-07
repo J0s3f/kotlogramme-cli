@@ -10,7 +10,7 @@ application.
 > **Status: usable.** Phases 1-9 are implemented: authentication, configuration, dialogs, history,
 > sending and editing, media and files, contacts, search, chat members, dialog folders, live
 > updates, an interactive shell, admin rights, stickers and inline. The current release is
-> [`v0.8.3`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.8.3), carrying the fat jar and
+> [`v0.10.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.10.0), carrying the fat jar and
 > the distribution; it builds on the `kotlogram` `v0.9.15` tag from JitPack. Later additions beyond
 > the original phases:
 > `download-media`, `list-files` with a server-side media-kind filter, and an upload progress bar for
@@ -56,8 +56,11 @@ target the file is named after the media's own name, falling back to the message
 the working directory; missing parent directories are created and an existing file is overwritten.
 The command prints the path and the byte count, so a script can read either.
 
-Every command renders as a table by default and can be switched to `--format plain` or `--format
-json` (via `config set --format`) for scripting. Tables wrap to the width of the terminal; `--table-width N` before the command sets the width yourself
+Every command renders as a table by default. The global `--plain` and `--json` options, which go before the command
+(`kotlogramme --json history @ada`), switch one run to tab-separated plain text or to JSON, and `--table` forces the table;
+`config set --format` stores the default. In JSON every output line is one JSON value: a table is an array of objects, a
+statement is `{"message": "..."}`, a count is `{"count": N}`, and a listing cut short ends with `{"next_after": "..."}`.
+`import-contacts --from-json FILE` (`-` for stdin) takes a JSON array of `{"phone", "first_name", "last_name"}` objects. Tables wrap to the width of the terminal; `--table-width N` before the command sets the width yourself
 (`0` never wraps), which is also how to get a wrapped table into a file. `kotlogramme doctor` checks the installation:
 the native library, the Telegram schema, the terminal libraries, the configuration and the network,
 without needing API credentials, and the account too when they are set.
@@ -88,19 +91,19 @@ still streams in chunks rather than holding the whole file in the heap.
 
 ## Getting the client
 
-The current release is [`v0.8.3`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.8.3). Its
+The current release is [`v0.10.0`](https://github.com/J0s3f/kotlogramme-cli/releases/tag/v0.10.0). Its
 GitHub Release carries the JVM artifacts below and five single-file native executables:
 
 - **`kotlogramme-all.jar`** - a single runnable fat jar. Run it with JDK 25:
   ```bash
   java -jar kotlogramme-all.jar --help
   ```
-- **`kotlogramme-0.8.3.zip`** - the `distZip` distribution. Unpack it and run
-  `kotlogramme-0.8.3/bin/kotlogramme` (or `kotlogramme-0.8.3\bin\kotlogramme.bat` on Windows); the
+- **`kotlogramme-0.10.0.zip`** - the `distZip` distribution. Unpack it and run
+  `kotlogramme-0.10.0/bin/kotlogramme` (or `kotlogramme-0.10.0\bin\kotlogramme.bat` on Windows); the
   jar and its dependencies live in `lib/`.
 
-- **Single-file native executables** — `kotlogramme-0.8.3-windows-x86_64.exe` and
-  `kotlogramme-0.8.3-{linux,macos}-{x86_64,aarch64}`. Run the downloaded file directly; on
+- **Single-file native executables** — `kotlogramme-0.10.0-windows-x86_64.exe` and
+  `kotlogramme-0.10.0-{linux,macos}-{x86_64,aarch64}`. Run the downloaded file directly; on
   Linux/macOS first use `chmod +x`. These require no JRE, JDK or installer. Support libraries are
   embedded by Wrappe and extracted into a temporary cache. See [native requirements](docs/native-image.md).
 

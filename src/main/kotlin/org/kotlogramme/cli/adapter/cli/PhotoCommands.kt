@@ -34,7 +34,7 @@ class ChatPhotoHistoryCommand : CliktCommand(name = "chat-photo-history") {
         val photos = rejectInvalidInput { appContext.photos().chatPhotos(peer, limit, after, all) }
         appContext.output.renderFiles(photos)
         if (photos.size == limit && !all) {
-            appContext.output.line("# next: --after ${photos.last().id}")
+            appContext.output.nextPage(photos.last().id.toString())
         }
     }
 
@@ -65,7 +65,7 @@ class ProfilePhotosCommand : CliktCommand(name = "profile-photos") {
         appContext.output.renderPhotos(photos)
         if (photos.size == limit && !all) {
             val startingOffset = after?.let(ListingCursor::parseDecimal) ?: 0
-            appContext.output.line("# next: --after ${startingOffset + photos.size}")
+            appContext.output.nextPage((startingOffset + photos.size).toString())
         }
     }
 

@@ -16,7 +16,7 @@ class ReactCommand : CliktCommand(name = "react") {
     override fun run() {
         val reaction = decodeEmojiArgument(emoji)
         rejectInvalidInput { appContext.messageWriter().react(peer, messageId, reaction) }
-        appContext.output.line("Reacted to message $messageId in $peer.")
+        appContext.output.message("Reacted to message $messageId in $peer.")
     }
 }
 
@@ -29,6 +29,6 @@ class UnreactCommand : CliktCommand(name = "unreact") {
 
     override fun run() {
         rejectInvalidInput { appContext.messageWriter().removeReaction(peer, messageId) }
-        appContext.output.line("Removed the reaction from message $messageId in $peer.")
+        appContext.output.message("Removed the reaction from message $messageId in $peer.")
     }
 }

@@ -12,6 +12,6 @@ class MarkReadCommand : CliktCommand(name = "mark-read") {
 
     override fun run() {
         rejectInvalidInput { appContext.messageWriter().markRead(peer) }
-        appContext.output.line("Marked $peer as read.")
+        appContext.output.message("Marked $peer as read.")
     }
 }

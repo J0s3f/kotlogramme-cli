@@ -28,12 +28,12 @@ class SearchCommand : CliktCommand(name = "search") {
         val search = appContext.searchMessages()
         if (total) {
             val matches = rejectInvalidInput { search.total(inPeer, query) }
-            appContext.output.line(matches.toString())
+            appContext.output.count(matches)
         } else {
             val messages = rejectInvalidInput { search.search(inPeer, query, limit, after) }
             appContext.output.renderMessages(messages, appContext.messageStyler)
             if (messages.size == limit) {
-                appContext.output.line("# next: --after ${messages.last().id}")
+                appContext.output.nextPage(messages.last().id.toString())
             }
         }
     }

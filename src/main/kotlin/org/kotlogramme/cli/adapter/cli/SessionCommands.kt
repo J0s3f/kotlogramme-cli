@@ -41,7 +41,7 @@ class TerminateSessionCommand : CliktCommand(name = "terminate") {
 
     override fun run() {
         rejectInvalidInput { appContext.sessions().terminate(hash) }
-        appContext.output.line("Terminated session $hash.")
+        appContext.output.message("Terminated session $hash.")
     }
 }
 
@@ -59,6 +59,6 @@ class TerminateAllSessionsCommand : CliktCommand(name = "terminate-all") {
             )
         }
         rejectInvalidInput { appContext.sessions().terminateAll() }
-        appContext.output.line("Terminated every session except the current one.")
+        appContext.output.message("Terminated every session except the current one.")
     }
 }

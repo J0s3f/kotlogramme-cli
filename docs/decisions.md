@@ -426,3 +426,17 @@ which would push people to write tests that raise a number instead of tests that
 
 **Why.** JaCoCo ships with Gradle, so it adds no dependency to resolve. Measured this way, 87% of
 lines were covered when it was added; the report is how the untested ones were listed.
+
+## 0025 — Output has a method per kind of statement, and the format is a global option
+
+**Decision.** `Output` gained `message`, `nextPage`, `count`, `record` and `properties` next to `line` and `table`. Commands
+say what they mean and the output decides how it looks: the defaults give the text form and `ConsoleOutput` overrides them for
+JSON. `--table`, `--plain` and `--json` are global options that override the stored format for one run, and `import-contacts`
+reads a JSON array with `--from-json`.
+
+**Alternatives.** A `--json` flag on every command, which repeats the option 40 times and still leaves each command printing its
+own text. Printing statements as text in every format, which hands a script a line it must parse. Sending the `# next:` hint to
+stderr, which would hide it from a script that only captured stdout.
+
+**Why.** A script needs one parseable shape per line. The statement methods put that choice in one class instead of in every
+command, and the shell and the commands share it. JSON stays line oriented, so `jq` reads a listing and its cursor the same way.

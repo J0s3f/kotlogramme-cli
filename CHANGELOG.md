@@ -2,6 +2,18 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.10.0 - 2026-11-07
+
+Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
+
+### Features
+
+- The global `--table`, `--plain` and `--json` options pick the output format for one run. Every command that
+  prints now has a JSON and a plain form, not only the tables: statements, counts, continuation cursors, the
+  saved file of `download-media` and the settings of `config` included. JSON output is one JSON value per line.
+- `import-contacts --from-json FILE` (`-` for stdin) imports a JSON array of contacts in one call.
+- `listen` follows the global `--json`.
+
 ## 0.8.3 - 2026-11-07
 
 Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
