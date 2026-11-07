@@ -45,4 +45,12 @@ data class Chat(
 ) {
     val reference: String
         get() = username?.let { "@$it" } ?: id.toString()
+
+    /** True when [selector] names this chat by numeric id, `@username` or title, ignoring case. */
+    fun isNamedBy(selector: String): Boolean {
+        val wanted = selector.trim()
+        return wanted == id.toString() ||
+            wanted.removePrefix("@").equals(username, ignoreCase = true) ||
+            wanted.equals(title, ignoreCase = true)
+    }
 }

@@ -143,6 +143,60 @@ class ListenCommandTest {
     }
 
     @Test
+    fun `listen --chat waits for a message in that chat and skips others`() {
+        val other = update.copy(chat = update.chat!!.copy(id = 2, title = "Bob", username = "bob"))
+        val fixture = cliFixture(listen = FakeListen(listOf(other, update, other)))
+
+        fixture.run("listen", "--once", "--chat", "@ada")
+
+        assertEquals(
+            listOf(
+                "kind\u0009chat\u0009message_id\u0009from\u0009time\u0009text\u0009chat_id\u0009sender_id",
+                "message\u0009Ada\u00097\u0009Ada Lovelace\u00092026-01-01T12:30:00Z\u0009hello\u00091\u0009",
+            ),
+            fixture.output.lines,
+        )
+    }
+
+    @Test
+    fun `listen --chat accepts a numeric id`() {
+        val other = update.copy(chat = update.chat!!.copy(id = 2, title = "Bob", username = "bob"))
+        val fixture = cliFixture(listen = FakeListen(listOf(other, update)))
+
+        fixture.run("listen", "--once", "--chat", "1")
+
+        assertEquals(2, fixture.output.lines.size)
+        assertTrue(fixture.output.lines.last().startsWith("message\u0009Ada"))
+    }
+
+    @Test
+    fun `listen --chat accepts the chat title`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(update)))
+
+        fixture.run("listen", "--once", "--chat", "ada")
+
+        assertEquals(2, fixture.output.lines.size)
+    }
+
+    @Test
+    fun `listen --chat prints nothing when no message comes from that chat`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(update)))
+
+        fixture.run("listen", "--once", "--chat", "@nobody")
+
+        assertEquals(emptyList(), fixture.output.lines)
+    }
+
+    @Test
+    fun `listen --chat hides updates without a chat even with --all`() {
+        val fixture = cliFixture(listen = FakeListen(listOf(IncomingUpdate.Other("updateUserStatus"))))
+
+        fixture.run("listen", "--all", "--chat", "@ada")
+
+        assertEquals(emptyList(), fixture.output.lines)
+    }
+
+    @Test
     fun `listen reports missing credentials before starting the stream`() {
         val fixture = cliFixture(
             config = AppConfig(credentials = null, sessionPath = Paths.get("session.sqlite")),

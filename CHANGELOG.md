@@ -2,6 +2,15 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.8.0 - 2026-11-07
+
+Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
+
+### Features
+
+- `listen --chat <id|@username|title>` shows only messages from one chat, so
+  `listen --once --json --chat @ada` waits for the next message in that chat and then exits.
+
 ## 0.7.0 - 2026-10-07
 
 Built on the `kotlogram` `v0.9.11` tag, resolved from JitPack.

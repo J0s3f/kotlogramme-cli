@@ -18,7 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * mid-print. No worker thread of its own is started - the facade loop is the only reader. Updates
  * that carry no message, such as read receipts and contact status, are hidden unless `--all` is given.
  * `--once` stops after the first shown update, which is what makes the command scriptable; `--json`
- * prints one JSON object per line instead of the human rendering.
+ * prints one JSON object per line instead of the human rendering. `--chat` narrows the stream to one
+ * chat, so `--once --chat X` waits for the next message there; updates without a chat are then hidden.
  */
 class ListenCommand : CliktCommand(name = "listen") {
     private val appContext by requireObject<AppContext>()
@@ -26,6 +27,7 @@ class ListenCommand : CliktCommand(name = "listen") {
     private val once by option("--once", help = "Stop after the first update").flag()
     private val all by option("--all", help = "Also show updates that carry no message, with their data as hex").flag()
     private val json by option("--json", help = "Print one JSON object per update").flag()
+    private val chat by option("--chat", help = "Only show messages from this chat: numeric id, @username or title")
 
     override fun run() {
         val stop = AtomicBoolean(false)
@@ -49,7 +51,13 @@ class ListenCommand : CliktCommand(name = "listen") {
         listen.run(stop = { stop.get() }, onUpdate = onUpdate)
     }
 
-    private fun isShown(update: IncomingUpdate): Boolean = all || update is IncomingUpdate.NewMessage
+    private fun isShown(update: IncomingUpdate): Boolean =
+        (all || update is IncomingUpdate.NewMessage) && isInSelectedChat(update)
+
+    private fun isInSelectedChat(update: IncomingUpdate): Boolean {
+        val selector = chat ?: return true
+        return update is IncomingUpdate.NewMessage && update.chat?.isNamedBy(selector) == true
+    }
 
     private fun printUpdate(update: IncomingUpdate) {
         if (json) {

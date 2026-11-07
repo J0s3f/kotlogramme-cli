@@ -200,8 +200,9 @@ trace.
 - `members <peer> [--limit <n>]` - lists a chat's members with their role.
 - `invite <peer> <user>` - adds a member to a channel, supergroup or group.
 - `kick <peer> <user>` - removes a member from a chat.
-- `listen [--once] [--all] [--json]` — follows the live update stream, printing each message as it
-  arrives. Updates that carry no message, such as read receipts and contact status changes, are
+- `listen [--once] [--all] [--json] [--chat <chat>]` — follows the live update stream, printing each
+  message as it arrives. `--chat` (numeric id, `@username` or title) narrows it to one chat, so
+  `listen --once --chat @ada` waits for the next message there; updates without a chat are then hidden. Updates that carry no message, such as read receipts and contact status changes, are
   hidden unless `--all` is given; each then shows its Telegram update name and its content decoded
   to JSON (nested under `data` with `--json`). Every row ends with `chat_id` and
   `sender_id` (and `--json` has them as strings), the ids a script passes back to address the chat or
