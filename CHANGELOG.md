@@ -2,6 +2,17 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.8.2 - 2026-11-07
+
+Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
+
+### Fixes
+
+- The native executable finds the facade's native library again. Since `v0.9.15` the library and the
+  protocol classes live in the `kotlogramme` module jar, which the native build did not select, so the
+  executable shipped without its sidecar library and without reflection metadata. `v0.8.0` and `v0.8.1`
+  were tagged but never released; their changes ship in `0.8.2`.
+
 ## 0.8.1 - 2026-11-07
 
 Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.

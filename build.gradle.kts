@@ -157,7 +157,7 @@ val generateNativeMetadata = tasks.register("generateNativeMetadata") {
     doLast {
         // Files from an earlier build, such as a resource list that no longer exists, must not linger.
         nativeMetadataDir.get().asFile.deleteRecursively()
-        val facadeJar = runtimeClasspath.get().single { it.name.startsWith("kotlogram-") }
+        val facadeJar = runtimeClasspath.get().single { it.name.startsWith("kotlogramme-") }
         val registrations = ZipFile(facadeJar).use { archive ->
             archive.entries().asSequence()
                 .map { it.name }
@@ -210,7 +210,7 @@ val extractNativeLibrary = tasks.register<Copy>("extractNativeLibrary") {
     description = "Places the facade's native library beside the native executable."
     dependsOn(tasks.named("nativeCompile"))
     val facadeJar = configurations.runtimeClasspath.map { classpath ->
-        classpath.single { it.name.startsWith("kotlogram-") }
+        classpath.single { it.name.startsWith("kotlogramme-") }
     }
     from(facadeJar.map { zipTree(it) }) {
         include("native/$nativePlatform/$nativeLibraryName")
