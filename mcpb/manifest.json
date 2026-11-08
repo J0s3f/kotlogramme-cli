@@ -1,0 +1,62 @@
+{
+  "manifest_version": "0.3",
+  "name": "kotlogramme",
+  "display_name": "Telegram (kotlogramme)",
+  "version": "__VERSION__",
+  "description": "Lets an AI application read and, if you allow it, act on your own Telegram account.",
+  "long_description": "kotlogramme is a command-line Telegram client that also runs as an MCP server. By default it is read only: it lists chats, reads and searches messages, lists contacts and members, and waits for new messages. Raise the access level to read-write to send, edit, forward, react and pin, or to full to also delete, remove and block people, change admin rights and end sessions. Anything beyond read-only acts as you and reaches real people.\n\nBefore first use, sign in once in a terminal with the same executable: 'kotlogramme login --phone +<number>' (the file is in this extension's folder, or download it from the releases page). The server cannot ask for the login code itself. API id and hash come from https://my.telegram.org.",
+  "author": {
+    "name": "J0s3f",
+    "url": "https://github.com/J0s3f"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/J0s3f/kotlogramme-cli.git"
+  },
+  "homepage": "https://github.com/J0s3f/kotlogramme-cli",
+  "documentation": "https://github.com/J0s3f/kotlogramme-cli/blob/main/docs/agent-install.md",
+  "support": "https://github.com/J0s3f/kotlogramme-cli/issues",
+  "keywords": ["telegram", "messaging", "chat", "mcp"],
+  "server": {
+    "type": "binary",
+    "entry_point": "server/kotlogramme",
+    "mcp_config": {
+      "command": "server/kotlogramme",
+      "args": ["mcp", "--access", "${user_config.access}"],
+      "env": {
+        "TG_API_ID": "${user_config.api_id}",
+        "TG_API_HASH": "${user_config.api_hash}"
+      },
+      "platform_overrides": {
+        "win32": {
+          "command": "server/kotlogramme.exe"
+        }
+      }
+    }
+  },
+  "user_config": {
+    "api_id": {
+      "type": "string",
+      "title": "Telegram API id",
+      "description": "The api_id from https://my.telegram.org (API development tools).",
+      "required": true
+    },
+    "api_hash": {
+      "type": "string",
+      "title": "Telegram API hash",
+      "description": "The api_hash from https://my.telegram.org.",
+      "sensitive": true,
+      "required": true
+    },
+    "access": {
+      "type": "string",
+      "title": "Access level",
+      "description": "read-only (default), read-write (also sends and edits) or full (also deletes, removes and blocks).",
+      "default": "read-only",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["__OS__"]
+  }
+}
