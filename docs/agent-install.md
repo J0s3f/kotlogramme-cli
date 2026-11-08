@@ -10,6 +10,13 @@ executable per platform.
 stdin and stdout, so the person's AI application can use their own Telegram account. It acts **as the
 person** and reaches real people, so the access level you choose matters (step 5).
 
+## 0. Tell the person this before you start
+
+kotlogramme is unofficial and signs in as their own Telegram user account, so Telegram's API terms apply and
+heavy automation can get the account restricted. The session file it creates is as powerful as the account.
+Messages that the tools return go to the AI application and its provider. The full list is in the
+[README](../README.md#safety-and-limits). Continue only if the person is fine with that.
+
 ## 1. Ask the person first
 
 Do not download or configure anything before you have these answers:

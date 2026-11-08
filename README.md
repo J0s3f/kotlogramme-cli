@@ -199,6 +199,26 @@ it explicitly - any published facade tag works:
 - [`docs/native-image.md`](docs/native-image.md) — building and verifying standalone native packages.
 - [`AGENTS.md`](AGENTS.md) — engineering rules for humans and agents.
 
+## Safety and limits
+
+- **Unofficial.** kotlogramme is not made, endorsed or supported by Telegram. It signs in as your own user
+  account over MTProto, not as a bot, so Telegram's [API Terms of Service](https://core.telegram.org/api/terms)
+  apply to you. Bulk or automated sending, joining and adding people can trigger flood waits or restrictions on
+  the account; that risk is yours.
+- **The session file is the account.** Whoever can read the session file in the configuration directory, or run
+  the program as you, has everything you have. Keep it private, never commit it, never share it. The same holds
+  for the API id and hash.
+- **Access levels are a limit of this server, not of Telegram.** `--access read-only` keeps the tools from
+  changing anything, but the session itself keeps full authority inside the process.
+- **What the AI reads leaves your machine.** In MCP mode, the messages, names and file names a tool returns are
+  passed to the AI application and its provider. Choose chats and an access level accordingly.
+- **Message texts can be hostile.** Other people write them, and a message can try to instruct the model. The
+  server says so in its instructions, but no instruction is a guarantee: prefer `read-only` when the account
+  receives messages from strangers, and read what a write or delete tool is about to do.
+- **One connection at a time.** Do not run `mcp` together with another kotlogramme command, the shell or `listen`
+  on the same session; Telegram may reject parallel use of one login.
+- **No warranty.** See the Apache-2.0 license below.
+
 ## License
 
 This project is licensed under Apache-2.0; see [`LICENSE`](LICENSE). It builds on the
