@@ -2,6 +2,15 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.11.1 - 2026-11-08
+
+Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
+
+### Features
+
+- Each release carries an MCP Bundle (`.mcpb`) per platform, which Claude Desktop installs by double click, and
+  a `server.json` for the official MCP Registry. See `docs/publishing-mcp.md`.
+
 ## 0.11.0 - 2026-11-08
 
 Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.

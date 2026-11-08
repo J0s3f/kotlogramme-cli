@@ -84,6 +84,18 @@ jobs:
             test -s "release-assets/kotlogramme-$RELEASE_VERSION-$platform"
           done
           test -s "release-assets/kotlogramme-$RELEASE_VERSION-windows-x86_64.exe"
+      - name: Build the MCP Bundles and the registry description
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.value }}
+        run: |
+          for platform in linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64 windows-x86_64; do
+            file="release-assets/kotlogramme-$RELEASE_VERSION-$platform"
+            if [ "$platform" = windows-x86_64 ]; then file="$file.exe"; fi
+            python3 scripts/build-mcpb.py "$RELEASE_VERSION" "$platform" "$file" release-assets/mcpb
+          done
+          python3 scripts/generate-server-json.py "$RELEASE_VERSION" release-assets/mcpb release-assets/mcpb/server.json
+          test "$(ls release-assets/mcpb/*.mcpb | wc -l)" -eq 5
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,4 +113,7 @@ jobs:
             release-assets/kotlogramme-"$RELEASE_VERSION"-linux-aarch64 \
             release-assets/kotlogramme-"$RELEASE_VERSION"-macos-x86_64 \
             release-assets/kotlogramme-"$RELEASE_VERSION"-macos-aarch64 \
-            release-assets/kotlogramme-"$RELEASE_VERSION"-windows-x86_64.exe
+            release-assets/kotlogramme-"$RELEASE_VERSION"-windows-x86_64.exe \
+            release-assets/mcpb/*.mcpb \
+            release-assets/mcpb/server.json
+

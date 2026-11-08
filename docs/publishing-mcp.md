@@ -3,10 +3,12 @@
 Nothing here runs automatically. Each step is public and hard to take back, so it is done by hand after a
 release, by the maintainer.
 
-## 1. Build the bundles
+## 1. The bundles
 
 An MCP Bundle (`.mcpb`) is a zip with `manifest.json` and the executable; Claude Desktop installs it by
-double click. One bundle per platform, from the release executables:
+double click. From `0.11.1` on, the release workflow builds one bundle per platform and attaches them to the
+release together with a ready `server.json`, so this step is only needed for an older release. By hand, from
+the release executables:
 
 ```bash
 gh release download v<version> --repo J0s3f/kotlogramme-cli --pattern "kotlogramme-<version>-*" --dir dist
@@ -23,7 +25,7 @@ not code signed, so macOS and Windows may warn on first start.
 ## 2. Official MCP Registry
 
 ```bash
-python3 scripts/generate-server-json.py <version> dist/mcpb server.json
+gh release download v<version> --repo J0s3f/kotlogramme-cli --pattern server.json   # or generate it, see below
 mcp-publisher login github
 mcp-publisher publish
 ```
