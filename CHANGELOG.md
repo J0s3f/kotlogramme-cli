@@ -2,7 +2,9 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
-## Unreleased
+## 0.11.0 - 2026-11-08
+
+Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
 
 ### Features
 
