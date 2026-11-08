@@ -100,6 +100,124 @@ class BooleanParameter(
     }
 }
 
+/** A non-empty list of integers, such as message ids. */
+class IntListParameter(
+    name: String,
+    description: String,
+    private val min: Int,
+    private val max: Int,
+    private val maxItems: Int,
+    override val required: Boolean = true,
+) : Parameter(name, description) {
+    override val default: Any? = null
+
+    override fun schema() = described("array") {
+        put("items", buildJsonObject { put("type", "integer"); put("minimum", min); put("maximum", max) })
+        put("minItems", 1)
+        put("maxItems", maxItems)
+        put("uniqueItems", true)
+    }
+
+    override fun parse(raw: JsonElement): Any {
+        val array = raw as? JsonArray ?: mismatch("an array of integers")
+        require(array.size in 1..maxItems) { "The argument '$name' must hold between 1 and $maxItems integers." }
+        val values = array.map { element ->
+            val primitive = element as? JsonPrimitive
+            if (primitive == null || element is JsonNull || primitive.isString) mismatch("an array of integers")
+            primitive.intOrNull ?: mismatch("an array of integers")
+        }
+        require(values.all { it in min..max }) { "Every entry of '$name' must be between $min and $max." }
+        require(values.toSet().size == values.size) { "The argument '$name' must not repeat an entry." }
+        return values
+    }
+}
+
+/** A non-empty list of short texts, such as file names. */
+class StringListParameter(
+    name: String,
+    description: String,
+    private val maxItems: Int,
+    override val required: Boolean = true,
+) : Parameter(name, description) {
+    override val default: Any? = null
+
+    override fun schema() = described("array") {
+        put("items", buildJsonObject { put("type", "string"); put("maxLength", MAX_ITEM_LENGTH) })
+        put("minItems", 1)
+        put("maxItems", maxItems)
+    }
+
+    override fun parse(raw: JsonElement): Any {
+        val array = raw as? JsonArray ?: mismatch("an array of strings")
+        require(array.size in 1..maxItems) { "The argument '$name' must hold between 1 and $maxItems entries." }
+        return array.map { element ->
+            val primitive = element as? JsonPrimitive
+            if (primitive == null || element is JsonNull || !primitive.isString) mismatch("an array of strings")
+            require(primitive.content.length <= MAX_ITEM_LENGTH) {
+                "An entry of '$name' is longer than $MAX_ITEM_LENGTH characters."
+            }
+            primitive.content
+        }
+    }
+
+    private companion object {
+        const val MAX_ITEM_LENGTH = 1024
+    }
+}
+
+/** One value out of a fixed set of words. */
+class ChoiceParameter(
+    name: String,
+    description: String,
+    private val choices: List<String>,
+    override val default: String? = null,
+    override val required: Boolean = false,
+) : Parameter(name, description) {
+    override fun schema() = described("string") {
+        put("enum", JsonArray(choices.map(::JsonPrimitive)))
+        default?.let { put("default", it) }
+    }
+
+    override fun parse(raw: JsonElement): Any {
+        val primitive = raw as? JsonPrimitive
+        if (primitive == null || raw is JsonNull || !primitive.isString) mismatch("a string")
+        require(primitive.content in choices) {
+            "The argument '$name' must be one of ${choices.joinToString(", ")}, not '${primitive.content}'."
+        }
+        return primitive.content
+    }
+}
+
+/** Any number of distinct words out of a fixed set; an empty list is a valid answer. */
+class ChoiceListParameter(
+    name: String,
+    description: String,
+    private val choices: List<String>,
+    override val required: Boolean = false,
+) : Parameter(name, description) {
+    override val default: Any = emptyList<String>()
+
+    override fun schema() = described("array") {
+        put("items", buildJsonObject { put("type", "string"); put("enum", JsonArray(choices.map(::JsonPrimitive))) })
+        put("uniqueItems", true)
+    }
+
+    override fun parse(raw: JsonElement): Any {
+        val array = raw as? JsonArray ?: mismatch("an array of strings")
+        val values = array.map { element ->
+            val primitive = element as? JsonPrimitive
+            if (primitive == null || element is JsonNull || !primitive.isString) mismatch("an array of strings")
+            primitive.content
+        }
+        val unknown = values.filterNot(choices::contains)
+        require(unknown.isEmpty()) {
+            "Unknown entry '${unknown.first()}' in '$name'. Valid entries: ${choices.joinToString(", ")}."
+        }
+        require(values.toSet().size == values.size) { "The argument '$name' must not repeat an entry." }
+        return values
+    }
+}
+
 /** The arguments of one tool: their JSON Schema and the parser that enforces it. */
 class ToolParameters(vararg parameters: Parameter) {
     private val declared: List<Parameter> = parameters.toList()
@@ -139,9 +257,17 @@ class ToolArguments(private val values: Map<String, Any?>) {
 
     fun stringOrNull(name: String): String? = value(name) as String?
 
-    fun int(name: String): Int = value(name) as Int? ?: error("'$name' was not given")
+    fun int(name: String): Int = intOrNull(name) ?: error("'$name' was not given")
+
+    fun intOrNull(name: String): Int? = value(name) as Int?
 
     fun boolean(name: String): Boolean = value(name) as Boolean? ?: error("'$name' was not given")
+
+    @Suppress("UNCHECKED_CAST")
+    fun ints(name: String): List<Int> = value(name) as List<Int>? ?: error("'$name' was not given")
+
+    @Suppress("UNCHECKED_CAST")
+    fun strings(name: String): List<String> = value(name) as List<String>? ?: error("'$name' was not given")
 
     private fun value(name: String): Any? {
         check(values.containsKey(name)) { "The tool never declared an argument '$name'" }

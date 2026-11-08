@@ -1,0 +1,9 @@
+{
+  "name": "kotlogramme-mcp-interop",
+  "private": true,
+  "type": "module",
+  "description": "Drives kotlogramme mcp with the official TypeScript SDK client. See interop.mjs.",
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.4.0"
+  }
+}

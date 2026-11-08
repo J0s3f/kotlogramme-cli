@@ -210,16 +210,35 @@ trace.
   stdin and stdout, so an AI application such as Claude can read the account. It speaks the current
   stateless revision (2026-07-28) and the handshake revisions (2025-11-25, 2025-06-18) from one process. Log
   in once with `login` first: stdin is the protocol, so the server cannot ask. The default access level is
-  `read-only`, and tools above the chosen level are neither listed nor callable. Tools in v1 (all read only):
-  `telegram_whoami`, `telegram_list_chats`, `telegram_read_history`, `telegram_search_messages`,
-  `telegram_count_messages`, `telegram_get_pinned_message`, `telegram_list_contacts`,
-  `telegram_search_contacts`, `telegram_list_members`, `telegram_list_folders` and
-  `telegram_wait_for_message` (waits for the next message from someone else, with a timeout of at most five
-  minutes). Results are JSON objects: a listing is `items` plus `next_cursor` when more follows, which is
-  passed back as `cursor`. A `chat` argument is `me`, an `@username` or a numeric id; invite links are
-  refused because opening one joins the chat. One Telegram connection serves every call, and calls run one
-  at a time. Write and destructive tools follow in a later release. Design and test strategy:
-  `docs/mcp-server-plan.md`.
+  `read-only`, and tools above the chosen level are neither listed nor callable. Three levels, each adding to
+  the one below:
+  - `read-only` (15 tools): `telegram_whoami`, `telegram_list_chats`, `telegram_read_history`,
+    `telegram_search_messages`, `telegram_count_messages`, `telegram_get_pinned_message`,
+    `telegram_list_files`, `telegram_list_contacts`, `telegram_search_contacts`, `telegram_list_blocked`,
+    `telegram_list_members`, `telegram_get_member_rights`, `telegram_list_folders`, `telegram_list_sessions`
+    and `telegram_wait_for_message` (waits for the next message from someone else, with a timeout of at most
+    five minutes).
+  - `read-write` (11 more): `telegram_send_message`, `telegram_edit_message`, `telegram_forward_messages`,
+    `telegram_mark_read`, `telegram_react`, `telegram_remove_reaction`, `telegram_pin_message`,
+    `telegram_unpin_message`, `telegram_send_chat_action`, `telegram_invite_member` and
+    `telegram_import_contact`.
+  - `full` (10 more, all marked `destructiveHint`): `telegram_delete_messages`, `telegram_unpin_all_messages`,
+    `telegram_kick_member`, `telegram_restrict_member`, `telegram_set_admin_rights`, `telegram_block_user`,
+    `telegram_unblock_user`, `telegram_delete_contact`, `telegram_terminate_session` and
+    `telegram_terminate_all_sessions` (which needs `confirm` to be true).
+
+  `--files-dir DIRECTORY` adds the file tools, limited to that directory: `telegram_send_file` and
+  `telegram_send_album` (from `read-write` on) send files from it, and `telegram_download_media` (at every
+  level) saves a message's media into it without ever replacing a file. File names are relative, written as
+  `folder/file.ext`; absolute paths, `..`, backslashes, colons, Windows device names and links that lead out of
+  the directory are refused, and an upload is capped at 100 MiB. Without `--files-dir` the server cannot touch
+  a file.
+
+  Results are JSON objects: a listing is `items` plus `next_cursor` when more follows, which is passed back as
+  `cursor`. A `chat` or `user` argument is `me` (chats only), an `@username` or a numeric id; links are refused
+  because opening an invite link joins the chat. A bad argument or a refusal by Telegram comes back as a tool
+  result with `isError`, so the model can correct itself. One Telegram connection serves every call, and calls
+  run one at a time. Design and test strategy: `docs/mcp-server-plan.md`.
 - `listen [--once] [--all] [--json] [--chat <chat>]` — follows the live update stream, printing each
   message as it arrives. `--chat` (numeric id, `@username` or title) narrows it to one chat, so
   `listen --once --chat @ada` waits for the next message there; updates without a chat are then hidden. Updates that carry no message, such as read receipts and contact status changes, are

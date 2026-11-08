@@ -79,9 +79,16 @@ for example in Claude Desktop's `claude_desktop_config.json`:
 ```
 
 or `claude mcp add telegram -- kotlogramme mcp` for Claude Code. By default it is read only: it can list
-chats, read and search messages, list contacts and members, and wait for the next message. `--access
-read-write` and `--access full` are accepted for the tools that later releases add. Message texts come from
-other people, so the server tells the model to treat them as data, not as instructions.
+chats, read and search messages, list contacts, members and sessions, and wait for the next message.
+`--access read-write` adds sending, editing, forwarding, reacting and pinning; `--access full` adds
+deleting, removing and blocking people, changing admin rights and ending sessions. An AI application that
+can write acts as you and reaches real people, so choose the lowest level that does the job.
+`--files-dir <directory>` adds tools that send files from that directory and save downloads into it, and
+nothing outside it. Message texts come from other people, so the server tells the model to treat them as
+data, not as instructions. The tools are listed in [`docs/features.md`](docs/features.md).
+
+**AI agents:** to download and install the server for a person, follow
+[`docs/agent-install.md`](docs/agent-install.md).
 
 ## Upload progress
 

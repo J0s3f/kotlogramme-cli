@@ -2,6 +2,20 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## Unreleased
+
+### Features
+
+- `kotlogramme mcp` runs the client as a Model Context Protocol server over stdin and stdout, for AI
+  applications such as Claude. It speaks the stateless revision `2026-07-28` and the handshake revisions
+  `2025-11-25` and `2025-06-18` from one process.
+- `--access read-only|read-write|full` (default `read-only`) decides which tools are offered: 15 that only
+  look, 11 that send or add, 10 that delete, remove, block or change rights. Tools above the level are neither
+  listed nor callable, and every tool reports all four annotation hints.
+- `--files-dir DIRECTORY` adds tools that send files from that directory and save downloads into it, and
+  nothing outside it.
+- Invite links and `me` are refused where a tool would otherwise join a chat or act on the account itself.
+
 ## 0.10.0 - 2026-11-07
 
 Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.

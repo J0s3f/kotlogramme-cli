@@ -46,6 +46,16 @@ jobs:
           jar tf build/libs/kotlogramme-all.jar | grep -E '^native/.*\.(dll|so|dylib)$' || true
           echo "native entries: $native_count"
           test "$native_count" -eq 6
+      - name: Interop with the official MCP client
+        # The TypeScript SDK client is an independent implementation of the protocol; it checks the server in
+        # both protocol eras and at every access level, without a Telegram account.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          ./gradlew --no-daemon installDist
+          npm ci --prefix scripts/mcp-interop --no-audit --no-fund
+          node scripts/mcp-interop/interop.mjs "$PWD/build/install/kotlogramme/bin/kotlogramme" \
+            --config-dir "$RUNNER_TEMP/mcp-config"
 
   windows-arm:
     # GraalVM has no Windows ARM64 Native Image toolchain; verify the JVM facade there.

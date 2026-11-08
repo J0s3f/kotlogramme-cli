@@ -489,3 +489,50 @@ is a silent join.
 behind a tool that only reads, a model, or a message it read, could make the account join chats. Restricting
 the form at the tool boundary keeps "read only" true without touching the resolver. `telegram_wait_for_message`
 takes a selector it only compares with incoming messages, so it never resolves anything and is not affected.
+
+## 0029 - Write and destructive MCP tools are separate access levels, and every tool carries all four hints
+
+**Decision.** Each tool belongs to one of three levels and says so in code, by extending `ReadingTool`,
+`WritingTool` or `DestructiveTool`: the base class fixes the level and the annotations, so a tool cannot
+claim the wrong ones. `read-only` is the default; `--access read-write` adds tools that send or add something
+(messages, reactions, pins, invitations, a saved contact); `--access full` adds tools that remove something
+or change who may do what (deleting, kicking, restricting, admin rights, blocking, ending sessions). A tool
+above the chosen level is neither listed nor callable. `destructiveHint` is true exactly at `full`, and every
+tool sends `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`, because the protocol
+defaults (destructive and open world unless said otherwise) would otherwise mislabel a read only tool.
+`user` arguments accept an `@username` or a numeric id, never `me`: kicking, blocking or restricting the
+account the server runs as is never what a person asked for. `telegram_terminate_all_sessions` also needs
+`confirm: true`, the counterpart of the `--yes` the command line demands.
+
+**Alternatives.** One flat list with a per tool allow list: more to configure, and the common case is "this
+much and no more". A confirmation round trip for every destructive call: the protocol has no portable
+confirmation, and asking from a server is not possible on stdio; the client already shows each call to the
+person. Splitting `full` further (admin rights apart from deleting messages): a third option that nobody
+would set differently.
+
+**Why.** The annotations are hints that clients treat as untrusted, so the level, enforced by the server, is
+the boundary and the hints are for the client's confirmation screen. Putting the level in the base class keeps
+the two from drifting, and one contract test checks the combination for every tool.
+
+## 0030 - File tools exist only with a files directory, and a path is never a path
+
+**Decision.** `--files-dir DIRECTORY` adds `telegram_send_file`, `telegram_send_album` and
+`telegram_download_media`; without it they do not exist. A file argument is a name relative to that directory,
+written `folder/file.ext`, and `FilesSandbox` decides what it means. Reading refuses absolute, drive relative
+and UNC paths, `..` and `.` parts, empty parts, backslashes, colons (so also alternate data streams), control
+characters, trailing dots or spaces and Windows device names, and then resolves the real path, following links
+and junctions, and checks that it is still inside the directory, is a regular file and is at most 100 MiB.
+Writing takes a bare file name and never replaces a file; a name proposed by the sender of a message is reduced
+to its last part and cleaned, with the message id as the fallback. Sending needs `read-write`;
+`telegram_download_media` is offered at every level because it changes nothing on the account, and its
+annotation still says it is not read only.
+
+**Alternatives.** Accepting any path the process can reach: a model, or a message it read, could then send
+`~/.ssh/id_rsa` to a chat. An allow list of several directories: more to configure for no gain, one directory
+is enough to exchange files. Returning absolute paths: they leak the layout of the machine and the model only
+needs the relative name to send a file back.
+
+**Why.** A path written by a model is a way to read or write any file the process may touch, so the directory
+is the feature. The check runs on the real path, because a link inside the directory is the usual escape. A
+file swapped for a link between the check and the use is not defended against; the directory is one the user
+chose for this, and nothing here can lock it.

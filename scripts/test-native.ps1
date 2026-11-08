@@ -90,6 +90,12 @@ try {
     foreach ($line in $mcpLines) {
         if (($line | ConvertFrom-Json).jsonrpc -ne '2.0') { throw "mcp wrote something that is not a JSON-RPC message: $line" }
     }
+    # The write and destructive tiers and the file tools are separate code paths in the native image.
+    $mcpFullInput = '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{' + $mcpMeta + '}}' + "`n"
+    $mcpFull = Invoke-NativeCheck @('--config-dir', $configDirectory, 'mcp', '--access', 'full', '--files-dir', $testDirectory) '"tools"' $mcpFullInput
+    foreach ($tool in @('telegram_delete_messages', 'telegram_send_message', 'telegram_send_file', 'telegram_download_media')) {
+        if ($mcpFull -notmatch $tool) { throw "mcp --access full lists no $tool`: $mcpFull" }
+    }
     Write-Host 'Native smoke checks passed with the portable native files and no Java environment or Java on PATH.'
 } finally {
     Remove-Item -LiteralPath $testDirectory -Recurse -Force

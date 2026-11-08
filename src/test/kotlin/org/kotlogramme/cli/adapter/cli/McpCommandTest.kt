@@ -67,11 +67,7 @@ class McpCommandTest {
 
     @Test
     fun `mcp offers the reading tools by default`() {
-        val names = cliFixture(mcpCommand = command(modernRequest(1, "tools/list"))).let {
-            it.run("mcp")
-            parse(responses().single()).result().getValue("tools").jsonArray
-                .map { tool -> tool.jsonObject.getValue("name").jsonPrimitive.content }
-        }
+        val names = toolNames()
 
         assertEquals(names.sorted(), names)
         assertTrue(
@@ -93,6 +89,111 @@ class McpCommandTest {
 
         assertTrue(rejected.statusCode != 0)
         assertTrue(rejected.stderr.contains("access"), rejected.stderr)
+    }
+
+    private fun toolNames(vararg options: String): List<String> {
+        output.reset()
+        cliFixture(mcpCommand = command(modernRequest(1, "tools/list"))).run("mcp", *options)
+        return parse(responses().single()).result().getValue("tools").jsonArray
+            .map { it.jsonObject.getValue("name").jsonPrimitive.content }
+    }
+
+    @Test
+    fun `each access level offers more tools than the one below and keeps all of them`() {
+        val readOnly = toolNames()
+        val readWrite = toolNames("--access", "read-write")
+        val full = toolNames("--access", "full")
+
+        assertEquals(15, readOnly.size)
+        assertEquals(26, readWrite.size)
+        assertEquals(36, full.size)
+        assertTrue(readWrite.containsAll(readOnly) && full.containsAll(readWrite))
+        assertTrue("telegram_send_message" in readWrite && "telegram_send_message" !in readOnly)
+        assertTrue("telegram_delete_messages" in full && "telegram_delete_messages" !in readWrite)
+    }
+
+    @Test
+    fun `the file tools appear only when a files directory is given`(@org.junit.jupiter.api.io.TempDir dir: java.nio.file.Path) {
+        val without = toolNames("--access", "full")
+        val with = toolNames("--access", "full", "--files-dir", dir.toString())
+        val readOnlyWith = toolNames("--files-dir", dir.toString())
+
+        assertEquals(emptyList(), without.filter { it.startsWith("telegram_send_file") || it == "telegram_download_media" })
+        assertEquals(
+            listOf("telegram_download_media", "telegram_send_album", "telegram_send_file"),
+            (with - without.toSet()).sorted(),
+        )
+        assertEquals(listOf("telegram_download_media"), (readOnlyWith - toolNames().toSet()))
+    }
+
+    @Test
+    fun `a files directory that does not exist is a usage error`(@org.junit.jupiter.api.io.TempDir dir: java.nio.file.Path) {
+        val missing = dir.resolve("nothing")
+
+        val result = cliFixture(mcpCommand = command()).run("mcp", "--files-dir", missing.toString())
+
+        assertTrue(result.statusCode != 0)
+        assertTrue(result.stderr.contains("files-dir"), result.stderr)
+    }
+
+    @Test
+    fun `a writing tool works at read-write and reaches the use case`() {
+        val writer = FakeMessageWriter()
+        val send = modernRequest(
+            2,
+            "tools/call",
+            buildJsonObject {
+                put("name", "telegram_send_message")
+                put("arguments", buildJsonObject { put("chat", "@ada"); put("text", "hi") })
+            },
+        )
+
+        cliFixture(messageWriter = writer, mcpCommand = command(send)).run("mcp", "--access", "read-write")
+
+        McpSchema.assertResultResponse(MODERN, "CallToolResult", responses().single())
+        assertEquals(listOf(SendCall("@ada", "hi", null, false)), writer.sends)
+    }
+
+    @Test
+    fun `a destructive tool is refused at read-write and works at full`() {
+        val delete = modernRequest(
+            2,
+            "tools/call",
+            buildJsonObject {
+                put("name", "telegram_block_user")
+                put("arguments", buildJsonObject { put("user", "@bob") })
+            },
+        )
+        val contacts = FakeContacts()
+
+        cliFixture(contacts = contacts, mcpCommand = command(delete)).run("mcp", "--access", "read-write")
+        assertEquals(-32602, parse(responses().single()).getValue("error").jsonObject.getValue("code").jsonPrimitive.int)
+        assertEquals(emptyList(), contacts.blocked)
+
+        output.reset()
+        cliFixture(contacts = contacts, mcpCommand = command(delete)).run("mcp", "--access", "full")
+        McpSchema.assertResultResponse(MODERN, "CallToolResult", responses().single())
+        assertEquals(listOf("@bob"), contacts.blocked)
+    }
+
+    @Test
+    fun `a file tool call stays inside the files directory`(@org.junit.jupiter.api.io.TempDir dir: java.nio.file.Path) {
+        val sendMedia = FakeSendMedia()
+        val escape = modernRequest(
+            2,
+            "tools/call",
+            buildJsonObject {
+                put("name", "telegram_send_file")
+                put("arguments", buildJsonObject { put("chat", "@ada"); put("file", "../outside.txt") })
+            },
+        )
+
+        cliFixture(sendMedia = sendMedia, mcpCommand = command(escape))
+            .run("mcp", "--access", "read-write", "--files-dir", dir.toString())
+
+        assertEquals(emptyList(), sendMedia.fileSends)
+        val result = parse(responses().single()).result()
+        assertEquals(true, result.getValue("isError").jsonPrimitive.boolean)
     }
 
     @Test
@@ -140,6 +241,23 @@ class McpCommandTest {
         val result = parse(responses().single()).result()
         assertEquals(true, result.getValue("isError").jsonPrimitive.boolean)
         assertTrue(result.getValue("content").jsonArray.single().jsonObject.getValue("text").jsonPrimitive.content.contains("FLOOD_WAIT_30"))
+    }
+
+    @Test
+    fun `an invalid argument of a tool is a result the model can read and not a protocol error`() {
+        val request = modernRequest(
+            2,
+            "tools/call",
+            buildJsonObject {
+                put("name", "telegram_read_history")
+                put("arguments", buildJsonObject { put("chat", "https://t.me/+AbCdEf") })
+            },
+        )
+
+        cliFixture(mcpCommand = command(request)).run("mcp")
+
+        McpSchema.assertResultResponse(MODERN, "CallToolResult", responses().single())
+        assertEquals(true, parse(responses().single()).result().getValue("isError").jsonPrimitive.boolean)
     }
 
     @Test

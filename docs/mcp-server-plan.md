@@ -1,13 +1,26 @@
 # Plan: kotlogramme as an optional MCP server
 
-Status: proposal, nothing implemented. Written 2026-11-08 against MCP spec revision **2026-07-28**
+Status: implemented, see below. Written 2026-11-08 against MCP spec revision **2026-07-28**
 (the current one) and the previous **2025-11-25**.
 
 ## Implementation status (2026-11-08)
 
-Phases 1 to 3 are implemented in `adapter.mcp` and `adapter.cli.McpCommand`: `kotlogramme mcp` speaks both eras
-over stdio and offers the eleven read only tools (`--access` is accepted; the write and full tiers are phase 4).
-Decisions 0026 to 0028 are in `docs/decisions.md`.
+Phases 1 to 5 and 7 are implemented in `adapter.mcp` and `adapter.cli.McpCommand`: `kotlogramme mcp` speaks both
+eras over stdio and offers 15 read only tools, 11 more at `--access read-write` and 10 more at `--access full`,
+plus the three file tools behind `--files-dir`. Decisions 0026 to 0030 are in `docs/decisions.md`.
+
+Added in phases 4, 5 and 7, beyond the catalogue of section 5:
+- Read only: `telegram_list_files`, `telegram_list_blocked`, `telegram_get_member_rights`, `telegram_list_sessions`.
+- Read-write: `telegram_remove_reaction`, `telegram_unpin_message`, `telegram_invite_member`.
+- Full: `telegram_unpin_all_messages`, `telegram_restrict_member`, `telegram_terminate_all_sessions` (needs
+  `confirm: true`); `telegram_block` and `telegram_unblock` are `telegram_block_user` and `telegram_unblock_user`.
+- `user` arguments accept `@username` or a numeric id and never `me`; message ids and id lists are bounded.
+- `scripts/mcp-interop` runs the official TypeScript client against the built distribution in both eras and
+  at every level; the `test` workflow runs it on Linux, and `scripts/test-native.ps1` checks the full level and
+  the file tools in the native image.
+- **Not done:** the official conformance suite. It speaks HTTP only and needs fixture tools, so it would test a
+  second server built for the purpose (section 7.3); the schema checks and the independent client cover the
+  protocol core instead. Revisit when the suite gains a stdio mode.
 
 What the implementation settled that the plan left open:
 - **Errors without a readable request id omit `id`**, they do not send JSON-RPC's `"id": null`. MCP's schema makes

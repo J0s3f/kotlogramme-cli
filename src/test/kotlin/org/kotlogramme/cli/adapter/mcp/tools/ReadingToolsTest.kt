@@ -297,16 +297,5 @@ class ReadingToolsTest {
         McpSchema.assertResultResponse(MODERN, "CallToolResult", line)
     }
 
-    private fun everyTool(): List<McpTool> = ReadingTools(
-        authenticate = { FakeAuthenticate() },
-        listDialogs = { FakeListDialogs() },
-        readHistory = { FakeReadHistory() },
-        searchMessages = { FakeSearchMessages() },
-        contacts = { FakeContacts() },
-        chatMembers = { FakeChatMembers() },
-        listFolders = { FakeListFolders() },
-        messageWriter = { FakeMessageWriter() },
-        listen = { org.kotlogramme.cli.adapter.cli.FakeListen() },
-        clock = org.kotlogramme.cli.FakeClock(),
-    ).all()
+    private fun everyTool(): List<McpTool> = fakeTelegramTools().all().filter { it.access == AccessLevel.READ_ONLY }
 }
