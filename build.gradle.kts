@@ -35,6 +35,8 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // Validates what the MCP server emits against the protocol's own JSON Schema; tests only.
+    testImplementation("com.networknt:json-schema-validator:3.0.9")
 }
 
 // Mordant ships JNA, FFM and GraalVM terminal backends. JNA references java.awt, which drags the JDK

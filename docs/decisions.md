@@ -440,3 +440,38 @@ stderr, which would hide it from a script that only captured stdout.
 
 **Why.** A script needs one parseable shape per line. The statement methods put that choice in one class instead of in every
 command, and the shell and the commands share it. JSON stays line oriented, so `jq` reads a listing and its cursor the same way.
+
+## 0026 — The MCP server is our own implementation, not an SDK
+
+**Decision.** `kotlogramme mcp` speaks the Model Context Protocol with a small implementation in
+`adapter.mcp`, built on `kotlinx.serialization` only. It serves the current revision (2026-07-28, stateless,
+per-request `_meta`) and the previous ones (2025-11-25, 2025-06-18, `initialize` handshake) from the same
+process, over stdio. Only the `tools` feature is implemented.
+
+**Alternatives.** The Kotlin SDK 0.16.0: Tier 3, and its 2026-07-28 support is experimental types that its
+own server does not use yet. The Java SDK: the stable 2.1.0 is the old stateful protocol, and the stateless
+server exists only in the 2.2.0-M1 milestone and is HTTP oriented; it also brings Jackson and Reactor next to
+`kotlinx.serialization`. Both would add a large reflection-heavy dependency to a GraalVM native executable
+for a surface of five methods.
+
+**Why.** No JVM SDK serves the current revision over stdio today, and the protocol surface needed for tools
+is small. The price is that compliance is ours, so it is checked against the protocol's own JSON Schema and
+independent clients (0027). Revisit when an SDK serves 2026-07-28 over stdio and is Tier 1 or 2.
+Full research and the tool catalogue: `docs/mcp-server-plan.md`.
+
+## 0027 — MCP compliance is checked against the official JSON Schema
+
+**Decision.** The official `schema.json` of 2026-07-28 and 2025-11-25 are vendored under
+`src/test/resources/mcp-schema/<version>/` (commits `38353251fa` and `c4c367f9f5` of
+`modelcontextprotocol/modelcontextprotocol`). Unit tests validate every message the server produces against
+the matching definition (`DiscoverResult`, `ListToolsResult`, `CallToolResult`, `InitializeResult`, the
+JSON-RPC response and error shapes). The validator is `com.networknt:json-schema-validator`, a test-only
+dependency.
+
+**Alternatives.** Hand-written structural assertions, which drift from the spec without anyone noticing.
+Validating in Node, which would make the unit tests depend on Node. The official conformance suite alone: it
+is HTTP only and expects fixture tools, so it can only run later against a test fixture.
+
+**Why.** The schema is the spec's machine-readable source of truth, the check is the same one the conformance
+suite calls `wire-schema-valid`, and it runs offline on every build. Refresh the files by fetching the new
+revision and updating the commit ids here.

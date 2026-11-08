@@ -38,6 +38,7 @@ import org.kotlogramme.cli.adapter.cli.ListenCommand
 import org.kotlogramme.cli.adapter.cli.LoginCommand
 import org.kotlogramme.cli.adapter.cli.LogoutCommand
 import org.kotlogramme.cli.adapter.cli.MarkReadCommand
+import org.kotlogramme.cli.adapter.cli.McpCommand
 import org.kotlogramme.cli.adapter.cli.MembersCommand
 import org.kotlogramme.cli.adapter.cli.PermissionsCommand
 import org.kotlogramme.cli.adapter.cli.PinCommand
@@ -170,6 +171,7 @@ fun main(args: Array<String>) {
                 SendStickerCommand(),
                 InlineCommand(),
                 ShellCommand(),
+                McpCommand(),
             )
             .main(args)
     } catch (error: TelegramException) {

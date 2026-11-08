@@ -1,0 +1,14 @@
+# A handshake (2025-11-25) session against a server that has one tool, "echo".
+# "> " is a line the client sends, "< " the line the server must answer with byte for byte, "< -" no answer.
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"legacy","version":"1"}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"kotlogramme","title":"Kotlogramme","version":"9.9.9"},"instructions":"Test instructions."}}
+> {"jsonrpc":"2.0","method":"notifications/initialized"}
+< -
+> {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+< {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"echo","title":"Echo","description":"Repeats the text it is given.","inputSchema":{"type":"object","properties":{"text":{"type":"string"}}},"annotations":{"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":true}}]}}
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"echo","arguments":{"text":"hi"}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"echo: hi"}],"isError":false}}
+> {"jsonrpc":"2.0","id":4,"method":"ping"}
+< {"jsonrpc":"2.0","id":4,"result":{}}
+> {"jsonrpc":"2.0","id":5,"method":"resources/list"}
+< {"jsonrpc":"2.0","id":5,"error":{"code":-32601,"message":"Method not found: resources/list"}}

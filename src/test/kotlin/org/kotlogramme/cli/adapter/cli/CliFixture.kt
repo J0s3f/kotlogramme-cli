@@ -979,6 +979,7 @@ internal fun cliFixture(
     sendFileCommand: SendFileCommand = SendFileCommand(),
     sendCommand: SendCommand = SendCommand(),
     importContactsCommand: ImportContactsCommand = ImportContactsCommand(),
+    mcpCommand: McpCommand = McpCommand(),
     interactiveTerminal: Boolean = false,
     progressFactory: () -> UploadProgressReporter = { UploadProgressBar() },
     clock: Clock = FakeClock(),
@@ -1060,6 +1061,7 @@ internal fun cliFixture(
             SendStickerCommand(),
             InlineCommand(),
             ShellCommand(),
+            mcpCommand,
         )
     return CliFixture(output, authenticate, root)
 }

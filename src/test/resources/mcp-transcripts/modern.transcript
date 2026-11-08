@@ -1,0 +1,20 @@
+# A stateless (2026-07-28) session against a server that has one tool, "echo".
+# "> " is a line the client sends, "< " the line the server must answer with byte for byte, "< -" no answer.
+> {"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","supportedVersions":["2026-07-28","2025-11-25","2025-06-18"],"capabilities":{"tools":{"listChanged":false}},"instructions":"Test instructions.","ttlMs":3600000,"cacheScope":"public","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"kotlogramme","title":"Kotlogramme","version":"9.9.9"}}}}
+> {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":2,"result":{"resultType":"complete","tools":[{"name":"echo","title":"Echo","description":"Repeats the text it is given.","inputSchema":{"type":"object","properties":{"text":{"type":"string"}}},"annotations":{"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":true}}],"ttlMs":3600000,"cacheScope":"public","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"kotlogramme","title":"Kotlogramme","version":"9.9.9"}}}}
+> {"jsonrpc":"2.0","id":"call-3","method":"tools/call","params":{"name":"echo","arguments":{"text":"héllo 😀"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":"call-3","result":{"resultType":"complete","content":[{"type":"text","text":"echo: héllo 😀"}],"isError":false,"_meta":{"io.modelcontextprotocol/serverInfo":{"name":"kotlogramme","title":"Kotlogramme","version":"9.9.9"}}}}
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"nope","_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":4,"error":{"code":-32602,"message":"Unknown tool: nope"}}
+> {"jsonrpc":"2.0","id":5,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"1900-01-01","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":5,"error":{"code":-32022,"message":"Unsupported protocol version","data":{"supported":["2026-07-28","2025-11-25","2025-06-18"],"requested":"1900-01-01"}}}
+> {"jsonrpc":"2.0","id":6,"method":"tools/list","params":{}}
+< {"jsonrpc":"2.0","id":6,"error":{"code":-32602,"message":"Missing _meta: send io.modelcontextprotocol/protocolVersion and io.modelcontextprotocol/clientCapabilities with every request, or open with initialize"}}
+> {"jsonrpc":"2.0","id":7,"method":"ping","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":7,"error":{"code":-32601,"message":"Method not found: ping"}}
+> {"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":99}}
+< -
+> {not json
+< {"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: the message is not valid JSON"}}
