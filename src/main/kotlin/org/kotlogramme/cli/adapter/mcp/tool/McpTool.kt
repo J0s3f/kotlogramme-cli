@@ -22,6 +22,9 @@ interface McpTool {
     val inputSchema: JsonObject
     val annotations: ToolAnnotations
 
+    /** The least access level a server must run at to offer this tool. */
+    val access: AccessLevel
+
     fun call(arguments: JsonObject, context: ToolContext): ToolResult
 }
 

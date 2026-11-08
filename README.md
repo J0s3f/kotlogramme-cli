@@ -65,6 +65,24 @@ statement is `{"message": "..."}`, a count is `{"count": N}`, and a listing cut 
 the native library, the Telegram schema, the terminal libraries, the configuration and the network,
 without needing API credentials, and the account too when they are set.
 
+## Use it from an AI application (MCP)
+
+`kotlogramme mcp` runs the client as a [Model Context Protocol](https://modelcontextprotocol.io) server over
+stdin and stdout. Log in once with `kotlogramme login`, then register the command with your AI application,
+for example in Claude Desktop's `claude_desktop_config.json`:
+
+```json
+{ "mcpServers": { "telegram": {
+  "command": "C:\\Tools\\console\\kotlogramme.exe",
+  "args": ["mcp"],
+  "env": { "TG_API_ID": "...", "TG_API_HASH": "..." } } } }
+```
+
+or `claude mcp add telegram -- kotlogramme mcp` for Claude Code. By default it is read only: it can list
+chats, read and search messages, list contacts and members, and wait for the next message. `--access
+read-write` and `--access full` are accepted for the tools that later releases add. Message texts come from
+other people, so the server tells the model to treat them as data, not as instructions.
+
 ## Upload progress
 
 `send-file` draws a one-line progress bar while the bytes go out, showing the percentage, the bytes

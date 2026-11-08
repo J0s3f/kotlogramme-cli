@@ -96,4 +96,23 @@ class ConsoleOutputStatementsTest {
             render(OutputFormat.JSON) { properties(properties) },
         )
     }
+
+    @Test
+    fun `details are a headline and labelled lines in the table and plain formats`() {
+        val fields = listOf("id" to "42", "username" to "@ada")
+
+        val expected = "Signed in as Ada\nid: 42\nusername: @ada"
+        assertEquals(expected, render(OutputFormat.TABLE) { details("Signed in as Ada", fields) })
+        assertEquals(expected, render(OutputFormat.PLAIN) { details("Signed in as Ada", fields) })
+    }
+
+    @Test
+    fun `details are one object with the headline as its message in the json format`() {
+        val fields = listOf("id" to "42", "username" to "@ada")
+
+        assertEquals(
+            """{"message":"Signed in as Ada","id":"42","username":"@ada"}""",
+            render(OutputFormat.JSON) { details("Signed in as Ada", fields) },
+        )
+    }
 }

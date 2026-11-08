@@ -26,6 +26,12 @@ interface Output {
     /** Reports one item as named fields, such as a saved file's path and size. */
     fun record(fields: List<Pair<String, String>>) = line(fields.joinToString("\t") { it.second })
 
+    /** Reports one thing as a [headline] and labelled [fields], such as the signed in account. */
+    fun details(headline: String, fields: List<Pair<String, String>>) {
+        line(headline)
+        fields.forEach { (label, value) -> line("$label: $value") }
+    }
+
     /** Reports labelled settings; a label is human text such as `Session path`. */
     fun properties(properties: List<Pair<String, String>>) =
         properties.forEach { (label, value) -> line("$label: $value") }

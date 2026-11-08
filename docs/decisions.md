@@ -475,3 +475,17 @@ is HTTP only and expects fixture tools, so it can only run later against a test 
 **Why.** The schema is the spec's machine-readable source of truth, the check is the same one the conformance
 suite calls `wire-schema-valid`, and it runs offline on every build. Refresh the files by fetching the new
 revision and updating the commit ids here.
+
+## 0028 - Read only MCP tools accept only references to existing chats
+
+**Decision.** A `chat` argument of a read only MCP tool must be `me`, an `@username` or a numeric id. Links of
+every kind are refused before anything reaches Telegram.
+
+**Alternatives.** Passing the argument to the same resolver the command line uses, which is what the CLI does.
+Refusing only invite links: the link formats are many (`t.me/+...`, `joinchat`, `tg://join`), and a missed one
+is a silent join.
+
+**Why.** The resolver turns an invite link into a joined chat. On the command line that is what the user typed;
+behind a tool that only reads, a model, or a message it read, could make the account join chats. Restricting
+the form at the tool boundary keeps "read only" true without touching the resolver. `telegram_wait_for_message`
+takes a selector it only compares with incoming messages, so it never resolves anything and is not affected.

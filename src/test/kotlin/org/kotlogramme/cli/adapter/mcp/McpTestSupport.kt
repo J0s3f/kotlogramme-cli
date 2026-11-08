@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.mcp
 
+import com.networknt.schema.SchemaLocation
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.SpecificationVersion
 import kotlinx.serialization.json.Json
@@ -11,6 +12,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.kotlogramme.cli.adapter.mcp.server.McpServer
 import org.kotlogramme.cli.adapter.mcp.server.ServerIdentity
+import org.kotlogramme.cli.adapter.mcp.tool.AccessLevel
 import org.kotlogramme.cli.adapter.mcp.tool.McpTool
 import org.kotlogramme.cli.adapter.mcp.tool.ToolAnnotations
 import org.kotlogramme.cli.adapter.mcp.tool.ToolCatalog
@@ -116,6 +118,7 @@ internal class EchoTool(
         )
     }
     override val annotations = ToolAnnotations(readOnly = true)
+    override val access = AccessLevel.READ_ONLY
 
     override fun call(arguments: JsonObject, context: ToolContext): ToolResult = behaviour(arguments, context)
 }
@@ -135,6 +138,12 @@ internal object McpSchema {
         val wrapped = JsonObject(document(version) + ("\$ref" to JsonPrimitive("#/\$defs/$definition")))
         val schema = registry.getSchema(wrapped.toString())
         return schema.validate(mapper.readTree(instance)).map { "${it.instanceLocation}: ${it.message}" }
+    }
+
+    /** Whether [schema] is itself a valid JSON Schema 2020-12 document; an empty list means it is. */
+    fun violationsOfSchema(schema: String): List<String> {
+        val metaschema = registry.getSchema(SchemaLocation.of("https://json-schema.org/draft/2020-12/schema"))
+        return metaschema.validate(mapper.readTree(schema)).map { "${it.instanceLocation}: ${it.message}" }
     }
 
     fun assertValid(version: String, definition: String, instance: String) {

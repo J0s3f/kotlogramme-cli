@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.cli
 
+import org.kotlogramme.cli.adapter.format.renderAccount
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.UsageError
@@ -29,7 +30,7 @@ class LoginCommand : CliktCommand(name = "login") {
     override fun run() {
         val authenticate = appContext.authenticate()
         val account = botToken?.let(authenticate::loginWithBotToken) ?: signInUser(authenticate)
-        appContext.output.printAccount(account)
+        appContext.output.renderAccount(account)
     }
 
     private fun signInUser(authenticate: Authenticate): Account {

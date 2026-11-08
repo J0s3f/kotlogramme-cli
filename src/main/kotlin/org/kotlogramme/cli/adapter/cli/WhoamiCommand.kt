@@ -1,5 +1,6 @@
 package org.kotlogramme.cli.adapter.cli
 
+import org.kotlogramme.cli.adapter.format.renderAccount
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.requireObject
 import org.kotlogramme.cli.application.port.api.AccountStatus
@@ -10,7 +11,7 @@ class WhoamiCommand : CliktCommand(name = "whoami") {
 
     override fun run() {
         when (val status = appContext.authenticate().status()) {
-            is AccountStatus.SignedIn -> appContext.output.printAccount(status.account)
+            is AccountStatus.SignedIn -> appContext.output.renderAccount(status.account)
             is AccountStatus.Anonymous -> appContext.output.message("Not signed in.")
         }
     }

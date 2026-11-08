@@ -81,10 +81,12 @@ try {
     # must end when stdin closes. Every output line has to be a JSON-RPC message.
     $mcpMeta = '"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}'
     $mcpInput = '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{' + $mcpMeta + '}}' + "`n" +
-        '{"jsonrpc":"2.0","id":2,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}' + "`n"
+        '{"jsonrpc":"2.0","id":2,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}' + "`n" +
+        '{"jsonrpc":"2.0","id":3,"method":"tools/list","params":{' + $mcpMeta + '}}' + "`n"
     $mcpOutput = Invoke-NativeCheck @('--config-dir', $configDirectory, 'mcp') '"supportedVersions"' $mcpInput
     $mcpLines = @($mcpOutput -split "`r?`n" | Where-Object { $_.Trim() })
-    if ($mcpLines.Count -ne 2) { throw "mcp answered $($mcpLines.Count) lines instead of 2: $mcpOutput" }
+    if ($mcpLines.Count -ne 3) { throw "mcp answered $($mcpLines.Count) lines instead of 3: $mcpOutput" }
+    if ($mcpOutput -notmatch 'telegram_whoami') { throw "mcp lists no Telegram tools: $mcpOutput" }
     foreach ($line in $mcpLines) {
         if (($line | ConvertFrom-Json).jsonrpc -ne '2.0') { throw "mcp wrote something that is not a JSON-RPC message: $line" }
     }

@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.kotlogramme.cli.application.port.api.AccountStatus
 import org.kotlogramme.cli.application.port.spi.OutputFormat
 import org.kotlogramme.cli.domain.Message
 import java.time.Instant
@@ -149,5 +150,17 @@ class OutputFormatsTest {
 
         assertTrue(output.lines.all { it.substringBefore('\t') in setOf("config_directory", "session_path", "credentials", "output_format") })
         assertEquals(4, output.lines.size)
+    }
+
+    @Test
+    fun `whoami prints the signed in account as one object in the json format`() {
+        val output = RecordingOutput(OutputFormat.JSON)
+
+        cliFixture(output = output, authenticate = FakeAuthenticate(AccountStatus.SignedIn(testAccount))).run("whoami")
+
+        val account: JsonObject = Json.parseToJsonElement(output.lines.single()).jsonObject
+        assertEquals("42", account.getValue("id").jsonPrimitive.content)
+        assertEquals("@ada", account.getValue("username").jsonPrimitive.content)
+        assertEquals("Signed in as Ada Lovelace", account.getValue("message").jsonPrimitive.content)
     }
 }

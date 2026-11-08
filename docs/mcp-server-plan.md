@@ -5,8 +5,9 @@ Status: proposal, nothing implemented. Written 2026-11-08 against MCP spec revis
 
 ## Implementation status (2026-11-08)
 
-Phases 1 and 2 are implemented in `adapter.mcp` and `adapter.cli.McpCommand`; `kotlogramme mcp` runs, speaks both
-eras over stdio and offers no tools yet (phase 3). Decisions 0026 and 0027 are in `docs/decisions.md`.
+Phases 1 to 3 are implemented in `adapter.mcp` and `adapter.cli.McpCommand`: `kotlogramme mcp` speaks both eras
+over stdio and offers the eleven read only tools (`--access` is accepted; the write and full tiers are phase 4).
+Decisions 0026 to 0028 are in `docs/decisions.md`.
 
 What the implementation settled that the plan left open:
 - **Errors without a readable request id omit `id`**, they do not send JSON-RPC's `"id": null`. MCP's schema makes
@@ -19,6 +20,14 @@ What the implementation settled that the plan left open:
   `-32600` instead of buffering it.
 - **Parse errors do not echo the client's text.**
 - `ping` without stateless metadata is answered `{}` in any state; with stateless metadata it is `-32601`.
+- **Pagination key is `next_cursor` and the argument is `cursor`** in every paging tool (the CLI says `next_after`
+  and `--after`/`--before`); one name is easier for a model to carry from a result into the next call.
+- **Read only tools take `me`, `@username` or a numeric id for `chat`, never a link**: the resolver joins a chat
+  when given an invite link (decision 0028).
+- **`AppContext` got `shareTelegramClient()`**, opt-in, so the server uses one connection; the one-shot commands
+  and the shell still build a client per use case, unchanged.
+- **`whoami`/`login` now report the account through `Output.details`**, so `--json` prints one object. The sweep had
+  missed it because its fake was never signed in.
 - Tested by: protocol unit tests, JSON Schema validation of every response shape, two golden transcripts
   (`src/test/resources/mcp-transcripts/`), transport tests, a command test and a real-pipe run of the
   installed distribution. The native smoke test (`scripts/test-native.ps1`) has an `mcp` check that has not run

@@ -73,6 +73,9 @@ class ConsoleOutput(
     override fun record(fields: List<Pair<String, String>>) =
         whenJson({ super.record(fields) }) { jsonObject(*fields.toTypedArray()) }
 
+    override fun details(headline: String, fields: List<Pair<String, String>>) =
+        whenJson({ super.details(headline, fields) }) { jsonObject("message" to headline, *fields.toTypedArray()) }
+
     override fun properties(properties: List<Pair<String, String>>) = when (format) {
         OutputFormat.TABLE -> super.properties(properties)
         OutputFormat.PLAIN -> properties.forEach { (label, value) -> line("${label.toKey()}\t$value") }

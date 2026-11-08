@@ -3,6 +3,7 @@ package org.kotlogramme.cli.adapter.cli
 import com.github.ajalt.clikt.core.CliktError
 import org.kotlogramme.cli.adapter.config.ConfigPaths
 import org.kotlogramme.cli.adapter.config.JsonConfigStore
+import com.github.badoualy.telegram.api.TelegramClient
 import org.kotlogramme.cli.adapter.format.ConsoleOutput
 import org.kotlogramme.cli.adapter.format.MessageStyler
 import org.kotlogramme.cli.adapter.format.UploadProgressBar
@@ -45,7 +46,8 @@ import org.kotlogramme.cli.adapter.telegram.KotlogramUpdateLoop
 import org.kotlogramme.cli.adapter.telegram.KotlogramUserGateway
 import org.kotlogramme.cli.adapter.telegram.UserNameCache
 import org.kotlogramme.cli.adapter.telegram.KotlogramUserOperations
-import org.kotlogramme.cli.adapter.telegram.TelegramClientFactory
+import org.kotlogramme.cli.adapter.telegram.TelegramClients
+import org.kotlogramme.cli.adapter.telegram.telegramClients
 import org.kotlogramme.cli.application.port.api.AdminRights
 import org.kotlogramme.cli.application.port.api.Authenticate
 import org.kotlogramme.cli.application.port.api.ChatMembers
@@ -110,22 +112,24 @@ class AppContext(
      * the shell has a JLine terminal to write through; see [outputOn].
      */
     val outputFormat: OutputFormat = OutputFormat.TABLE,
-    private val authenticateFactory: (AppConfig) -> Authenticate = ::defaultAuthenticate,
-    private val listDialogsFactory: (AppConfig) -> ListDialogs = ::defaultListDialogs,
-    private val readHistoryFactory: (AppConfig) -> ReadHistory = ::defaultReadHistory,
-    private val messageWriterFactory: (AppConfig) -> MessageWriter = ::defaultMessageWriter,
-    private val contactsFactory: (AppConfig) -> Contacts = ::defaultContacts,
-    private val searchMessagesFactory: (AppConfig) -> SearchMessages = ::defaultSearchMessages,
-    private val chatMembersFactory: (AppConfig) -> ChatMembers = ::defaultChatMembers,
-    private val adminRightsFactory: (AppConfig) -> AdminRights = ::defaultAdminRights,
-    private val listFoldersFactory: (AppConfig) -> ListFolders = ::defaultListFolders,
-    private val listenFactory: (AppConfig) -> Listen = ::defaultListen,
-    private val stickersFactory: (AppConfig) -> Stickers = ::defaultStickers,
-    private val inlineFactory: (AppConfig) -> InlineBots = ::defaultInline,
-    private val sendMediaFactory: (AppConfig) -> SendMedia = ::defaultSendMedia,
-    private val downloadMediaFactory: (AppConfig) -> DownloadMedia = ::defaultDownloadMedia,
-    private val sessionsFactory: (AppConfig) -> Sessions = ::defaultSessions,
-    private val photosFactory: (AppConfig) -> Photos = ::defaultPhotos,
+    /** Where the use cases get their Telegram client; see [shareTelegramClient]. */
+    private val clients: TelegramClients<TelegramClient> = telegramClients(),
+    private val authenticateFactory: (AppConfig) -> Authenticate = { config -> defaultAuthenticate(config, clients) },
+    private val listDialogsFactory: (AppConfig) -> ListDialogs = { config -> defaultListDialogs(config, clients) },
+    private val readHistoryFactory: (AppConfig) -> ReadHistory = { config -> defaultReadHistory(config, clients) },
+    private val messageWriterFactory: (AppConfig) -> MessageWriter = { config -> defaultMessageWriter(config, clients) },
+    private val contactsFactory: (AppConfig) -> Contacts = { config -> defaultContacts(config, clients) },
+    private val searchMessagesFactory: (AppConfig) -> SearchMessages = { config -> defaultSearchMessages(config, clients) },
+    private val chatMembersFactory: (AppConfig) -> ChatMembers = { config -> defaultChatMembers(config, clients) },
+    private val adminRightsFactory: (AppConfig) -> AdminRights = { config -> defaultAdminRights(config, clients) },
+    private val listFoldersFactory: (AppConfig) -> ListFolders = { config -> defaultListFolders(config, clients) },
+    private val listenFactory: (AppConfig) -> Listen = { config -> defaultListen(config, clients) },
+    private val stickersFactory: (AppConfig) -> Stickers = { config -> defaultStickers(config, clients) },
+    private val inlineFactory: (AppConfig) -> InlineBots = { config -> defaultInline(config, clients) },
+    private val sendMediaFactory: (AppConfig) -> SendMedia = { config -> defaultSendMedia(config, clients) },
+    private val downloadMediaFactory: (AppConfig) -> DownloadMedia = { config -> defaultDownloadMedia(config, clients) },
+    private val sessionsFactory: (AppConfig) -> Sessions = { config -> defaultSessions(config, clients) },
+    private val photosFactory: (AppConfig) -> Photos = { config -> defaultPhotos(config, clients) },
     private val mediaProbeFactory: () -> MediaProbe = ::FileMediaProbe,
     /**
      * Whether the output is a terminal a person is watching, which is what puts an upload's progress
@@ -139,6 +143,15 @@ class AppContext(
 ) {
     /** The configuration as it is on disk right now. */
     fun config(): AppConfig = configStore.load()
+
+    /**
+     * Makes every use case share one Telegram client for the rest of the process. A long-lived process
+     * such as the MCP server calls this once; one-shot commands never do and behave as they always did.
+     */
+    fun shareTelegramClient() = clients.reuseOneClient()
+
+    /** Closes the shared client when [shareTelegramClient] was used. */
+    fun closeTelegramClient() = clients.close()
 
     /** Persists [config], replacing whatever was stored before. */
     fun save(config: AppConfig) {
@@ -302,16 +315,16 @@ class MissingCredentialsError : CliktError(
         "or the TG_API_ID/TG_API_HASH environment variables.",
 )
 
-private fun defaultAuthenticate(config: AppConfig): Authenticate {
-    val client = clientFor(config)
+private fun defaultAuthenticate(config: AppConfig, clients: TelegramClients<TelegramClient>): Authenticate {
+    val client = clientFor(config, clients)
     return AuthenticateService(KotlogramAccountGateway(KotlogramAccountOperations(client)))
 }
 
-private fun defaultListDialogs(config: AppConfig): ListDialogs =
-    ListDialogsService(KotlogramChatGateway(KotlogramChatOperations(clientFor(config))))
+private fun defaultListDialogs(config: AppConfig, clients: TelegramClients<TelegramClient>): ListDialogs =
+    ListDialogsService(KotlogramChatGateway(KotlogramChatOperations(clientFor(config, clients))))
 
-private fun defaultReadHistory(config: AppConfig): ReadHistory {
-    val client = clientFor(config)
+private fun defaultReadHistory(config: AppConfig, clients: TelegramClients<TelegramClient>): ReadHistory {
+    val client = clientFor(config, clients)
     val chatOperations = KotlogramChatOperations(client)
     return ReadHistoryService(
         KotlogramMessageGateway(chatOperations, KotlogramMessageOperations(client)),
@@ -319,8 +332,8 @@ private fun defaultReadHistory(config: AppConfig): ReadHistory {
     )
 }
 
-private fun defaultMessageWriter(config: AppConfig): MessageWriter {
-    val client = clientFor(config)
+private fun defaultMessageWriter(config: AppConfig, clients: TelegramClients<TelegramClient>): MessageWriter {
+    val client = clientFor(config, clients)
     val chatOperations = KotlogramChatOperations(client)
     return MessageWritingService(
         KotlogramMessageWriteGateway(
@@ -330,19 +343,19 @@ private fun defaultMessageWriter(config: AppConfig): MessageWriter {
     )
 }
 
-private fun defaultContacts(config: AppConfig): Contacts =
-    ContactsService(KotlogramContactGateway(KotlogramContactOperations(clientFor(config))))
+private fun defaultContacts(config: AppConfig, clients: TelegramClients<TelegramClient>): Contacts =
+    ContactsService(KotlogramContactGateway(KotlogramContactOperations(clientFor(config, clients))))
 
-private fun defaultSearchMessages(config: AppConfig): SearchMessages {
-    val client = clientFor(config)
+private fun defaultSearchMessages(config: AppConfig, clients: TelegramClients<TelegramClient>): SearchMessages {
+    val client = clientFor(config, clients)
     val chatOperations = KotlogramChatOperations(client)
     return SearchMessagesService(
         KotlogramMessageSearchGateway(KotlogramSearchOperations(client), ChatReferenceResolver(chatOperations)),
     )
 }
 
-private fun defaultChatMembers(config: AppConfig): ChatMembers {
-    val client = clientFor(config)
+private fun defaultChatMembers(config: AppConfig, clients: TelegramClients<TelegramClient>): ChatMembers {
+    val client = clientFor(config, clients)
     val chatOperations = KotlogramChatOperations(client)
     return ChatMembersService(
         KotlogramParticipantGateway(
@@ -352,16 +365,16 @@ private fun defaultChatMembers(config: AppConfig): ChatMembers {
     )
 }
 
-private fun defaultAdminRights(config: AppConfig): AdminRights {
-    val client = clientFor(config)
+private fun defaultAdminRights(config: AppConfig, clients: TelegramClients<TelegramClient>): AdminRights {
+    val client = clientFor(config, clients)
     val chatOperations = KotlogramChatOperations(client)
     return AdminRightsService(
         KotlogramAdminRightsGateway(KotlogramAdminOperations(client), ChatReferenceResolver(chatOperations)),
     )
 }
 
-private fun defaultListen(config: AppConfig): Listen {
-    val client = clientFor(config)
+private fun defaultListen(config: AppConfig, clients: TelegramClients<TelegramClient>): Listen {
+    val client = clientFor(config, clients)
     val accounts = KotlogramAccountGateway(KotlogramAccountOperations(client))
     // A session belongs to one account for as long as it lasts, so its id is read once; a failed
     // read is not remembered and is tried again on the next update.
@@ -371,11 +384,11 @@ private fun defaultListen(config: AppConfig): Listen {
     return ListenService(KotlogramUpdateLoop(client, userNames, selfId))
 }
 
-private fun defaultListFolders(config: AppConfig): ListFolders =
-    ListFoldersService(KotlogramFolderGateway(KotlogramFolderOperations(clientFor(config))))
+private fun defaultListFolders(config: AppConfig, clients: TelegramClients<TelegramClient>): ListFolders =
+    ListFoldersService(KotlogramFolderGateway(KotlogramFolderOperations(clientFor(config, clients))))
 
-private fun defaultStickers(config: AppConfig): Stickers {
-    val client = clientFor(config)
+private fun defaultStickers(config: AppConfig, clients: TelegramClients<TelegramClient>): Stickers {
+    val client = clientFor(config, clients)
     return StickerService(
         KotlogramStickerGateway(
             KotlogramStickerOperations(client),
@@ -384,8 +397,8 @@ private fun defaultStickers(config: AppConfig): Stickers {
     )
 }
 
-private fun defaultInline(config: AppConfig): InlineBots {
-    val client = clientFor(config)
+private fun defaultInline(config: AppConfig, clients: TelegramClients<TelegramClient>): InlineBots {
+    val client = clientFor(config, clients)
     return InlineService(
         KotlogramInlineGateway(
             KotlogramInlineOperations(client),
@@ -394,27 +407,27 @@ private fun defaultInline(config: AppConfig): InlineBots {
     )
 }
 
-private fun defaultSendMedia(config: AppConfig): SendMedia = SendMediaService(mediaGateway(config))
+private fun defaultSendMedia(config: AppConfig, clients: TelegramClients<TelegramClient>): SendMedia = SendMediaService(mediaGateway(config, clients))
 
-private fun defaultDownloadMedia(config: AppConfig): DownloadMedia = DownloadMediaService(mediaGateway(config))
+private fun defaultDownloadMedia(config: AppConfig, clients: TelegramClients<TelegramClient>): DownloadMedia = DownloadMediaService(mediaGateway(config, clients))
 
-private fun defaultSessions(config: AppConfig): Sessions =
-    SessionsService(KotlogramSessionGateway(KotlogramSessionOperations(clientFor(config))))
+private fun defaultSessions(config: AppConfig, clients: TelegramClients<TelegramClient>): Sessions =
+    SessionsService(KotlogramSessionGateway(KotlogramSessionOperations(clientFor(config, clients))))
 
-private fun defaultPhotos(config: AppConfig): Photos {
-    val client = clientFor(config)
+private fun defaultPhotos(config: AppConfig, clients: TelegramClients<TelegramClient>): Photos {
+    val client = clientFor(config, clients)
     val operations = KotlogramPhotoOperations(client)
     return PhotosService(KotlogramPhotoGateway(operations, ChatReferenceResolver(KotlogramChatOperations(client))))
 }
 
 /** The gateway both media commands share, so a send and a download resolve a peer the same way. */
-private fun mediaGateway(config: AppConfig): MediaGateway {
-    val client = clientFor(config)
+private fun mediaGateway(config: AppConfig, clients: TelegramClients<TelegramClient>): MediaGateway {
+    val client = clientFor(config, clients)
     return KotlogramMediaGateway(
         KotlogramMediaOperations(client),
         ChatReferenceResolver(KotlogramChatOperations(client)),
     )
 }
 
-private fun clientFor(config: AppConfig) =
-    TelegramClientFactory().create(requireNotNull(config.credentials), config.sessionPath)
+private fun clientFor(config: AppConfig, clients: TelegramClients<TelegramClient>) =
+    clients.clientFor(requireNotNull(config.credentials), config.sessionPath)

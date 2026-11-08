@@ -206,6 +206,20 @@ trace.
 - `members <peer> [--limit <n>]` - lists a chat's members with their role.
 - `invite <peer> <user>` - adds a member to a channel, supergroup or group.
 - `kick <peer> <user>` - removes a member from a chat.
+- `mcp [--access read-only|read-write|full]` - runs the client as a Model Context Protocol server on
+  stdin and stdout, so an AI application such as Claude can read the account. It speaks the current
+  stateless revision (2026-07-28) and the handshake revisions (2025-11-25, 2025-06-18) from one process. Log
+  in once with `login` first: stdin is the protocol, so the server cannot ask. The default access level is
+  `read-only`, and tools above the chosen level are neither listed nor callable. Tools in v1 (all read only):
+  `telegram_whoami`, `telegram_list_chats`, `telegram_read_history`, `telegram_search_messages`,
+  `telegram_count_messages`, `telegram_get_pinned_message`, `telegram_list_contacts`,
+  `telegram_search_contacts`, `telegram_list_members`, `telegram_list_folders` and
+  `telegram_wait_for_message` (waits for the next message from someone else, with a timeout of at most five
+  minutes). Results are JSON objects: a listing is `items` plus `next_cursor` when more follows, which is
+  passed back as `cursor`. A `chat` argument is `me`, an `@username` or a numeric id; invite links are
+  refused because opening one joins the chat. One Telegram connection serves every call, and calls run one
+  at a time. Write and destructive tools follow in a later release. Design and test strategy:
+  `docs/mcp-server-plan.md`.
 - `listen [--once] [--all] [--json] [--chat <chat>]` — follows the live update stream, printing each
   message as it arrives. `--chat` (numeric id, `@username` or title) narrows it to one chat, so
   `listen --once --chat @ada` waits for the next message there; updates without a chat are then hidden. Updates that carry no message, such as read receipts and contact status changes, are

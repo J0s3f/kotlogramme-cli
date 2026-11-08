@@ -95,6 +95,9 @@ internal class RecordingOutput(format: OutputFormat? = null) : Output {
 
     override fun record(fields: List<Pair<String, String>>) = rendering?.record(fields) ?: super.record(fields)
 
+    override fun details(headline: String, fields: List<Pair<String, String>>) =
+        rendering?.details(headline, fields) ?: super.details(headline, fields)
+
     override fun properties(properties: List<Pair<String, String>>) =
         rendering?.properties(properties) ?: super.properties(properties)
 }
