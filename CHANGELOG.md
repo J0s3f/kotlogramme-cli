@@ -2,6 +2,20 @@
 
 All notable changes to `kotlogramme-cli` are recorded here.
 
+## 0.11.2 - 2026-11-21
+
+Built on the `kotlogram` `v0.9.17` tag, resolved from JitPack.
+
+### Features
+
+- `listen --all` shows an edited forum topic as a `topic_edited` row that says what changed, instead of an
+  empty `forumTopicEdited` one.
+
+### Security
+
+- CI refuses a JDK from before the Java4Shell fix (CVE-2026-114938) and asks `setup-java` for the newest build.
+  See `docs/decisions.md` 0031.
+
 ## 0.11.1 - 2026-11-08
 
 Built on the `kotlogram` `v0.9.15` tag, resolved from JitPack.
