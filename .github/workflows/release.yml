@@ -59,6 +59,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          check-latest: true
+      - name: Require a JDK with the Java4Shell fix
+        shell: bash
+        run: bash scripts/check-jdk.sh
       - uses: gradle/actions/setup-gradle@v6
       - name: Build the fat jar and the distribution
         shell: bash

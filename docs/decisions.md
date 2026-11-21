@@ -536,3 +536,20 @@ needs the relative name to send a file back.
 is the feature. The check runs on the real path, because a link inside the directory is the usual escape. A
 file swapped for a link between the check and the use is not defended against; the directory is one the user
 chose for this, and nothing here can lock it.
+
+## 0031 - CI refuses a JDK from before the Java4Shell fix, except for the native build
+
+**Decision.** `scripts/check-jdk.sh` fails a CI job whose `java` is older than the first build with the
+Java4Shell fix (CVE-2026-114938): 17.0.21.1, 21.0.13.1, 25.0.5.1 or 27.0.1.1. It runs after `setup-java` in
+the test jobs and in the release job, and `scripts/test-check-jdk.sh` checks it against a stand-in `java`. The
+native packages are not guarded.
+
+**Alternatives.** Relying on `check-latest: true` alone: it asks for the newest build but a runner that serves
+a cached one passes silently, which is how the facade's own CI got an affected 17.0.21. Guarding the native
+packages too: Liberica NIK 25 is still the October build, so the guard would block every release until
+BellSoft publishes a fixed one. Using `sort -V` for the comparison, as the facade's copy does: older BSD
+userlands lack it, so the comparison is plain bash.
+
+**Why.** The flaw is in HotSpot's Base64 intrinsic, so it matters for the JVM that runs the tests and builds
+the jar. A native executable runs on Substrate VM, not HotSpot, and NIK only runs the compiler at build time.
+Revisit the exception when a fixed NIK exists, and raise the minimums with every later security release.

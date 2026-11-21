@@ -24,7 +24,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          check-latest: true
+      - name: Require a JDK with the Java4Shell fix
+        shell: bash
+        run: bash scripts/check-jdk.sh
       - uses: gradle/actions/setup-gradle@v6
+      - name: Test the JDK guard
+        shell: bash
+        run: bash scripts/test-check-jdk.sh
       - name: Test release version updates
         shell: bash
         run: bash scripts/test-version.sh
@@ -67,6 +74,10 @@ jobs:
           distribution: liberica
           java-version: '25'
           architecture: aarch64
+          check-latest: true
+      - name: Require a JDK with the Java4Shell fix
+        shell: bash
+        run: bash scripts/check-jdk.sh
       - uses: gradle/actions/setup-gradle@v6
       - name: Test release version updates
         shell: bash
