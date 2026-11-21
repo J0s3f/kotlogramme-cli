@@ -8,6 +8,7 @@ import org.kotlogramme.cli.domain.Chat
 import org.kotlogramme.cli.domain.ChatKind
 import org.kotlogramme.cli.domain.IncomingUpdate
 import org.kotlogramme.cli.domain.Message as DomainMessage
+import org.kotlogramme.protocol.ForumTopicEditUpdate
 
 /**
  * The [UpdateLoop] backed by the facade's own background loop.
@@ -38,7 +39,8 @@ internal class KotlogramUpdateLoop(
  * Maps an update off the facade's background loop to a domain one.
  *
  * A message update becomes [IncomingUpdate.NewMessage], with the chat from the message's peer and
- * `null` when it carries none; every other kind becomes [IncomingUpdate.Other], named after the
+ * `null` when it carries none; an edited forum topic becomes [IncomingUpdate.TopicEdited]; every
+ * other kind becomes [IncomingUpdate.Other], named after the
  * Telegram update it carries with its payload as JSON. Pass the same [payload] that
  * [renamedUserId] was given and the payload is decoded once for both.
  */
@@ -47,11 +49,21 @@ internal fun TypedUpdate.toIncomingUpdate(
     selfId: () -> Long? = { null },
     payload: DecodedRawUpdate? = rawUpdate?.let(::DecodedRawUpdate),
 ): IncomingUpdate {
+    forumTopicEdit?.let { return it.toTopicEdited() }
     val message = message ?: return otherUpdate(payload)
     val chat = message.chat(names)
     val domain = message.toMessage().named(message, names, selfId).fromPartnerOf(chat)
     return IncomingUpdate.NewMessage(chat, domain)
 }
+
+private fun ForumTopicEditUpdate.toTopicEdited() = IncomingUpdate.TopicEdited(
+    chatId = peerId,
+    topicId = topicId,
+    title = title,
+    iconEmojiId = iconEmojiId,
+    closed = closed,
+    hidden = hidden,
+)
 
 private fun TypedUpdate.otherUpdate(payload: DecodedRawUpdate?) = IncomingUpdate.Other(
     kind = payload?.name ?: kind,

@@ -71,6 +71,60 @@ class UpdateRenderingTest {
         assertEquals(listOf("typing", "", "", "", "", "", "", ""), updateRow(other))
     }
 
+    private fun topicEdited(
+        title: String? = null,
+        closed: Boolean? = null,
+        hidden: Boolean? = null,
+        iconEmojiId: Long? = null,
+    ) = IncomingUpdate.TopicEdited(
+        chatId = 5,
+        topicId = 7,
+        title = title,
+        closed = closed,
+        hidden = hidden,
+        iconEmojiId = iconEmojiId,
+    )
+
+    @Test
+    fun `an edited topic is a row of its own kind with the chat id`() {
+        val row = updateRow(topicEdited(title = "News"))
+
+        assertEquals(listOf("topic_edited", "5"), listOf(row[0], row[6]))
+    }
+
+    @Test
+    fun `a renamed topic says its new title`() {
+        assertEquals("topic 7: renamed to \"News\"", updateRow(topicEdited(title = "News"))[5])
+    }
+
+    @Test
+    fun `every reported change is listed in a fixed order`() {
+        val row = updateRow(topicEdited(title = "News", closed = true, hidden = true, iconEmojiId = 99))
+
+        assertEquals("topic 7: renamed to \"News\", icon changed, closed, hidden", row[5])
+    }
+
+    @Test
+    fun `reopening and showing a topic is told as such`() {
+        assertEquals("topic 7: reopened, shown", updateRow(topicEdited(closed = false, hidden = false))[5])
+    }
+
+    @Test
+    fun `an edit with no reported change still names the topic`() {
+        assertEquals("topic 7: edited", updateRow(topicEdited())[5])
+    }
+
+    @Test
+    fun `an edited topic is one JSON object with its readable text`() {
+        val json = updateJson(topicEdited(title = "News"))
+
+        assertEquals(
+            "{\"kind\":\"topic_edited\",\"chat\":\"\",\"message_id\":\"\",\"from\":\"\",\"time\":\"\"," +
+                "\"text\":\"topic 7: renamed to \\\"News\\\"\",\"chat_id\":\"5\",\"sender_id\":\"\"}",
+            json,
+        )
+    }
+
     @Test
     fun `a message row ends with the ids of its chat and sender`() {
         val withSender = newMessage.copy(message = newMessage.message.copy(senderId = 5))

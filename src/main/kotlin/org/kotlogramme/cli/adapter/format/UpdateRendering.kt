@@ -45,7 +45,20 @@ internal fun updateRow(
         update.chat?.id?.toString().orEmpty(),
         update.message.senderId?.toString().orEmpty(),
     )
+    is IncomingUpdate.TopicEdited ->
+        listOf(TOPIC_EDITED_KIND, "", "", "", "", update.describe(), update.chatId.toString(), "")
     is IncomingUpdate.Other -> listOf(update.kind, "", "", "", "", update.data, "", update.userId?.toString().orEmpty())
+}
+
+/** What changed about a topic, in the order a reader looks for it: the name, the icon, then the state. */
+private fun IncomingUpdate.TopicEdited.describe(): String {
+    val changes = listOfNotNull(
+        title?.let { "renamed to \"$it\"" },
+        iconEmojiId?.let { "icon changed" },
+        closed?.let { if (it) "closed" else "reopened" },
+        hidden?.let { if (it) "hidden" else "shown" },
+    )
+    return "topic $topicId: ${changes.ifEmpty { listOf("edited") }.joinToString(", ")}"
 }
 
 /** [update] as one JSON object keyed by [UPDATE_HEADERS]; pure, for tests and JSON Lines. */
@@ -65,7 +78,8 @@ private fun dataColumn(update: IncomingUpdate): Map<String, JsonElement> = when 
     } else {
         mapOf("text" to JsonPrimitive(""), "data" to Json.parseToJsonElement(update.data))
     }
-    is IncomingUpdate.NewMessage -> emptyMap()
+    is IncomingUpdate.NewMessage, is IncomingUpdate.TopicEdited -> emptyMap()
 }
 
 private const val NEW_MESSAGE_KIND = "message"
+private const val TOPIC_EDITED_KIND = "topic_edited"

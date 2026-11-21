@@ -243,7 +243,10 @@ trace.
   message as it arrives. `--chat` (numeric id, `@username` or title) narrows it to one chat, so
   `listen --once --chat @ada` waits for the next message there; updates without a chat are then hidden. Updates that carry no message, such as read receipts and contact status changes, are
   hidden unless `--all` is given; each then shows its Telegram update name and its content decoded
-  to JSON (nested under `data` with `--json`). Every row ends with `chat_id` and
+  to JSON (nested under `data` with `--json`). A forum topic that was renamed, closed, reopened, hidden or
+  shown, or got a new icon, is one `topic_edited` row, also behind `--all`, saying what changed in `text`
+  (`topic 7: renamed to "News", closed`) with the forum's `chat_id`; `--chat` hides it, because the
+  update names no chat title. Every row ends with `chat_id` and
   `sender_id` (and `--json` has them as strings), the ids a script passes back to address the chat or
   the person; an update about a user, such as typing, carries that user as `sender_id`. An incoming
   message in a private chat is from the person the chat is with, under the chat's name. A message
