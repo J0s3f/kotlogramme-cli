@@ -67,6 +67,8 @@ without needing API credentials, and the account too when they are set.
 
 ## Use it from an AI application (MCP)
 
+[![J0s3f/kotlogramme-cli MCP server](https://glama.ai/mcp/servers/J0s3f/kotlogramme-cli/badges/score.svg)](https://glama.ai/mcp/servers/J0s3f/kotlogramme-cli)
+
 `kotlogramme mcp` runs the client as a [Model Context Protocol](https://modelcontextprotocol.io) server over
 stdin and stdout. Log in once with `kotlogramme login`, then register the command with your AI application,
 for example in Claude Desktop's `claude_desktop_config.json`:
